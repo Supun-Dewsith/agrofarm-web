@@ -1,36 +1,20 @@
-import React, { useState } from "react";
-import { Form, redirect, useActionData, useNavigation } from "react-router";
+import { useState } from "react";
+import { Form, replace, useActionData, useNavigation } from "react-router";
 import { Leaf, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import type { Route } from "./+types/login";
+import { loginRequest, setAuthData } from "../utils/auth";
 
-// CHANGE: Renamed to clientAction for SPA mode execution
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const username = formData.get("username");
-  const password = formData.get("password");
-
-  // Load backend base URL dynamically from environment definitions
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  const username = String(formData.get("username") || "");
+  const password = String(formData.get("password") || "");
 
   try {
-    const response = await fetch(`${baseUrl}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      return { error: "Invalid username or password" };
-    }
-
-    const data = await response.json();
-    
-    localStorage.setItem("token", data.accessToken);
-    localStorage.setItem("user", JSON.stringify(data.user));
-
-    return redirect("/"); 
-  } catch (err) {
-    return { error: "Something went wrong. Please try again." };
+    const data = await loginRequest(username, password);
+    setAuthData(data);
+    return replace("/home");
+  } catch (err: any) {
+    return { error: err.message || "Invalid credentials" };
   }
 }
 
@@ -128,7 +112,7 @@ export default function Login() {
         </p>
       </div>
 
-      <div 
+      <div
         className="hidden lg:flex lg:w-1/2 bg-cover bg-center items-center justify-center relative p-12"
         style={{ backgroundImage: `linear-gradient(rgba(36, 74, 56, 0.85), rgba(36, 74, 56, 0.85)), url('https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=1000')` }}
       >
