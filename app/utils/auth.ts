@@ -48,7 +48,7 @@ export const refreshTokens = async (): Promise<AuthResponse> => {
   });
 
   if (!response.ok) {
-    logout(); 
+    logout();
     throw new Error("Session expired");
   }
 
@@ -60,21 +60,23 @@ export const refreshTokens = async (): Promise<AuthResponse> => {
 export const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
   let authData = getAuthData();
 
-  options.headers = {
-    ...options.headers,
-    "Authorization": `Bearer ${authData?.accessToken}`,
-    "Content-Type": "application/json",
-  };
+  const headers = new Headers(options.headers);
+  if (authData?.accessToken) {
+    headers.set("Authorization", `Bearer ${authData.accessToken}`);
+  }
+  if (options.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
+  options.headers = headers;
   let response = await fetch(url, options);
 
   if (response.status === 401) {
     try {
-      authData = await refreshTokens();
-      
-      if (options.headers) {
-        (options.headers as any)["Authorization"] = `Bearer ${authData.accessToken}`;
-      }
+      authData = await refreshTokens(); 
+      headers.set("Authorization", `Bearer ${authData.accessToken}`);
+      options.headers = headers;
+
       response = await fetch(url, options);
     } catch (refreshError) {
       logout();
