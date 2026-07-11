@@ -1,71 +1,86 @@
-const API_BASE_URL = 'http://localhost:8080/api/auth';
-
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   username: string;
   role: string;
+  permissions: string[];
 }
 
-export const authStorage = {
-  setTokens: (response: AuthResponse) => {
-    localStorage.setItem('access_token', response.accessToken);
-    localStorage.setItem('refresh_token', response.refreshToken);
-    localStorage.setItem('username', response.username);
-    localStorage.setItem('user_role', response.role);
-  },
-  clearTokens: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('username');
-    localStorage.removeItem('user_role');
-  },
-  getAccessToken: () => localStorage.getItem('access_token'),
-  getRefreshToken: () => localStorage.getItem('refresh_token'),
-  getUsername: () => localStorage.getItem('username'),
-  getUserRole: () => localStorage.getItem('user_role'),
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_URL = `${BASE_URL}/api/auth`;
+
+export const setAuthData = (data: AuthResponse) => {
+  localStorage.setItem("token_data", JSON.stringify(data));
 };
 
-// Generic fetch wrapper with automatic token refresh logic
-export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const token = authStorage.getAccessToken();
-  const headers = new Headers(options.headers);
-  
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+export const getAuthData = (): AuthResponse | null => {
+  const data = localStorage.getItem("token_data");
+  return data ? JSON.parse(data) : null;
+};
+
+export const logout = () => {
+  localStorage.removeItem("token_data");
+  window.location.href = "/login";
+};
+
+export const loginRequest = async (username: string, password: string): Promise<AuthResponse> => {
+  const response = await fetch(`${API_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Invalid username or password");
   }
-  headers.set('Content-Type', 'application/json');
 
-  let response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+  return response.json();
+};
 
-  // If unauthorized, attempt to handle dual-token refresh
+export const refreshTokens = async (): Promise<AuthResponse> => {
+  const currentData = getAuthData();
+  if (!currentData?.refreshToken) throw new Error("No refresh token available");
+
+  const response = await fetch(`${API_URL}/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken: currentData.refreshToken }),
+  });
+
+  if (!response.ok) {
+    logout(); 
+    throw new Error("Session expired");
+  }
+
+  const newData: AuthResponse = await response.json();
+  setAuthData(newData);
+  return newData;
+};
+
+export const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  let authData = getAuthData();
+
+  options.headers = {
+    ...options.headers,
+    "Authorization": `Bearer ${authData?.accessToken}`,
+    "Content-Type": "application/json",
+  };
+
+  let response = await fetch(url, options);
+
   if (response.status === 401) {
-    const refreshToken = authStorage.getRefreshToken();
-    if (refreshToken) {
-      try {
-        const refreshRes = await fetch(`${API_BASE_URL}/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-
-        if (refreshRes.ok) {
-          const newTokens: AuthResponse = await refreshRes.json();
-          authStorage.setTokens(newTokens);
-
-          // Retry the original request with new token
-          headers.set('Authorization', `Bearer ${newTokens.accessToken}`);
-          response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
-        } else {
-          authStorage.clearTokens();
-          window.location.href = '/login';
-        }
-      } catch (err) {
-        authStorage.clearTokens();
-        window.location.href = '/login';
+    try {
+      authData = await refreshTokens();
+      
+      if (options.headers) {
+        (options.headers as any)["Authorization"] = `Bearer ${authData.accessToken}`;
       }
+      response = await fetch(url, options);
+    } catch (refreshError) {
+      logout();
+      throw new Error("Session expired. Please log in again.");
     }
   }
 
   return response;
-}
+};
