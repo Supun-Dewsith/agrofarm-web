@@ -1,6 +1,7 @@
 import {useState, useEffect} from 'react';
 import {Sun, Cloud, CloudSun, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning} from 'lucide-react';
 
+// getWeatherIcon function for choosing the weather icon according to the weather code
 function getWeatherIcons(code: number) {
   const iconClass = "w-6 h-6"; // Standard size for all icons
 
@@ -53,7 +54,16 @@ function getWeatherIcons(code: number) {
 // This is your static UI, no API involved yet!
 export default function WeatherPage() {
   // Using hardcoded data to design the UI
-  const mockData = { temperature: 28, condition: 'Sunny', humidity: 65 };
+  const [weather, setWeather] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("http://localhost:8080/api/weather/all")
+      .then((res) => res.json())
+      .then((data) => setWeather(data))
+      .catch((err) => console.error(err));
+    }, []);
+  
+  if (!weather) return <div>Loading...</div>;
 
   return (
     <div className="flex flex-col gap-4 items-start">
@@ -61,9 +71,9 @@ export default function WeatherPage() {
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <h1 className="text-xl font-bold text-gray-900">Current Weather</h1>
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <h2>Current temperature</h2>
+          <h2>Current temperature </h2><h2>{weather.current.temperature_2m}</h2>
           <h2>Weather Condition</h2>
-          <h2>icon</h2>
+          <h2>{getWeatherIcons(weather.current.weather_code)}</h2>
           <h2>humidity</h2>
           <h2>Wind speed</h2>
         </div>
