@@ -32,7 +32,7 @@ export default function DashboardLayout() {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/home" },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/home/dashboard" },
     { icon: Users, label: "Farmers", path: "/home/farmers" },
     { icon: Sprout, label: "Crops", path: "/home/crops" },
     { icon: ClipboardList, label: "Attendance", path: "/home/attendance" },
