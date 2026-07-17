@@ -46,7 +46,7 @@ export default function DashboardLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex bg-[#f8fafc] text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="h-screen overflow-hidden flex bg-[#f8fafc] text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900">
 
       {/* SIDEBAR */}
       <aside className="w-64 bg-[#1b3b2b] text-slate-300 flex flex-col hidden md:flex border-r border-[#244A38]/30">
