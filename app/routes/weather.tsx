@@ -1,13 +1,19 @@
 import {useState, useEffect} from 'react';
 import {Sun, Cloud, CloudSun, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning} from 'lucide-react';
+import SunnyIcon from '../asserts/icons/animated/day.svg';
 
 // getWeatherIcon function for choosing the weather icon according to the weather code
 function getWeatherIcons(code: number) {
-  const iconClass = "w-6 h-6"; // Standard size for all icons
+  const iconClass = "w-6 h-6";// Standard size for all icons
+  const containerClass = "w-[100px] h-[100px]";
 
   switch (code) {
     case 0:
-      return <Sun className={`text-yellow-500 ${iconClass}`} />;
+      return (
+        <div className={containerClass}>
+          <img src={SunnyIcon} alt="Sunny" className="w-full h-full object-contain" />
+        </div>
+      );
     case 1:
     case 2:
     case 3:
