@@ -1,7 +1,13 @@
 import {useState, useEffect} from 'react';
-import {Sun, Cloud, CloudSun, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning} from 'lucide-react';
 import SunnyIcon from '../asserts/icons/animated/day.svg';
-import CloudSon from '../asserts/icons/animated/cloudy-day-1.svg';
+import CloudSun from '../asserts/icons/animated/cloudy-day-1.svg';
+import CloudFog from '../asserts/icons/animated/cloudy-day-3.svg';
+import CloudDrizzle from '../asserts/icons/animated/rainy-1.svg';
+import CloudSlowRain from '../asserts/icons/animated/rainy-5.svg';
+import CloudHeavyRain from '../asserts/icons/animated/rainy-7.svg';
+import SlowSnowy from '../asserts/icons/animated/snowy-5.svg';
+import HeavySnowy from '../asserts/icons/animated/snowy-6.svg';
+import Thunder from '../asserts/icons/animated/thunder.svg';
 
 // getWeatherIcon function for choosing the weather icon according to the weather code
 function getWeatherIcons(code: number) {
@@ -20,45 +26,89 @@ function getWeatherIcons(code: number) {
     case 3:
       return (
         <div className={containerClass}>
-          <img src={CloudSon} alt="Sunny" className="w-full h-full object-contain" />
+          <img src={CloudSun} alt="CloudySun" className="w-full h-full object-contain" />
         </div>
       );
     case 45:
     case 48:
-      return <CloudFog className={`text-gray-500 ${iconClass}`} />;
+      return  (  
+        <div className={containerClass}>
+          <img src={CloudFog} alt="Cloudfog" className="w-full h-full object-contain" />
+        </div>
+      );
     case 51:
     case 53:
     case 55:
-      return <CloudDrizzle className={`text-blue-400 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={CloudDrizzle} alt="Clouddrizzle" className="w-full h-full object-contain" />
+        </div>
+      );
     case 56:
     case 57:
-      return <CloudDrizzle className={`text-blue-600 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={CloudDrizzle} alt="Clouddrizzle" className="w-full h-full object-contain" />
+        </div>
+      );
     case 61:
     case 63:
     case 65:
-      return <CloudRain className={`text-blue-500 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={CloudSlowRain} alt="Cloudrain" className="w-full h-full object-contain" />
+        </div>
+      );
     case 66:
     case 67:
-      return <CloudRain className={`text-blue-800 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={CloudHeavyRain} alt="Cloudrain" className="w-full h-full object-contain" />
+        </div>
+      );
     case 71:
     case 73:
     case 75:
     case 77:
-      return <CloudSnow className={`text-sky-300 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={SlowSnowy} alt="Slowsnowy" className="w-full h-full object-contain" />
+        </div>
+      );
     case 80:
     case 81:
     case 82:
-      return <CloudRain className={`text-blue-600 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={CloudHeavyRain} alt="Cloudrain" className="w-full h-full object-contain" />
+        </div>
+      );
     case 85:
     case 86:
-      return <CloudSnow className={`text-sky-500 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={HeavySnowy} alt="HeavySnow" className="w-full h-full object-contain" />
+        </div>
+      );
     case 95:
-      return <CloudLightning className={`text-yellow-600 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={Thunder} alt="Thunder" className="w-full h-full object-contain" />
+        </div>
+      );
     case 96:
     case 99:
-      return <CloudLightning className={`text-purple-600 ${iconClass}`} />;
+      return (  
+        <div className={containerClass}>
+          <img src={Thunder} alt="Thunder" className="w-full h-full object-contain" />
+        </div>
+      );
     default:
-      return <Cloud className={`text-gray-400 ${iconClass}`} />;
+      return (
+        <div className={containerClass}>
+          <img src={CloudSun} alt="CloudySun" className="w-full h-full object-contain" />
+        </div>
+      );
   }
 
 }
