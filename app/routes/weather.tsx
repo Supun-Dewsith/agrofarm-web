@@ -8,7 +8,11 @@ import CloudHeavyRain from '../asserts/icons/animated/rainy-7.svg';
 import SlowSnowy from '../asserts/icons/animated/snowy-5.svg';
 import HeavySnowy from '../asserts/icons/animated/snowy-6.svg';
 import Thunder from '../asserts/icons/animated/thunder.svg';
+import { fetchWithAuth, getAuthData } from '../utils/auth';
 
+
+
+  
 // getWeatherIcon function for choosing the weather icon according to the weather code
 function getWeatherIcons(code: number) {
   const iconClass = "w-6 h-6";// Standard size for all icons
@@ -31,19 +35,16 @@ function getWeatherIcons(code: number) {
       );
     case 45:
     case 48:
+    case 51:
+    case 53:
+    case 55:
       return  (  
         <div className={containerClass}>
           <img src={CloudFog} alt="Cloudfog" className="w-full h-full object-contain" />
         </div>
       );
-    case 51:
-    case 53:
-    case 55:
-      return (  
-        <div className={containerClass}>
-          <img src={CloudDrizzle} alt="Clouddrizzle" className="w-full h-full object-contain" />
-        </div>
-      );
+    
+      
     case 56:
     case 57:
       return (  
@@ -111,131 +112,277 @@ function getWeatherIcons(code: number) {
       );
   }
 
+
 }
-// This is your static UI, no API involved yet!
+
+
+
+
+
+
+
+
+
+function getWeatherCondition(code: number) {
+  
+
+  switch (code) {
+    case 0:
+      return ( <h2>Clear Sky</h2> );
+    case 1:
+    case 2:
+    case 3:
+      return ( <h2>Party Cloudy</h2> );
+    case 45:
+    case 48:
+      return ( <h2>Foggy</h2> );
+    case 51:
+    case 53:
+    case 55:
+      return ( <h2>Light Drizzle</h2> );
+    case 56:
+    case 57:
+      return ( <h2>Freezing Drizzle</h2> );
+    case 61:
+    case 63:
+    case 65:
+      return ( <h2>Slightly Rainy</h2> );
+    case 66:
+    case 67:
+      return ( <h2>Freezing Rain</h2> );
+    case 71:
+    case 73:
+    case 75:
+    case 77:
+      return ( <h2>Snowy</h2> );
+    case 80:
+    case 81:
+    case 82:
+      return ( <h2>Heavy Rain</h2> );
+    case 85:
+    case 86:
+      return ( <h2>Heavy Snow</h2> );
+    case 95:
+      return ( <h2>Thunderstorm</h2> );
+    case 96:
+    case 99:
+      return ( <h2>Heavy Thunderstorm</h2> );
+    default:
+      return ( <h2>Clear Sky</h2> );
+  }
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function findUsername(): string | undefined{
+  const authData = getAuthData();
+
+  const username = authData?.username;
+
+  return username;
+
+
+}
+
+
+
+
+
+
+
+const getWeather = async () => {
+  const response = await fetchWithAuth(
+    "http://localhost:8080/api/weather/all",
+    {
+      method: "GET"
+    }
+  );
+
+  const weather = await response.json();
+  return weather;
+}
+
+
+
+// This is your UI
 export default function WeatherPage() {
-  // Using hardcoded data to design the UI
+
+
   const [weather, setWeather] = useState<any>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/weather/all")
-      .then((res) => res.json())
-      .then((data) => setWeather(data))
-      .catch((err) => console.error(err));
-    }, []);
+
+    const loadWeather = async () => {
+      const data = await getWeather();
+      setWeather(data);
+    };
+
+    loadWeather();
+  }, []);
+
+
+  if (!weather) {
+    return <div>Loading...</div>;
+  }
+
   
-  if (!weather) return <div>Loading...</div>;
+
+  
+
+
+  // 1. Declare state at the TOP level of the component
+  
 
   return (
-    <div className="flex flex-col gap-4 items-start">
 
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <h1 className="text-xl font-bold text-gray-900">Current Weather</h1>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <h2>Current temperature </h2><h2>{weather.current.temperature_2m}</h2>
-          <h2>Weather Condition</h2>
-          <h2>{getWeatherIcons(weather.current.weather_code)}</h2>
-          <h2>humidity</h2>
-          <h2>Wind speed</h2>
+    // main page of the weather page
+    <div className=" bg-[#E8F5E9] flex flex-col gap-4 items-start rounded-2x1">
+      <div className='flex'>
+      {/*   current weather page part   */ }
+        <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100 ">
+          <h1 className="text-xl font-bold text-gray-900">Current Weather</h1>
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-md">
+            <div className='flex gap-2'>
+              <h2 className='font-bold'>Current temperature : </h2><h2>{weather.current.temperature_2m}</h2><h2>°C</h2>
+            </div>
+            <div className='flex gap-2'>
+              <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.current.weather_code)}</h2>
+            </div>
+            <h2>{getWeatherIcons(weather.current.weather_code)}</h2>
+            <div className='flex gap-2'>
+              <h2 className='font-bold'>humidity: </h2><h2>{weather.current.relative_humidity_2m}%</h2>
+            </div>
+            <div className='flex gap-2'>
+              <h2 className='font-bold'>Wind speed: </h2><h2>{weather.current.wind_speed_10m}</h2><h2>km/h</h2>
+            </div>
+          </div>
         </div>
+
+
+      {/*   Additional data page part   */}
+        <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100 ">
+          <h1 className="text-xl font-bold text-gray-900">Additional Data</h1>
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-md">
+            <h2 className='font-bold'>UV Index: </h2><h2>{weather.daily.uv_index_max[0]}</h2>
+            <h2 className='font-bold'>Expected Rainfall: </h2><h2>{weather.current.rain} mm</h2>
+          </div>
+        </div>
+
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+    {/*   weather forcast page part    */}
+
+      <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100">
         <h1 className="text-xl font-bold text-gray-900">Daily Forcast</h1>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 p-4 gap-4">
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[1]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[1]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[1]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[1])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[1])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[2]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[2]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[2]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[2])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[2])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[3]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[3]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[3]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[3])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[3])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[4]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[4]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[4]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[4])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[4])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[5]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[5]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[5]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[5])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[5])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[6]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[6]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[6]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[6])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[6])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[7]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[7]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[7]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[7])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[7])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[8]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[8]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[8]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[8])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[8])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[9]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[9]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[9]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[9])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[9])}</h2>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
-            <h2>Date</h2>
-            <h2>High temperature</h2>
-            <h2>Low temperature</h2>
-            <h2>Weather Condition</h2>
-            <h2>Rain Risk</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+            <h2 className='font-bold'>Date :</h2><h2>{weather.daily.time[10]}</h2>
+            <h2 className='font-bold'>High temperature :</h2><h2>{weather.daily.temperature_2m_max[10]}</h2>
+            <h2 className='font-bold'>Low temperature :</h2><h2>{weather.daily.temperature_2m_min[10]}</h2>
+            <h2 className='font-bold'>Weather Condition :</h2><h2>{getWeatherCondition(weather.daily.weather_code[10])}</h2>
+            <h2>{getWeatherIcons(weather.daily.weather_code[10])}</h2>
           </div>
 
           
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <h1 className="text-xl font-bold text-gray-900">Additional Data</h1>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <h2>UV Index</h2>
-          <h2>Expected Rainfall</h2>
-        </div>
-      </div>
+
+
+    
 
 
     </div>
