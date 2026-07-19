@@ -32,7 +32,7 @@ export default function DashboardLayout() {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/home" },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/home/dashboard" },
     { icon: Users, label: "Farmers", path: "/home/farmers" },
     { icon: Sprout, label: "Crops", path: "/home/crops" },
     { icon: ClipboardList, label: "Attendance", path: "/home/attendance" },
@@ -84,7 +84,7 @@ export default function DashboardLayout() {
 
         {/* TOPBAR */}
         <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 sticky top-0 z-10 backdrop-blur-md bg-white/95">
-          <h2 className="text-xl font-bold tracking-tight text-slate-800 transition-all duration-300 ease-out">
+          <h2 className="text-2xl font-bold tracking-tight text-emerald-900">
             {getPageTitle()}
           </h2>
 

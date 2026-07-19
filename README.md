@@ -77,3 +77,34 @@ This template comes with [Tailwind CSS](https://tailwindcss.com/) already config
 ---
 
 Built with ❤️ using React Router.
+
+
+
+## Accessing User Authentication Data in Components
+
+In React Router v7 SPA Mode, authentication data (like `username` and `role`) is extracted from `localStorage` using a `clientLoader`. This ensures the data is available immediately when the component mounts, preventing any layout shifts or visual flashing.
+
+
+```
+import { useLoaderData } from "react-router";
+import { getAuthData } from "../utils/auth"; 
+
+export function clientLoader() {
+  const authData = getAuthData();
+  
+  return { 
+    username: authData?.username ?? "Guest",
+    role: authData?.role ?? "User"
+  };
+}
+
+export default function page() {
+  const { username, role } = useLoaderData<typeof clientLoader>();
+
+  return (
+    <div>
+      <p>User: {username} {role}</p>
+    </div>
+  );
+}
+```

@@ -12,7 +12,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   try {
     const data = await loginRequest(username, password);
     setAuthData(data);
-    return replace("/home");
+    return replace("/home/dashboard");
   } catch (err: any) {
     return { error: err.message || "Invalid credentials" };
   }
