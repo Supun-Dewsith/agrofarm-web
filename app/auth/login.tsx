@@ -14,8 +14,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     setAuthData(data);
     return replace("/home/dashboard");
   } catch (err: any) {
-    return { error: err.message || "Invalid credentials" };
+    return { error: err.message || "Invalid credentials"};
   }
+
 }
 
 export default function Login() {
