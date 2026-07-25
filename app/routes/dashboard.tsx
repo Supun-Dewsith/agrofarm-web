@@ -117,13 +117,23 @@ export default function DashboardPage() {
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto text-slate-800">
 
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* Stats Row - Horizontally Scrollable */}
+      <div className="flex gap-4 overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{stat.title}</span>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${stat.isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+          <div
+            key={idx}
+            className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-[220px] flex-shrink-0"
+          >
+            <div className="flex justify-between items-start gap-2">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
+                {stat.title}
+              </span>
+              <span
+                className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${stat.isPositive
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-rose-50 text-rose-600"
+                  }`}
+              >
                 {stat.change}
               </span>
             </div>
