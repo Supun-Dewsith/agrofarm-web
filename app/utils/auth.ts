@@ -57,8 +57,10 @@ export const refreshTokens = async (): Promise<AuthResponse> => {
   return newData;
 };
 
-export const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
+export const fetchWithAuth = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
   let authData = getAuthData();
+
+  const fullUrl = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
 
   const headers = new Headers(options.headers);
   if (authData?.accessToken) {
@@ -69,15 +71,16 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
   }
 
   options.headers = headers;
-  let response = await fetch(url, options);
+
+  let response = await fetch(fullUrl, options);
 
   if (response.status === 401) {
     try {
-      authData = await refreshTokens(); 
+      authData = await refreshTokens();
       headers.set("Authorization", `Bearer ${authData.accessToken}`);
       options.headers = headers;
 
-      response = await fetch(url, options);
+      response = await fetch(fullUrl, options);
     } catch (refreshError) {
       logout();
       throw new Error("Session expired. Please log in again.");
