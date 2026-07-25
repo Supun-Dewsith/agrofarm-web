@@ -2,13 +2,13 @@ import type { ClientLoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { fetchWithAuth, getAuthData } from "../utils/auth";
 import { useState } from "react";
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend, PieChart, Label, Pie, Cell 
+  BarChart, Bar, Legend, PieChart, Label, Pie, Cell
 } from 'recharts';
 
-// --- Interfaces ---
-interface StatCardProps {
+
+export interface StatCardProp {
   title: string;
   value: string | number;
   change: string;
@@ -16,7 +16,34 @@ interface StatCardProps {
   type: string;
 }
 
-interface ActivityItem {
+export interface Weather {
+  temp: number;
+  condition: string;
+  date: string;
+  humidity: string;
+  rainfall: string;
+  wind: string;
+}
+
+export interface CropHealth {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export interface FinanceData {
+  month: string;
+  revenue: number;
+  expense: number;
+}
+
+export interface HarvestSummary {
+  crop: string;
+  actual: number;
+  target: number;
+}
+
+export interface ActivityItem {
   id: string;
   type: "disease" | "task" | "system";
   title: string;
@@ -24,75 +51,51 @@ interface ActivityItem {
   time: string;
 }
 
-interface CropHealth {
-  name: string;
-  value: number;
-  color: string;
-}
-
-// --- Client Loader ---
 export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
   const authData = getAuthData();
 
-  const stats: StatCardProps[] = [
-    { title: "Total Farmers", value: 156, change: "+12%", isPositive: true, type: "farmers" },
-    { title: "Total Workers", value: 342, change: "+8%", isPositive: true, type: "workers" },
-    { title: "Active Crops", value: 24, change: "+3", isPositive: true, type: "crops" },
-    { title: "Active Tasks", value: 67, change: "-6", isPositive: false, type: "tasks" },
-    { title: "Disease Alerts", value: 8, change: "+1", isPositive: false, type: "alerts" },
-    { title: "Total Revenue", value: "$45.2K", change: "+18%", isPositive: true, type: "revenue" },
-  ];
+  const [
+    statsRes,
+    weatherRes,
+    cropHealthRes,
+    financeRes,
+    harvestRes,
+    activityRes,
+  ] = await Promise.all([
+    fetchWithAuth("/api/dashboard/stats"),
+    fetchWithAuth("/api/dashboard/weather"),
+    fetchWithAuth("/api/dashboard/health"),
+    fetchWithAuth("/api/dashboard/finance"),
+    fetchWithAuth("/api/dashboard/harvest"),
+    fetchWithAuth("/api/dashboard/activity"),
+  ]);
 
-  const weather = {
-    temp: 28,
-    condition: "Partly Cloudy",
-    date: "Today, June 21",
-    humidity: "65%",
-    rainfall: "12mm",
-    wind: "8 km/h",
-  };
+  if (
+    !statsRes.ok ||
+    !weatherRes.ok ||
+    !cropHealthRes.ok ||
+    !financeRes.ok ||
+    !harvestRes.ok ||
+    !activityRes.ok
+  ) {
+    throw new Error("Failed to fetch dashboard metrics from server");
+  }
 
-  const cropHealth: CropHealth[] = [
-  { name: "Healthy", value: 68, color: "#10b981" }, // Emerald green
-    { name: "Moderate", value: 22, color: "#eab308" }, // Yellow/Amber
-    { name: "Critical", value: 10, color: "#ef4444" }, // Red
-  ];
-
-  // Formatted for Recharts AreaChart
-  const financeData = [
-    { month: 'Jan', revenue: 28000, expense: 18000 },
-    { month: 'Feb', revenue: 32000, expense: 20000 },
-    { month: 'Mar', revenue: 35000, expense: 21000 },
-    { month: 'Apr', revenue: 39000, expense: 22000 },
-    { month: 'May', revenue: 43000, expense: 24000 },
-    { month: 'Jun', revenue: 45000, expense: 25000 },
-  ];
-
-  // Formatted for Recharts BarChart
-  const harvestSummary = [
-    { crop: "Tomato", actual: 480, target: 550 },
-    { crop: "Chili", actual: 510, target: 600 },
-    { crop: "Rice", actual: 490, target: 530 },
-    { crop: "Corn", actual: 520, target: 410 },
-    { crop: "Potato", actual: 540, target: 560 },
-  ];
-
-  const recentActivities: ActivityItem[] = [
-    {
-      id: "1",
-      type: "disease",
-      title: "New disease detected",
-      description: "Tomato crop in Field A",
-      time: "5 minutes ago",
-    },
-    {
-      id: "2",
-      type: "task",
-      title: "Task assigned",
-      description: "Irrigation for Field B",
-      time: "2 hours ago",
-    },
-  ];
+  const [
+    stats,
+    weather,
+    cropHealth,
+    financeData,
+    harvestSummary,
+    recentActivities,
+  ] = await Promise.all([
+    statsRes.json() as Promise<StatCardProp[]>,
+    weatherRes.json() as Promise<Weather>,
+    cropHealthRes.json() as Promise<CropHealth[]>,
+    financeRes.json() as Promise<FinanceData[]>,
+    harvestRes.json() as Promise<HarvestSummary[]>,
+    activityRes.json() as Promise<ActivityItem[]>,
+  ]);
 
   return {
     username: authData?.username || "Grower",
@@ -112,7 +115,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto text-slate-800">
-      
+
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -133,7 +136,7 @@ export default function DashboardPage() {
 
       {/* Analytics Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Interactive Revenue & Expenses Area Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[360px]">
           <div className="mb-6 flex justify-between items-center">
@@ -146,26 +149,29 @@ export default function DashboardPage() {
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-slate-800 rounded-sm" /> Expense</span>
             </div>
           </div>
-          
+
           <div className="flex-1 w-full min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={financeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1e293b" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#1e293b" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#1e293b" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#1e293b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(val) => `${val / 1000}k`} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, 'undefined']}
+                  formatter={(value) => [
+                    value !== undefined ? `$${Number(value).toLocaleString()}` : '$0',
+                    'Revenue'
+                  ]}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                 <Area type="monotone" dataKey="expense" stroke="#1e293b" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
@@ -202,11 +208,11 @@ export default function DashboardPage() {
 
       {/* Analytics Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Crop Health Status */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
           <h3 className="font-bold text-slate-700 mb-2">Crop Health Status</h3>
-          
+
           <div className="flex-1 w-full min-h-[220px] -ml-4">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -218,33 +224,31 @@ export default function DashboardPage() {
                   outerRadius={90}
                   dataKey="value"
                   stroke="none"
-                  // Update state on hover, revert to 0 on leave (optional)
                   onMouseEnter={(_, index) => setActiveCropIndex(index)}
                   onMouseLeave={() => setActiveCropIndex(0)}
-                  // External label lines matching Figma
                   label={({ name, value, cx, x, y }) => (
-                    <text 
-                      x={x} 
-                      y={y} 
-                      fill="#64748b" 
-                      textAnchor={x > cx ? 'start' : 'end'} 
-                      dominantBaseline="central" 
-                      fontSize={11} 
+                    <text
+                      x={x}
+                      y={y}
+                      fill="#64748b"
+                      textAnchor={x > cx ? 'start' : 'end'}
+                      dominantBaseline="central"
+                      fontSize={11}
                       fontWeight={600}
                     >
                       {`${name} ${value}%`}
                     </text>
                   )}
-                  labelLine={{ stroke: '#cbd5e1', strokeWidth: 1, length1: 15, length2: 10 }}
+                  labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }} // Removed length1 and length2
                 >
                   {cropHealth.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.color} 
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.color}
                       style={{ outline: 'none', cursor: 'pointer', transition: 'all 0.3s ease' }}
                     />
                   ))}
-                  
+
                   {/* Custom Center Label injected via Recharts */}
                   <Label
                     content={({ viewBox }) => {
@@ -254,20 +258,20 @@ export default function DashboardPage() {
 
                       return (
                         <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central">
-                          <tspan 
-                            x={cx} 
-                            dy="-0.2em" 
-                            fontSize="28" 
-                            fontWeight="bold" 
+                          <tspan
+                            x={cx}
+                            dy="-0.2em"
+                            fontSize="28"
+                            fontWeight="bold"
                             fill={activeData.color}
                           >
                             {activeData.value}%
                           </tspan>
-                          <tspan 
-                            x={cx} 
-                            dy="1.6em" 
-                            fontSize="11" 
-                            fontWeight="600" 
+                          <tspan
+                            x={cx}
+                            dy="1.6em"
+                            fontSize="11"
+                            fontWeight="600"
                             fill="#64748b"
                             letterSpacing="0.05em"
                           >
@@ -286,11 +290,10 @@ export default function DashboardPage() {
           {/* Custom Legend */}
           <div className="space-y-3 mt-2 w-full px-2">
             {cropHealth.map((item, idx) => (
-              <div 
-                key={idx} 
-                className={`flex justify-between items-center text-xs text-slate-600 transition-colors ${
-                  activeCropIndex === idx ? 'bg-slate-50 p-1.5 -m-1.5 rounded-md' : 'p-1.5 -m-1.5'
-                }`}
+              <div
+                key={idx}
+                className={`flex justify-between items-center text-xs text-slate-600 transition-colors ${activeCropIndex === idx ? 'bg-slate-50 p-1.5 -m-1.5 rounded-md' : 'p-1.5 -m-1.5'
+                  }`}
                 onMouseEnter={() => setActiveCropIndex(idx)}
               >
                 <div className="flex items-center gap-3">
@@ -313,14 +316,14 @@ export default function DashboardPage() {
             <h3 className="font-bold text-slate-700">Harvest Summary</h3>
             <p className="text-xs text-slate-400">Actual Yield vs Target Yield metrics (kg)</p>
           </div>
-          
+
           <div className="flex-1 w-full min-h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={harvestSummary} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="crop" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
@@ -340,9 +343,8 @@ export default function DashboardPage() {
           {recentActivities.map((act) => (
             <div key={act.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
               <div className="flex items-center gap-3.5">
-                <span className={`w-3 h-3 rounded-full flex-shrink-0 ring-4 ${
-                  act.type === 'disease' ? 'bg-rose-500 ring-rose-100' : 'bg-blue-500 ring-blue-100'
-                }`} />
+                <span className={`w-3 h-3 rounded-full flex-shrink-0 ring-4 ${act.type === 'disease' ? 'bg-rose-500 ring-rose-100' : 'bg-blue-500 ring-blue-100'
+                  }`} />
                 <div>
                   <h4 className="text-sm font-semibold text-slate-800">{act.title}</h4>
                   <p className="text-xs text-slate-400">{act.description}</p>
@@ -353,7 +355,7 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
-      
+
     </div>
   );
 }
