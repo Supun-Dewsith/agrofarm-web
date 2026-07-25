@@ -108,3 +108,37 @@ export default function page() {
   );
 }
 ```
+
+Here is a step-by-step execution breakdown of how `fetchWithAuth` processes the request when you call `fetchWithAuth("/api/dashboard/stats")`
+
+```
+[ Dashboard Loader Call ]
+           │
+           ▼
+1. URL Resolution ──► Converts '/api/dashboard/stats' to 'http://localhost:8080/api/dashboard/stats'
+           │
+           ▼
+2. Token Injection ──► Reads 'accessToken' from localStorage and sets 'Authorization: Bearer <token>'
+           │
+           ▼
+3. First HTTP Request ──► Sends request to Spring Boot backend
+           │
+    ┌──────┴──────┐
+    ▼             ▼
+[ Status 200 ]  [ Status 401 Unauthorized ]
+    │             │
+    │             ▼
+    │       4. Refresh Token Flow ──► Posts 'refreshToken' to '/api/auth/refresh'
+    │             │
+    │      ┌──────┴──────┐
+    │      ▼             ▼
+    │   [ Success ]   [ Failure ]
+    │      │             │
+    │      ▼             ▼
+    │   Save new      Clear localStorage
+    │   tokens &      & redirect to /login
+    │   retry original
+    │   request
+    │      │
+
+```

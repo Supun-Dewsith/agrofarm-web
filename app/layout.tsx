@@ -80,7 +80,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* MAIN CONTAINER */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
 
         {/* TOPBAR */}
         <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 sticky top-0 z-10 backdrop-blur-md bg-white/95">
@@ -116,7 +116,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* INNER SCROLLABLE STAGE */}
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
 
