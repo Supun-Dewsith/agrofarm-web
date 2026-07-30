@@ -2,6 +2,7 @@ import type { ClientLoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { fetchWithAuth, getAuthData } from "../utils/auth";
 import { useState } from "react";
+import { useRouteError, isRouteErrorResponse } from "react-router";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, PieChart, Label, Pie, Cell
@@ -366,6 +367,34 @@ export default function DashboardPage() {
         </div>
       </div>
 
+    </div>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  let errorMessage = "An unexpected error occurred.";
+
+  if (isRouteErrorResponse(error)) {
+    errorMessage = error.data || error.statusText;
+  } else if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+
+  return (
+    <div className="p-6 max-w-[600px] mx-auto mt-12 bg-white rounded-2xl shadow-sm border border-slate-100 text-center">
+      <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-xl">
+        !
+      </div>
+      <h2 className="text-xl font-bold text-slate-800 mb-2">Dashboard Error</h2>
+      <p className="text-sm text-slate-600 mb-6">{errorMessage}</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   );
 }
