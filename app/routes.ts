@@ -12,6 +12,7 @@ export default [
     
     route("farmers", "routes/farmers.tsx"),
     route("crops", "routes/crops.tsx"), 
+    route("cropInsert", "routes/cropInsert.tsx"),
     route("attendance", "routes/attendance.tsx"),
     route("weather", "routes/weather.tsx"),
     route("tasks", "routes/tasks.tsx"),
