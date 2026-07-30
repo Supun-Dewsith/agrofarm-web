@@ -63,10 +63,15 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
   const fullUrl = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
 
   const headers = new Headers(options.headers);
+
   if (authData?.accessToken) {
     headers.set("Authorization", `Bearer ${authData.accessToken}`);
   }
-  if (options.body && !headers.has("Content-Type")) {
+
+  // FORCE REMOVAL of Content-Type for FormData so browser auto-generates the multipart boundary
+  if (options.body instanceof FormData) {
+    headers.delete("Content-Type");
+  } else if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -78,6 +83,11 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
     try {
       authData = await refreshTokens();
       headers.set("Authorization", `Bearer ${authData.accessToken}`);
+      
+      if (options.body instanceof FormData) {
+        headers.delete("Content-Type");
+      }
+
       options.headers = headers;
 
       response = await fetch(fullUrl, options);
