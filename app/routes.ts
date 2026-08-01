@@ -10,6 +10,7 @@ export default [
   route("home", "layout.tsx", [
     index("routes/home.tsx"), 
     
+    route("register-users", "routes/user-registration.tsx"),
     route("farmers", "routes/farmers.tsx"),
     route("crops", "routes/crops.tsx"), 
     route("cropInsert", "routes/cropInsert.tsx"),

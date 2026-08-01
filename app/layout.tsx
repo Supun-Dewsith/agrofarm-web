@@ -3,6 +3,7 @@ import { logout, getAuthData } from "./utils/auth";
 import {
   LayoutDashboard,
   Users,
+  UserPlus,
   Sprout,
   ClipboardList,
   CloudSun,
@@ -14,6 +15,7 @@ import {
   Settings,
   LogOut
 } from "lucide-react";
+import { Label } from "recharts";
 
 export default function DashboardLayout() {
   const user = getAuthData();
@@ -32,6 +34,7 @@ export default function DashboardLayout() {
   };
 
   const menuItems = [
+    { icon: UserPlus , label: "Register", path: "/home/register-users" },
     { icon: LayoutDashboard, label: "Dashboard", path: "/home/dashboard" },
     { icon: Users, label: "Farmers", path: "/home/farmers" },
     { icon: Sprout, label: "Crops", path: "/home/crops" },
