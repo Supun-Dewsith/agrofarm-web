@@ -6,6 +6,14 @@ export interface AuthResponse {
   permissions: string[];
 }
 
+export interface RegisterUserPayload {
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+  permissions: string[];
+}
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const API_URL = `${BASE_URL}/api/auth`;
 
@@ -35,6 +43,18 @@ export const loginRequest = async (username: string, password: string): Promise<
   }
 
   return response.json();
+};
+
+export const registerUserByAdmin = async (userData: RegisterUserPayload): Promise<void> => {
+  const response = await fetchWithAuth("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({})) as {message?:string};
+    throw new Error(errorData.message || "Failed to register user");
+  }
 };
 
 export const refreshTokens = async (): Promise<AuthResponse> => {
