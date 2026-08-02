@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fetchWithAuth, registerUserByAdmin, type RegisterUserPayload } from "~/utils/auth";
+import { AVAILABLE_PERMISSIONS } from "../utils/constants";
 
 export interface RegisteredUser {
   id?: string | number;
@@ -10,20 +11,6 @@ export interface RegisteredUser {
 }
 
 const AVAILABLE_ROLES = ["SUPERVISOR", "ADMIN", "FARMER"];
-
-const AVAILABLE_PERMISSIONS = [
-  "VIEW_DASHBOARD",
-  "MANAGE_FARMERS",
-  "MANAGE_CROPS",
-  "MANAGE_ATTENDANCE",
-  "VIEW_WEATHER",
-  "MANAGE_TASKS",
-  "MANAGE_DISEASE_DETECTION",
-  "MANAGE_INVENTORY",
-  "MANAGE_HARVEST",
-  "VIEW_REPORTS",
-  "MANAGE_SETTINGS",
-];
 
 export default function UserRegistration() {
   const [formData, setFormData] = useState<RegisterUserPayload>({
