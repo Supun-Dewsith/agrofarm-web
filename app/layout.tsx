@@ -1,18 +1,8 @@
-import { Link, Outlet, useLocation } from "react-router"; 
+import { Link, Outlet, useLocation, Navigate } from "react-router";
 import { logout, getAuthData } from "./utils/auth";
+import { menuItems } from "./utils/constants";
 import {
-  LayoutDashboard,
-  Users,
-  UserPlus,
   Sprout,
-  ClipboardList,
-  CloudSun,
-  CheckSquare,
-  ScanFace,
-  Boxes,
-  Wheat,
-  FileText,
-  Settings,
   LogOut
 } from "lucide-react";
 import { Label } from "recharts";
@@ -20,6 +10,11 @@ import { Label } from "recharts";
 export default function DashboardLayout() {
   const user = getAuthData();
   const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   const currentPath = location.pathname.split("/").pop();
 
   const getPageTitle = () => {
@@ -33,20 +28,24 @@ export default function DashboardLayout() {
       .join(" ");
   };
 
-  const menuItems = [
-    { icon: UserPlus , label: "Register", path: "/home/register-users" },
-    { icon: LayoutDashboard, label: "Dashboard", path: "/home/dashboard" },
-    { icon: Users, label: "Farmers", path: "/home/farmers" },
-    { icon: Sprout, label: "Crops", path: "/home/crops" },
-    { icon: ClipboardList, label: "Attendance", path: "/home/attendance" },
-    { icon: CloudSun, label: "Weather", path: "/home/weather" },
-    { icon: CheckSquare, label: "Tasks", path: "/home/tasks" },
-    { icon: ScanFace, label: "Disease detection", path: "/home/disease-detection" },
-    { icon: Boxes, label: "Inventory", path: "/home/inventory" },
-    { icon: Wheat, label: "Harvest", path: "/home/harvest" },
-    { icon: FileText, label: "Reports", path: "/home/reports" },
-    { icon: Settings, label: "Settings", path: "/home/settings" },
-  ];
+  const userRole = user?.role?.toUpperCase();
+  const userPermissions = user?.permissions || [];
+
+  const visibleMenuItems = menuItems.filter(item => {
+    if (userRole === "ADMIN") return true;
+    return !item.permission || userPermissions.includes(item.permission);
+  });
+
+  const currentMenuItem = menuItems.find(item => item.path === location.pathname);
+
+  if (currentMenuItem?.permission && userRole !== "ADMIN") {
+    const hasAccess = userPermissions.includes(currentMenuItem.permission);
+
+    // Redirect unauthorized direct access attempts back to dashboard
+    if (!hasAccess) {
+      return <Navigate to="/home/dashboard" replace />;
+    }
+  }
 
   return (
     <div className="h-screen overflow-hidden flex bg-[#f8fafc] text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900">
@@ -63,18 +62,17 @@ export default function DashboardLayout() {
         </div>
 
         <nav className="mt-4 px-3 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
-          {menuItems.map((item, idx) => {
+          {visibleMenuItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={idx}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200 tracking-wide ${
-                  isActive 
-                    ? "bg-[#244A38] text-white shadow-md shadow-black/10 font-semibold" 
-                    : "text-slate-300/80 font-medium hover:bg-[#244A38]/40 hover:text-white"
-                }`}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200 tracking-wide ${isActive
+                  ? "bg-[#244A38] text-white shadow-md shadow-black/10 font-semibold"
+                  : "text-slate-300/80 font-medium hover:bg-[#244A38]/40 hover:text-white"
+                  }`}
               >
                 <Icon className={`h-4 w-4 transition-transform duration-200 ${isActive ? "scale-110 text-emerald-400" : ""}`} />
                 {item.label}
@@ -107,10 +105,10 @@ export default function DashboardLayout() {
                   {user?.role || "SUPERVISOR"}
                 </span>
               </div>
-              
+
               {/* Sleek Action Logout Button */}
-              <button 
-                onClick={logout} 
+              <button
+                onClick={logout}
                 title="Sign out"
                 className="ml-1 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
               >
