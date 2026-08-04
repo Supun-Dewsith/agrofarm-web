@@ -3,6 +3,8 @@ import { TrendingUp, CheckCircle, AlertTriangle, AlertCircle, Filter, Calendar }
 import { useNavigate } from 'react-router';
 
 
+// --------------- interfaces ------------------
+
 interface Crop {
   id: string;
   name: string;
@@ -14,6 +16,10 @@ interface Crop {
   progress: number;
   status: 'Healthy' | 'Moderate' | 'Critical';
 }
+
+
+
+// ---------------  data -------------------
 
 const INITIAL_CROPS: Crop[] = [
   {
@@ -51,12 +57,18 @@ const INITIAL_CROPS: Crop[] = [
   },
 ];
 
+
+// ------------- function page --------------
 export default function Page() {
 
+
+  // ------------ usestate --------------------
   const navigate = useNavigate();
   const [crops] = useState<Crop[]>(INITIAL_CROPS);
   const [selectedFilter, setSelectedFilter] = useState<string>('All Crops');
 
+
+  // ------------ filters --------------------
   const totalCrops = crops.length;
   const healthyCount = crops.filter(c => c.status === 'Healthy').length;
   const moderateCount = crops.filter(c => c.status === 'Moderate').length;
@@ -67,20 +79,46 @@ export default function Page() {
     return crops.filter(c => c.status.toLowerCase() === selectedFilter.toLowerCase());
   }, [crops, selectedFilter]);
 
+
+
+
+
+  // ------------ the web page -----------
+
+
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 font-sans text-gray-800">
       <div className="max-w-7xl mx-auto space-y-6">
 
+    {/* cropinserting button and choose farm butten*/}
+      <div>  
 
-        
-
-        {/* criopinserting button */}
+        {/* cropinserting button */}
         <div>
           <button onClick={() => navigate("/home/cropInsert")}>
             Insert Crops
           </button>
 
+        {/* choose farm dropdown list */}
         </div>
+          <select
+            value={selectedFilter}
+            onChange={(e) => setSelectedFilter(e.target.value)}
+            className="bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-4 py-2.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option>All Crops</option>
+            <option>Healthy</option>
+            <option>Moderate</option>
+            <option>Critical</option>
+          </select>
+
+        <div>
+
+        </div>
+
+      </div>
+
+
         {/* Top Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
