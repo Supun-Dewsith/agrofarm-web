@@ -1,6 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, CheckCircle, AlertTriangle, AlertCircle, Filter, Calendar } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { data, useNavigate } from 'react-router';
+import { fetchWithAuth } from '~/utils/auth';
+
+
+
+
 
 
 // --------------- interfaces ------------------
@@ -15,6 +20,12 @@ interface Crop {
   growthStage: string;
   progress: number;
   status: 'Healthy' | 'Moderate' | 'Critical';
+}
+
+
+interface farms {
+  id: number;
+  name: string;
 }
 
 
@@ -62,10 +73,69 @@ const INITIAL_CROPS: Crop[] = [
 export default function Page() {
 
 
+  
+
+
   // ------------ usestate --------------------
   const navigate = useNavigate();
   const [crops] = useState<Crop[]>(INITIAL_CROPS);
   const [selectedFilter, setSelectedFilter] = useState<string>('All Crops');
+
+  const [items, setItems] = useState<farms[]>([]);
+  const [selected, setSelected] = useState('');
+
+  
+
+  const [error, setError] = useState("");
+
+
+
+
+  // ------------- methods -------------  
+
+    // ---------  get methods  --------
+
+    // request farms
+
+useEffect(() => {
+    fetchWithAuth('/api/crops/farms')
+      .then((res) => res.json())
+      .then((data: unknown) => {
+
+        const farms = data as farms[];
+
+         if (farms.length === 0) {
+          setError("No farms found.");
+         } else{
+          console.log(data);
+          setItems(data as farms[]);
+         }
+      })
+      .catch(console.error);
+      
+  }, []);
+
+
+{/*useEffect(() => {
+    fetchWithAuth('/api/crops/crops')
+      .then((res) => res.json())
+      .then((data: unknown) => {
+
+        const farms = data as farms[];
+
+         if (farms.length === 0) {
+          setError("No farms found.");
+         } else{
+          console.log(data);
+          setItems(data as farms[]);
+         }
+      })
+      .catch(console.error);
+      
+  }, []);*/}
+
+  
+
 
 
   // ------------ filters --------------------
@@ -90,8 +160,12 @@ export default function Page() {
     <div className="min-h-screen bg-gray-50/50 p-6 font-sans text-gray-800">
       <div className="max-w-7xl mx-auto space-y-6">
 
-    {/* cropinserting button and choose farm butten*/}
+    {/* cropinserting button and choose farm button*/}
       <div>  
+
+        {error && (
+          <p className="text-red-600 text-sm">{error}</p>
+        )}
 
         {/* cropinserting button */}
         <div>
@@ -101,15 +175,15 @@ export default function Page() {
 
         {/* choose farm dropdown list */}
         </div>
-          <select
-            value={selectedFilter}
-            onChange={(e) => setSelectedFilter(e.target.value)}
-            className="bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-4 py-2.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option>All Crops</option>
-            <option>Healthy</option>
-            <option>Moderate</option>
-            <option>Critical</option>
+          <select value={selected} onChange={(e) => setSelected(e.target.value)}>
+            <option value="">Select an option</option>
+            
+            {items.map((item) => (
+              <option key={item.id} value={item.id}> 
+                {/* What the user actually reads on the screen */}
+                {item.name} 
+              </option>
+            ))}
           </select>
 
         <div>
