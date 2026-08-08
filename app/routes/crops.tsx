@@ -78,12 +78,12 @@ export default function Page() {
 
   // ------------ usestate --------------------
   const navigate = useNavigate();
-  const [crops] = useState<Crop[]>(INITIAL_CROPS);
+  
   const [selectedFilter, setSelectedFilter] = useState<string>('All Crops');
 
   const [items, setItems] = useState<farms[]>([]);
   const [selected, setSelected] = useState('');
-
+  const [crops, setCrops] = useState<Crop[]>([]);
   
 
   const [error, setError] = useState("");
@@ -97,7 +97,7 @@ export default function Page() {
 
     // request farms
 
-useEffect(() => {
+  useEffect(() => {
     fetchWithAuth('/api/crops/farms')
       .then((res) => res.json())
       .then((data: unknown) => {
@@ -113,26 +113,33 @@ useEffect(() => {
       })
       .catch(console.error);
       
-  }, []);
+  }, []); 
 
 
-{/*useEffect(() => {
-    fetchWithAuth('/api/crops/crops')
+    // request crop details
+
+  useEffect(() => {
+    console.log(selected);
+
+    fetchWithAuth('/api/crops/crops', {
+      method: "POST",
+      body: selected,
+    })
       .then((res) => res.json())
       .then((data: unknown) => {
 
-        const farms = data as farms[];
+        const crops = data as Crop[];
 
-         if (farms.length === 0) {
-          setError("No farms found.");
+         if (crops.length === 0) {
+          setError("No crops found.");
          } else{
           console.log(data);
-          setItems(data as farms[]);
+          setCrops(data as Crop[]);
          }
       })
       .catch(console.error);
       
-  }, []);*/}
+  }, []);  
 
   
 
