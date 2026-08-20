@@ -1,112 +1,41 @@
-import {
-  UserPlus,
-  LayoutDashboard,
-  Users,
-  Sprout,
-  ClipboardList,
-  CloudSun,
-  CheckSquare,
-  ScanFace,
-  Boxes,
-  Wheat,
-  FileText,
-  Settings,
-  LandPlot,
-} from "lucide-react";
+import { 
+
+  UserPlus, LayoutDashboard, Users, Sprout, 
+
+  ClipboardList, CloudSun, CheckSquare, ScanFace, 
+
+  Boxes, Wheat, FileText, Settings, LandPlot
+
+} from "lucide-react"; 
 
 export const menuItems = [
-  {
-    icon: UserPlus,
-    label: "Register",
-    path: "/home/register-users",
-    permission: "CAN_REGISTER_USERS",
-  },
 
-  {
-    icon: LayoutDashboard,
-    label: "Dashboard",
-    path: "/home/dashboard",
-    permission: "VIEW_DASHBOARD",
-  },
+  { icon: UserPlus, label: "Register", path: "/home/register-users", permission: "CAN_REGISTER_USERS" },
 
-  {
-    icon: LandPlot,
-    label: "Farm Management",
-    path: "/home/farm-management",
-    permission: "VIEW_FARM_MANAGEMENT",
-  },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/home/dashboard", permission: "VIEW_DASHBOARD" },
 
-  {
-    icon: Users,
-    label: "Farmers",
-    path: "/home/farmers",
-    permission: "VIEW_FARMERS",
-  },
+  { icon: LandPlot, label: "Farm Management", path: "/home/farm-management", permission: "VIEW_FARM_MANAGEMENT" },
 
-  {
-    icon: Sprout,
-    label: "Crops",
-    path: "/home/crops",
-    permission: "VIEW_CROPS",
-  },
+  { icon: Users, label: "Farmers", path: "/home/farmers", permission: "VIEW_FARMERS" },
 
-  {
-    icon: ClipboardList,
-    label: "Attendance",
-    path: "/home/attendance",
-    permission: "VIEW_ATTENDANCE",
-  },
+  { icon: Sprout, label: "Crops", path: "/home/crops", permission: "VIEW_CROPS" },
 
-  {
-    icon: CloudSun,
-    label: "Weather",
-    path: "/home/weather",
-    permission: "VIEW_WEATHER",
-  },
+  { icon: ClipboardList, label: "Attendance", path: "/home/attendance", permission: "VIEW_ATTENDANCE" },
 
-  {
-    icon: CheckSquare,
-    label: "Tasks",
-    path: "/home/tasks",
-    permission: "VIEW_TASKS",
-  },
+  { icon: CloudSun, label: "Weather", path: "/home/weather", permission: "VIEW_WEATHER" },
 
-  {
-    icon: ScanFace,
-    label: "Disease detection",
-    path: "/home/disease-detection",
-    permission: "VIEW_DISEASE_DETECTION",
-  },
+  { icon: CheckSquare, label: "Tasks", path: "/home/tasks", permission: "VIEW_TASKS" },
 
-  {
-    icon: Boxes,
-    label: "Inventory",
-    path: "/home/inventory",
-    permission: "VIEW_INVENTORY",
-  },
+  { icon: ScanFace, label: "Disease detection", path: "/home/disease-detection", permission: "VIEW_DISEASE_DETECTION" },
 
-  {
-    icon: Wheat,
-    label: "Harvest",
-    path: "/home/harvest",
-    permission: "VIEW_HARVEST",
-  },
+  { icon: Boxes, label: "Inventory", path: "/home/inventory", permission: "VIEW_INVENTORY" },
 
-  {
-    icon: FileText,
-    label: "Reports",
-    path: "/home/reports",
-    permission: "VIEW_REPORTS",
-  },
+  { icon: Wheat, label: "Harvest", path: "/home/harvest", permission: "VIEW_HARVEST" },
 
-  {
-    icon: Settings,
-    label: "Settings",
-    path: "/home/settings",
-    permission: "VIEW_SETTINGS",
-  },
+  { icon: FileText, label: "Reports", path: "/home/reports", permission: "VIEW_REPORTS" },
+
+  { icon: Settings, label: "Settings", path: "/home/settings", permission: "VIEW_SETTINGS" },
+
 ];
 
-export const AVAILABLE_PERMISSIONS = menuItems.map(
-  (item) => item.permission
-);
+export const AVAILABLE_PERMISSIONS = menuItems.map(item => item.permission);
