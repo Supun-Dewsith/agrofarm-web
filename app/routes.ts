@@ -4,12 +4,15 @@ import { type RouteConfig, route, index } from "@react-router/dev/routes";
 export default [
   index("auth/login.tsx"),
   route("login", "auth/login.tsx", { id: "login-explicit" }),
+  
+ 
 
   route("home", "layout.tsx", [
     index("routes/home.tsx"), 
     
     route("register-users", "routes/user-registration.tsx"),
     route("farmers", "routes/farmers.tsx"),
+    route("farm-management", "routes/farm-management.tsx"),
     route("crops", "routes/crops.tsx"), 
     route("cropInsert", "routes/cropInsert.tsx"),
     route("attendance", "routes/attendance.tsx"),
@@ -23,5 +26,6 @@ export default [
     route("settings", "routes/settings.tsx"),
     
     route("dashboard", "routes/dashboard.tsx"),
+
   ]),
 ] satisfies RouteConfig;
