@@ -30,43 +30,7 @@ interface farms {
 
 
 
-// ---------------  data -------------------
 
-const INITIAL_CROPS: Crop[] = [
-  {
-    id: '1',
-    name: 'Tomato',
-    variety: 'Cherry Tomato',
-    image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=600',
-    field: 'Field A',
-    area: '5 acres',
-    growthStage: 'Flowering',
-    progress: 65,
-    status: 'Healthy',
-  },
-  {
-    id: '2',
-    name: 'CORN',
-    variety: '',
-    image: 'https://images.unsplash.com/photo-1551754655-cd9e3bac822b?auto=format&fit=crop&q=80&w=600',
-    field: 'Field B',
-    area: '15 acres',
-    growthStage: 'Grain Filling',
-    progress: 85,
-    status: 'Healthy',
-  },
-  {
-    id: '3',
-    name: 'RICE',
-    variety: 'Basmati',
-    image: 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&q=80&w=600',
-    field: 'Field C',
-    area: '12 acres',
-    growthStage: 'Tillering',
-    progress: 45,
-    status: 'Moderate',
-  },
-];
 
 
 // ------------- function page --------------
@@ -89,7 +53,11 @@ export default function Page() {
   const [error, setError] = useState("");
 
 
+  // ------------- functions ------------
 
+  function checkFarmId(){
+    
+  }
 
   // ------------- methods -------------  
 
@@ -119,11 +87,15 @@ export default function Page() {
     // request crop details
 
   useEffect(() => {
-    console.log(selected);
+
+    if (!selected){
+      return;
+    }
+    console.log("Selected farm ID: ",selected);
 
     fetchWithAuth('/api/crops/crops', {
       method: "POST",
-      body: selected,
+      body: JSON.stringify(Number(selected)),
     })
       .then((res) => res.json())
       .then((data: unknown) => {
@@ -132,6 +104,7 @@ export default function Page() {
 
          if (crops.length === 0) {
           setError("No crops found.");
+          setCrops([]);
          } else{
           console.log(data);
           setCrops(data as Crop[]);
@@ -139,7 +112,7 @@ export default function Page() {
       })
       .catch(console.error);
       
-  }, []);  
+  }, [selected]);  
 
   
 

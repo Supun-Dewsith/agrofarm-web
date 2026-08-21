@@ -25,11 +25,17 @@ interface ApiErrorResponse {
   status?: number;
 }
 
+interface Farm {
+  id: number;
+  name: string;
+  location: string;
+}
+
 export default function Page() {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [farms, setFarms] = useState<any>(null);
+  const [farms, setFarms] = useState<Farm[]>([]);
 
 useEffect(() => {
   const loadFarmdetails = async () => {
@@ -38,8 +44,7 @@ useEffect(() => {
       setErrorMessage(null);
 
       try {
-        const response = await fetchWithAuth(
-          "http://localhost:8080/api/crops/farms",
+        const response = await fetchWithAuth("/api/crops/farms",
           {
             method: "GET"
           }
@@ -49,7 +54,7 @@ useEffect(() => {
         if (!response.ok) {
           const errorData = data as ApiErrorResponse;
           setErrorMessage(errorData.message || "There are no farms rejistered under this user.");
-          setFarms(null);
+          setFarms([]);
         } else {
           setFarms(data);
         }
@@ -174,7 +179,7 @@ useEffect(() => {
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">Select a farm...</option>
-                {INITIAL_FARMS.map((farm) => (
+                {farms.map((farm) => (
                   <option key={farm.id} value={farm.id}>
                     {farm.name} ({farm.location})
                   </option>
