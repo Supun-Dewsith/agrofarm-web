@@ -31,11 +31,71 @@ interface Farm {
   location: string;
 }
 
+
+interface Farms{
+  farmIDs: number;
+  farmNames: string;
+}
+
+interface Fields{
+  
+}
+
+// ----------------- functions ---------------------//
+
+
+
+
 export default function Page() {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [farms, setFarms] = useState<Farm[]>([]);
+  const [farms, setFarms] = useState<Farms[]>([]);
+  const [error, setError] = useState('');
+
+
+
+
+  // ----------------- methods -------------------//
+  // --------------- get farms ------------//
+  useEffect(() => {
+      fetchWithAuth('/api/crops/farms')
+        .then((res) => res.json())
+        .then((data: unknown) => {
+  
+          const farms = data as Farms[];
+  
+           if (farms.length === 0) {
+            setError("No farms found.");
+           } else{
+            console.log(data);
+            setFarms(data as Farms[]);
+           }
+        })
+        .catch(console.error);
+        
+    }, []); 
+
+  // ----------------- get fields ------------------//
+  useEffect(() => {
+      fetchWithAuth('/api/crops/farms')
+        .then((res) => res.json())
+        .then((data: unknown) => {
+  
+          const farms = data as Farms[];
+  
+           if (farms.length === 0) {
+            setError("No farms found.");
+           } else{
+            console.log(data);
+            setFarms(data as Farms[]);
+           }
+        })
+        .catch(console.error);
+        
+    }, []);
+
+
 
 useEffect(() => {
   const loadFarmdetails = async () => {
@@ -180,13 +240,13 @@ useEffect(() => {
               >
                 <option value="">Select a farm...</option>
                 {farms.map((farm) => (
-                  <option key={farm.id} value={farm.id}>
-                    {farm.name} ({farm.location})
+                  <option key={farm.farmIDs} value={farm.farmIDs}>
+                    {farm.farmNames}
                   </option>
                 ))}
               </select>
             </div>
-
+{/* --------------------------------------------------------------------------------------------------------------------- */}
             {/* Field Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
