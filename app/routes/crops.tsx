@@ -24,8 +24,8 @@ interface Crop {
 
 
 interface farms {
-  id: number;
-  name: string;
+  farmIDs: number;
+  farmNames: string;
 }
 
 
@@ -159,9 +159,9 @@ export default function Page() {
             <option value="">Select an option</option>
             
             {items.map((item) => (
-              <option key={item.id} value={item.id}> 
+              <option key={item.farmIDs} value={item.farmIDs}> 
                 {/* What the user actually reads on the screen */}
-                {item.name} 
+                {item.farmNames} 
               </option>
             ))}
           </select>
