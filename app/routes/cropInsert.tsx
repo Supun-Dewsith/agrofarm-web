@@ -56,12 +56,12 @@ useEffect(() => {
           setErrorMessage(errorData.message || "There are no farms rejistered under this user.");
           setFarms([]);
         } else {
-          setFarms(data);
+ //         setFarms(data);
         }
       } catch (err) {
         console.error("Failed to fetch farm data:", err);
         setErrorMessage("No farms rejistered.");
-        setFarms(null);
+ //       setFarms(null);
       } finally {
         setLoading(false);
       }
