@@ -57,7 +57,6 @@ interface Field {
 }
 
 interface FarmForm {
-  ownerId: string;
   farmName: string;
   farmAddress: string;
 }
@@ -711,7 +710,6 @@ export default function FarmManagement() {
 
   const [farmForm, setFarmForm] =
     useState<FarmForm>({
-      ownerId: "",
       farmName: "",
       farmAddress: "",
     });
@@ -981,7 +979,6 @@ export default function FarmManagement() {
     setEditingFarmId(null);
 
     setFarmForm({
-      ownerId: "",
       farmName: "",
       farmAddress: "",
     });
@@ -1011,11 +1008,6 @@ export default function FarmManagement() {
     );
 
     setFarmForm({
-      ownerId:
-        String(
-          farm.ownerId
-        ),
-
       farmName:
         farm.farmName,
 
@@ -1162,7 +1154,6 @@ export default function FarmManagement() {
     e.preventDefault();
 
     if (
-      !farmForm.ownerId ||
       !farmForm.farmName.trim() ||
       !farmForm.farmAddress.trim()
     ) {
@@ -1185,11 +1176,6 @@ export default function FarmManagement() {
       );
 
     const payload = {
-      ownerId:
-        Number(
-          farmForm.ownerId
-        ),
-
       farmName:
         farmForm.farmName.trim(),
 
@@ -1258,7 +1244,6 @@ export default function FarmManagement() {
       setEditingFarmId(null);
 
       setFarmForm({
-        ownerId: "",
         farmName: "",
         farmAddress: "",
       });
@@ -2652,25 +2637,6 @@ export default function FarmManagement() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 
-              <Input
-                label="Owner ID"
-                type="number"
-                placeholder="e.g. 1"
-                value={
-                  farmForm.ownerId
-                }
-                onChange={(
-                  value
-                ) =>
-                  setFarmForm(
-                    (prev) => ({
-                      ...prev,
-                      ownerId:
-                        value,
-                    })
-                  )
-                }
-              />
 
               <Input
                 label="Farm Name"
