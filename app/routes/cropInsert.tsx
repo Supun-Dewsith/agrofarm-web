@@ -78,7 +78,7 @@ export default function Page() {
 
   // ----------------- get fields ------------------//
   useEffect(() => {
-      fetchWithAuth('/api/crops/farms')
+      fetchWithAuth('/api/v1/fields/farm')
         .then((res) => res.json())
         .then((data: unknown) => {
   
@@ -94,41 +94,6 @@ export default function Page() {
         .catch(console.error);
         
     }, []);
-
-
-
-useEffect(() => {
-  const loadFarmdetails = async () => {
-
-      setLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const response = await fetchWithAuth("/api/crops/farms",
-          {
-            method: "GET"
-          }
-        );
-
-        const data = await response.json();
-        if (!response.ok) {
-          const errorData = data as ApiErrorResponse;
-          setErrorMessage(errorData.message || "There are no farms rejistered under this user.");
-          setFarms([]);
-        } else {
- //         setFarms(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch farm data:", err);
-        setErrorMessage("No farms rejistered.");
- //       setFarms(null);
-      } finally {
-        setLoading(false);
-      }
-  };
-
-  loadFarmdetails();
-}, []);
 
 
 
