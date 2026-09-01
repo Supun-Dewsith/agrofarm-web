@@ -102,24 +102,24 @@ export default function Page() {
         
     }, []);
 
-fetchWithAuth('/api/crops/crops', {
-      method: "POST",
-      body: JSON.stringify(Number(selected)),
-    })
-      .then((res) => res.json())
-      .then((data: unknown) => {
+// fetchWithAuth('/api/crops/crops', {
+ //     method: "POST",
+  //    body: JSON.stringify(Number(selected)),
+  //  })
+  //    .then((res) => res.json())
+  //    .then((data: unknown) => {
 
-        const crops = data as Crop[];
+   //     const crops = data as Crop[];
 
-         if (crops.length === 0) {
-          setError("No crops found.");
-          setCrops([]);
-         } else{
-          console.log(data);
-          setCrops(data as Crop[]);
-         }
-      })
-      .catch(console.error);
+   //      if (crops.length === 0) {
+   //       setError("No crops found.");
+    //      setCrops([]);
+    //     } else{
+   //       console.log(data);
+    //      setCrops(data as Crop[]);
+    //     }
+    //  })
+    //  .catch(console.error); 
 
 
 
