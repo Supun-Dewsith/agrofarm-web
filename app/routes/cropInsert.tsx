@@ -38,7 +38,10 @@ interface Farms{
 }
 
 interface Fields{
-  
+  id: number;
+  field_name: string;
+  field_size: number;
+  size_unit: number;
 }
 
 // ----------------- functions ---------------------//
@@ -51,6 +54,7 @@ export default function Page() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [farms, setFarms] = useState<Farms[]>([]);
+  const [fields, setFields] = useState<Fields[]>([]);
   const [error, setError] = useState('');
 
 
@@ -78,24 +82,44 @@ export default function Page() {
 
   // ----------------- get fields ------------------//
   useEffect(() => {
-      fetchWithAuth('/api/v1/fields/farm')
+      fetchWithAuth('/api/crops/fields', {
+        method: "POST",
+        body: JSON.stringify(farms)
+      })
         .then((res) => res.json())
         .then((data: unknown) => {
   
-          const farms = data as Farms[];
+          const fields = data as Fields[];
   
-           if (farms.length === 0) {
-            setError("No farms found.");
+           if (fields.length === 0) {
+            setError("No fields found.");
            } else{
             console.log(data);
-            setFarms(data as Farms[]);
+            setFields(data as Fields[]);
            }
         })
         .catch(console.error);
         
     }, []);
 
+fetchWithAuth('/api/crops/crops', {
+      method: "POST",
+      body: JSON.stringify(Number(selected)),
+    })
+      .then((res) => res.json())
+      .then((data: unknown) => {
 
+        const crops = data as Crop[];
+
+         if (crops.length === 0) {
+          setError("No crops found.");
+          setCrops([]);
+         } else{
+          console.log(data);
+          setCrops(data as Crop[]);
+         }
+      })
+      .catch(console.error);
 
 
 
