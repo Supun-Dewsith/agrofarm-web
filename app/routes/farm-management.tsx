@@ -72,11 +72,11 @@ interface FieldForm {
    API
 ========================================================= */
 
-const FARM_API =
-  "http://localhost:8080/api/v1/farms";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const FIELD_API =
-  "http://localhost:8080/api/v1/fields";
+const FARM_API = `${API_BASE_URL}/api/v1/farms`;
+
+const FIELD_API = `${API_BASE_URL}/api/v1/fields`;
 
 /* =========================================================
    DEFAULT MAP
