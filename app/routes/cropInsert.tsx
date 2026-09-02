@@ -25,47 +25,101 @@ interface ApiErrorResponse {
   status?: number;
 }
 
+interface Farm {
+  id: number;
+  name: string;
+  location: string;
+}
+
+
+interface Farms{
+  farmIDs: number;
+  farmNames: string;
+}
+
+interface Fields{
+  id: number;
+  field_name: string;
+  field_size: number;
+  size_unit: number;
+}
+
+// ----------------- functions ---------------------//
+
+
+
+
 export default function Page() {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [farms, setFarms] = useState<any>(null);
-
-useEffect(() => {
-  const loadFarmdetails = async () => {
-
-      setLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const response = await fetchWithAuth(
-          "http://localhost:8080/api/crops/farms",
-          {
-            method: "GET"
-          }
-        );
-
-        const data = await response.json();
-        if (!response.ok) {
-          const errorData = data as ApiErrorResponse;
-          setErrorMessage(errorData.message || "There are no farms rejistered under this user.");
-          setFarms(null);
-        } else {
-          setFarms(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch farm data:", err);
-        setErrorMessage("No farms rejistered.");
-        setFarms(null);
-      } finally {
-        setLoading(false);
-      }
-  };
-
-  loadFarmdetails();
-}, []);
+  const [farms, setFarms] = useState<Farms[]>([]);
+  const [fields, setFields] = useState<Fields[]>([]);
+  const [error, setError] = useState('');
 
 
+
+
+  // ----------------- methods -------------------//
+  // --------------- get farms ------------//
+  useEffect(() => {
+      fetchWithAuth('/api/crops/farms')
+        .then((res) => res.json())
+        .then((data: unknown) => {
+  
+          const farms = data as Farms[];
+  
+           if (farms.length === 0) {
+            setError("No farms found.");
+           } else{
+            console.log(data);
+            setFarms(data as Farms[]);
+           }
+        })
+        .catch(console.error);
+        
+    }, []); 
+
+  // ----------------- get fields ------------------//
+  useEffect(() => {
+      fetchWithAuth('/api/crops/fields', {
+        method: "POST",
+        body: JSON.stringify(farms)
+      })
+        .then((res) => res.json())
+        .then((data: unknown) => {
+  
+          const fields = data as Fields[];
+  
+           if (fields.length === 0) {
+            setError("No fields found.");
+           } else{
+            console.log(data);
+            setFields(data as Fields[]);
+           }
+        })
+        .catch(console.error);
+        
+    }, []);
+
+// fetchWithAuth('/api/crops/crops', {
+ //     method: "POST",
+  //    body: JSON.stringify(Number(selected)),
+  //  })
+  //    .then((res) => res.json())
+  //    .then((data: unknown) => {
+
+   //     const crops = data as Crop[];
+
+   //      if (crops.length === 0) {
+   //       setError("No crops found.");
+    //      setCrops([]);
+    //     } else{
+   //       console.log(data);
+    //      setCrops(data as Crop[]);
+    //     }
+    //  })
+    //  .catch(console.error); 
 
 
 
@@ -174,14 +228,14 @@ useEffect(() => {
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">Select a farm...</option>
-                {INITIAL_FARMS.map((farm) => (
-                  <option key={farm.id} value={farm.id}>
-                    {farm.name} ({farm.location})
+                {farms.map((farm) => (
+                  <option key={farm.farmIDs} value={farm.farmIDs}>
+                    {farm.farmNames}
                   </option>
                 ))}
               </select>
             </div>
-
+{/* --------------------------------------------------------------------------------------------------------------------- */}
             {/* Field Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">

@@ -24,49 +24,13 @@ interface Crop {
 
 
 interface farms {
-  id: number;
-  name: string;
+  farmIDs: number;
+  farmNames: string;
 }
 
 
 
-// ---------------  data -------------------
 
-const INITIAL_CROPS: Crop[] = [
-  {
-    id: '1',
-    name: 'Tomato',
-    variety: 'Cherry Tomato',
-    image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=600',
-    field: 'Field A',
-    area: '5 acres',
-    growthStage: 'Flowering',
-    progress: 65,
-    status: 'Healthy',
-  },
-  {
-    id: '2',
-    name: 'CORN',
-    variety: '',
-    image: 'https://images.unsplash.com/photo-1551754655-cd9e3bac822b?auto=format&fit=crop&q=80&w=600',
-    field: 'Field B',
-    area: '15 acres',
-    growthStage: 'Grain Filling',
-    progress: 85,
-    status: 'Healthy',
-  },
-  {
-    id: '3',
-    name: 'RICE',
-    variety: 'Basmati',
-    image: 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&q=80&w=600',
-    field: 'Field C',
-    area: '12 acres',
-    growthStage: 'Tillering',
-    progress: 45,
-    status: 'Moderate',
-  },
-];
 
 
 // ------------- function page --------------
@@ -78,18 +42,22 @@ export default function Page() {
 
   // ------------ usestate --------------------
   const navigate = useNavigate();
-  const [crops] = useState<Crop[]>(INITIAL_CROPS);
+  
   const [selectedFilter, setSelectedFilter] = useState<string>('All Crops');
 
   const [items, setItems] = useState<farms[]>([]);
   const [selected, setSelected] = useState('');
-
+  const [crops, setCrops] = useState<Crop[]>([]);
   
 
   const [error, setError] = useState("");
 
 
+  // ------------- functions ------------
 
+  function checkFarmId(){
+    
+  }
 
   // ------------- methods -------------  
 
@@ -97,7 +65,7 @@ export default function Page() {
 
     // request farms
 
-useEffect(() => {
+  useEffect(() => {
     fetchWithAuth('/api/crops/farms')
       .then((res) => res.json())
       .then((data: unknown) => {
@@ -113,26 +81,38 @@ useEffect(() => {
       })
       .catch(console.error);
       
-  }, []);
+  }, []); 
 
 
-{/*useEffect(() => {
-    fetchWithAuth('/api/crops/crops')
+    // request crop details
+
+  useEffect(() => {
+
+    if (!selected){
+      return;
+    }
+    console.log("Selected farm ID: ",selected);
+
+    fetchWithAuth('/api/crops/crops', {
+      method: "POST",
+      body: JSON.stringify(Number(selected)),
+    })
       .then((res) => res.json())
       .then((data: unknown) => {
 
-        const farms = data as farms[];
+        const crops = data as Crop[];
 
-         if (farms.length === 0) {
-          setError("No farms found.");
+         if (crops.length === 0) {
+          setError("No crops found.");
+          setCrops([]);
          } else{
           console.log(data);
-          setItems(data as farms[]);
+          setCrops(data as Crop[]);
          }
       })
       .catch(console.error);
       
-  }, []);*/}
+  }, [selected]);  
 
   
 
@@ -179,9 +159,9 @@ useEffect(() => {
             <option value="">Select an option</option>
             
             {items.map((item) => (
-              <option key={item.id} value={item.id}> 
+              <option key={item.farmIDs} value={item.farmIDs}> 
                 {/* What the user actually reads on the screen */}
-                {item.name} 
+                {item.farmNames} 
               </option>
             ))}
           </select>
