@@ -56,6 +56,8 @@ export default function Page() {
   const [farms, setFarms] = useState<Farms[]>([]);
   const [fields, setFields] = useState<Fields[]>([]);
   const [error, setError] = useState('');
+  const [selectedFarm, setSelectedFarm] = useState('');
+  const [selectedField, setSelectedField] = useState('');
 
 
 
@@ -84,7 +86,7 @@ export default function Page() {
   useEffect(() => {
       fetchWithAuth('/api/crops/fields', {
         method: "POST",
-        body: JSON.stringify(farms)
+        body: JSON.stringify(Number(selectedFarm))
       })
         .then((res) => res.json())
         .then((data: unknown) => {
@@ -100,7 +102,7 @@ export default function Page() {
         })
         .catch(console.error);
         
-    }, []);
+    }, [selectedFarm]);
 
 // fetchWithAuth('/api/crops/crops', {
  //     method: "POST",
@@ -136,6 +138,8 @@ export default function Page() {
     plantDate: '',
     harvestDate: '',
   });
+
+
 
   const [submitted, setSubmitted] = useState(false);
 
@@ -224,7 +228,7 @@ export default function Page() {
                 name="farmId"
                 required
                 value={formData.farmId}
-                onChange={handleChange}
+                onChange={(e) => setSelectedFarm(e.target.value)}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">Select a farm...</option>
@@ -241,15 +245,20 @@ export default function Page() {
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 Field Name / Designation
               </label>
-              <input
-                type="text"
-                name="fieldName"
+              <select
+                name="fieldId"
                 required
                 value={formData.fieldName}
-                onChange={handleChange}
-                placeholder="e.g. Field A"
+                onChange={(e) => setSelectedField(e.target.value)}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+              >
+                <option value="">Select a field...</option>
+                {fields.map((field) => (
+                  <option key={field.id} value={field.id}>
+                    {field.field_name}
+                  </option>
+                ))}
+              </select>
             </div>
 
           </div>
