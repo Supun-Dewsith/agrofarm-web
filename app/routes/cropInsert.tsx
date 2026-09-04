@@ -25,6 +25,10 @@ interface ApiErrorResponse {
   status?: number;
 }
 
+interface NewfarmResponse {
+  respomse: string;
+}
+
 interface Farm {
   id: number;
   name: string;
@@ -151,7 +155,7 @@ export default function Page() {
     farmId: '',
     fieldId: '',
     growthStage: 'Planted',
-    progress: 0 as 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100,
+    progress: 0 as 0 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100,
     status: 'Healthy' as 'Healthy' | 'Moderate' | 'Critical',
     plantDate: '',
     harvestDate: '',
@@ -170,13 +174,28 @@ export default function Page() {
     e.preventDefault();
     setSubmitted(true);
 
+    const cropData = {
+    ...formData,
+    farmId: Number(formData.farmId),
+    fieldId: Number(formData.fieldId),
+    progress: Number(formData.progress),
+    };
+
+    console.log("Sending", cropData);
+
     // submit API request  
     fetchWithAuth('/api/crops/new', {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(formData),
     })
-      .then((res) => {res.json(); console.log(res);})
-          
+      
+      .then((res) => res.json())
+      .then((data: unknown) => {
+      console.log("FIELDS API RESPONSE:", data);
+      })
  
     };
 
