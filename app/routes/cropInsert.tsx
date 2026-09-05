@@ -179,6 +179,12 @@ export default function Page() {
     farmId: Number(formData.farmId),
     fieldId: Number(formData.fieldId),
     progress: Number(formData.progress),
+     plantDate: formData.plantDate
+    ? `${formData.plantDate}T00:00:00`
+    : null,
+  harvestDate: formData.harvestDate
+    ? `${formData.harvestDate}T00:00:00`
+    : null,
     };
 
     console.log("Sending", cropData);
@@ -189,13 +195,12 @@ export default function Page() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(formData),
+      body: JSON.stringify(cropData),
     })
       
-      .then((res) => res.json())
-      .then((data: unknown) => {
-      console.log("FIELDS API RESPONSE:", data);
-      })
+
+      console.log("sent newcropdata successfully");
+      
  
     };
 
