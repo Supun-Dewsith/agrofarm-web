@@ -25,6 +25,10 @@ interface ApiErrorResponse {
   status?: number;
 }
 
+interface NewfarmResponse {
+  respomse: string;
+}
+
 interface Farm {
   id: number;
   name: string;
@@ -56,6 +60,10 @@ export default function Page() {
   const [farms, setFarms] = useState<Farms[]>([]);
   const [fields, setFields] = useState<Fields[]>([]);
   const [error, setError] = useState('');
+  const [selectedFarm, setSelectedFarm] = useState('');
+  const [selectedField, setSelectedField] = useState('');
+  const [selectedfarmname, setSelectedFarmName] = useState('Select a farm');
+  const [selectedfieldname, setSelectedFieldName] = useState('Select a farm');
 
 
 
@@ -82,25 +90,42 @@ export default function Page() {
 
   // ----------------- get fields ------------------//
   useEffect(() => {
-      fetchWithAuth('/api/crops/fields', {
-        method: "POST",
-        body: JSON.stringify(farms)
-      })
-        .then((res) => res.json())
-        .then((data: unknown) => {
-  
-          const fields = data as Fields[];
-  
-           if (fields.length === 0) {
-            setError("No fields found.");
-           } else{
-            console.log(data);
-            setFields(data as Fields[]);
-           }
-        })
-        .catch(console.error);
-        
-    }, []);
+  if (!selectedFarm) {
+    setFields([]);
+    return;
+  }
+
+  fetchWithAuth('/api/crops/fields', {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(Number(selectedFarm)),
+  })
+    .then((res) => res.json())
+    .then((data: unknown) => {
+      console.log("FIELDS API RESPONSE:", data);
+
+      if (!Array.isArray(data)) {
+        console.error("Expected fields array but received:", data);
+        setFields([]);
+        setError("Invalid fields response from server.");
+        return;
+      }
+
+      if (data.length === 0) {
+        setError("No fields found.");
+        setFields([]);
+      } else {
+        setFields(data as Fields[]);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      setFields([]);
+    });
+
+  }, [selectedFarm]);
 
 // fetchWithAuth('/api/crops/crops', {
  //     method: "POST",
@@ -128,14 +153,15 @@ export default function Page() {
     cropName: '',
     variety: '',
     farmId: '',
-    fieldName: '',
-    area: '',
+    fieldId: '',
     growthStage: 'Planted',
-    progress: 0 as 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100,
+    progress: 0 as 0 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100,
     status: 'Healthy' as 'Healthy' | 'Moderate' | 'Critical',
     plantDate: '',
     harvestDate: '',
   });
+
+
 
   const [submitted, setSubmitted] = useState(false);
 
@@ -147,9 +173,31 @@ export default function Page() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
-    // Handle form submission logic here (e.g., API call or state update)
-    setTimeout(() => setSubmitted(false), 3000);
-  };
+
+    const cropData = {
+    ...formData,
+    farmId: Number(formData.farmId),
+    fieldId: Number(formData.fieldId),
+    progress: Number(formData.progress),
+    };
+
+    console.log("Sending", cropData);
+
+    // submit API request  
+    fetchWithAuth('/api/crops/new', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    })
+      
+      .then((res) => res.json())
+      .then((data: unknown) => {
+      console.log("FIELDS API RESPONSE:", data);
+      })
+ 
+    };
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 font-sans text-gray-800">
@@ -224,10 +272,14 @@ export default function Page() {
                 name="farmId"
                 required
                 value={formData.farmId}
-                onChange={handleChange}
+                onChange={(e) => {
+                  setSelectedFarm(e.target.value);
+                  setSelectedFarmName(e.target.options[e.target.selectedIndex].text);
+                  handleChange(e);
+                }}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="">Select a farm...</option>
+                <option value="">{selectedfarmname}</option>
                 {farms.map((farm) => (
                   <option key={farm.farmIDs} value={farm.farmIDs}>
                     {farm.farmNames}
@@ -241,15 +293,24 @@ export default function Page() {
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 Field Name / Designation
               </label>
-              <input
-                type="text"
-                name="fieldName"
+              <select
+                name="fieldId"
                 required
-                value={formData.fieldName}
-                onChange={handleChange}
-                placeholder="e.g. Field A"
+                value={formData.fieldId}
+                onChange={(e) => {
+                  setSelectedField(e.target.value);
+                  setSelectedFieldName(e.target.options[e.target.selectedIndex].text);
+                  handleChange(e);
+                }}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+              >
+                <option value="">Select a field...</option>
+                {fields.map((field) => (
+                  <option key={field.id} value={field.id}>
+                    {field.field_name}
+                  </option>
+                ))}
+              </select>
             </div>
 
           </div>
@@ -257,21 +318,6 @@ export default function Page() {
           {/* Area & Growth Stage */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Area */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Farm Area Size
-              </label>
-              <input
-                type="text"
-                name="area"
-                required
-                value={formData.area}
-                onChange={handleChange}
-                placeholder="e.g. 5 acres"
-                className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
 
             {/* Growth Stage */}
             <div>
