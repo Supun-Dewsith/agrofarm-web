@@ -4,6 +4,7 @@ export interface AuthResponse {
   username: string;
   role: string;
   permissions: string[];
+  imageUrl: string;
 }
 
 export interface RegisterUserPayload {
@@ -45,14 +46,36 @@ export const loginRequest = async (username: string, password: string): Promise<
   return response.json();
 };
 
-export const registerUserByAdmin = async (userData: RegisterUserPayload): Promise<void> => {
+export const registerUserByAdmin = async (
+  userData: RegisterUserPayload | FormData,
+  file?: File | null
+): Promise<void> => {
+  let body: BodyInit;
+
+  if (userData instanceof FormData) {
+    body = userData;
+  } else {
+    const formData = new FormData();
+    formData.append(
+      "user",
+      new Blob([JSON.stringify(userData)], { type: "application/json" })
+    );
+
+    if (file) {
+      formData.append("file", file);
+    }
+    body = formData;
+  }
+
   const response = await fetchWithAuth("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify(userData),
+    body,
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as {message?:string};
+    const errorData = (await response.json().catch(() => ({}))) as {
+      message?: string;
+    };
     throw new Error(errorData.message || "Failed to register user");
   }
 };
@@ -103,7 +126,7 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
     try {
       authData = await refreshTokens();
       headers.set("Authorization", `Bearer ${authData.accessToken}`);
-      
+
       if (options.body instanceof FormData) {
         headers.delete("Content-Type");
       }

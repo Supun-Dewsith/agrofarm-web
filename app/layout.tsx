@@ -94,7 +94,24 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-4">
             {/* User Profile Card Group */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200/80">
-              <div className="h-9 w-9 bg-emerald-900 text-white font-bold rounded-full flex items-center justify-center text-xs tracking-wider shadow-sm ring-2 ring-emerald-900/10">
+              {user?.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt={user?.username || "Profile"}
+                  className="h-9 w-9 rounded-full object-cover shadow-sm ring-2 ring-emerald-900/20 border border-white"
+                  onError={(e) => {
+                    // Fallback if the image URL fails to resolve or 404s
+                    e.currentTarget.style.display = "none";
+                    e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+              ) : null}
+
+              {/* Initials fallback (displayed if no imageUrl exists or if the image fails to load) */}
+              <div
+                className={`h-9 w-9 bg-emerald-900 text-white font-bold rounded-full flex items-center justify-center text-xs tracking-wider shadow-sm ring-2 ring-emerald-900/10 ${user?.imageUrl ? "hidden" : ""
+                  }`}
+              >
                 {user?.username?.substring(0, 2).toUpperCase() || "AD"}
               </div>
               <div className="flex flex-col text-left hidden sm:flex">
