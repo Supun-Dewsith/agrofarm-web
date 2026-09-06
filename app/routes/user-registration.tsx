@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { fetchWithAuth, registerUserByAdmin, type RegisterUserPayload } from "~/utils/auth";
+import {
+  fetchWithAuth,
+  registerUserByAdmin,
+  type RegisterUserPayload,
+} from "~/utils/auth";
 import { AVAILABLE_PERMISSIONS } from "../utils/constants";
 
 export interface RegisteredUser {
@@ -8,6 +12,7 @@ export interface RegisteredUser {
   email: string;
   role: string;
   permissions: string[];
+  imageUrl?: string | null; // Added to support avatar images
 }
 
 const AVAILABLE_ROLES = ["SUPERVISOR", "ADMIN", "FARMER"];
@@ -20,6 +25,10 @@ export default function UserRegistration() {
     role: "SUPERVISOR",
     permissions: [],
   });
+
+  // Profile image state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -57,6 +66,23 @@ export default function UserRegistration() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setStatusMessage({ type: "error", text: "Please select an image file." });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setStatusMessage({ type: "error", text: "Image size must be under 5MB." });
+      return;
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
   const handlePermissionToggle = (permission: string) => {
     setFormData((prev) => {
       const exists = prev.permissions.includes(permission);
@@ -75,13 +101,15 @@ export default function UserRegistration() {
     setStatusMessage(null);
 
     try {
-      await registerUserByAdmin(formData);
+      // Pass both formData and the binary image file
+      await registerUserByAdmin(formData, avatarFile);
+
       setStatusMessage({
         type: "success",
         text: `User "${formData.username}" registered successfully!`,
       });
-      
-      // Reset form
+
+      // Reset form and image preview
       setFormData({
         username: "",
         email: "",
@@ -89,8 +117,10 @@ export default function UserRegistration() {
         role: "SUPERVISOR",
         permissions: [],
       });
+      setAvatarFile(null);
+      setAvatarPreview(null);
 
-      // Refresh list after registration
+      // Refresh registered users list
       await fetchUsers();
     } catch (err: any) {
       setStatusMessage({
@@ -148,9 +178,8 @@ export default function UserRegistration() {
               backgroundColor:
                 statusMessage.type === "success" ? "#d4edda" : "#f8d7da",
               color: statusMessage.type === "success" ? "#155724" : "#721c24",
-              border: `1px solid ${
-                statusMessage.type === "success" ? "#c3e6cb" : "#f5c6cb"
-              }`,
+              border: `1px solid ${statusMessage.type === "success" ? "#c3e6cb" : "#f5c6cb"
+                }`,
             }}
           >
             {statusMessage.text}
@@ -158,6 +187,57 @@ export default function UserRegistration() {
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* Profile Picture Upload & Preview */}
+          <div style={{ marginBottom: "18px" }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "14px",
+                color: "#333",
+                marginBottom: "8px",
+              }}
+            >
+              Profile Picture:
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Avatar preview"
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "2px solid #059669",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    backgroundColor: "#e5e7eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#9ca3af",
+                    fontSize: "12px",
+                  }}
+                >
+                  No Image
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                style={{ fontSize: "13px", color: "#555" }}
+              />
+            </div>
+          </div>
+
           {/* Username */}
           <div style={{ marginBottom: "18px" }}>
             <label
@@ -330,13 +410,13 @@ export default function UserRegistration() {
             </div>
           </div>
 
-          {/* GREEN SUBMIT BUTTON */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loadingSubmit}
             style={{
               padding: "10px 24px",
-              backgroundColor: "#059669", // AgriSense Theme Green
+              backgroundColor: "#059669",
               color: "#ffffff",
               border: "none",
               borderRadius: "6px",
@@ -388,34 +468,90 @@ export default function UserRegistration() {
                   borderRadius: "6px",
                   border: "1px solid #e5e7eb",
                   backgroundColor: "#f9fafb",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "4px",
-                  }}
-                >
-                  <span style={{ fontWeight: 600, fontSize: "14px" }}>
-                    {u.username}
-                  </span>
-                  <span
+                {/* User Avatar or Initials Fallback */}
+                {u.imageUrl ? (
+                  <img
+                    src={u.imageUrl}
+                    alt={u.username}
                     style={{
-                      fontSize: "11px",
+                      width: "38px",
+                      height: "38px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "1px solid #e5e7eb",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      borderRadius: "50%",
+                      backgroundColor: "#059669",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                       fontWeight: 600,
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      backgroundColor: "#d1fae5",
-                      color: "#065f46",
+                      fontSize: "14px",
+                      flexShrink: 0,
                     }}
                   >
-                    {u.role}
-                  </span>
-                </div>
-                <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                  {u.email}
+                    {u.username.charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "14px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {u.username}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        backgroundColor: "#d1fae5",
+                        color: "#065f46",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {u.role}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#6b7280",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {u.email}
+                  </div>
                 </div>
               </div>
             ))}
