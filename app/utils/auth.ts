@@ -4,6 +4,7 @@ export interface AuthResponse {
   username: string;
   role: string;
   permissions: string[];
+  imageUrl: string;
 }
 
 export interface RegisterUserPayload {
