@@ -193,7 +193,7 @@ export default function WeatherPage() {
 
       try {
         const response = await fetchWithAuth(
-          "http://localhost:8080/api/weather/all",
+          "/api/weather/all",
           {
             method: "GET"
           }
