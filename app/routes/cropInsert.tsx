@@ -78,7 +78,6 @@ export default function Page() {
     status: 'Healthy' as 'Healthy' | 'Moderate' | 'Critical',
     plantDate: '',
     harvestDate: '',
-    image: ''
   });
 
 
@@ -174,7 +173,7 @@ export default function Page() {
     : null,
     };
 
-    data.append('formDataList',JSON.stringify(cropData))
+    data.append('crop',JSON.stringify(cropData))
 
     if (cropImage !== null) {
       data.append('image',cropImage)

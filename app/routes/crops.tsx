@@ -20,6 +20,8 @@ interface Crop {
   growthStage: string;
   progress: number;
   status: 'Healthy' | 'Moderate' | 'Critical';
+  plantDate: string;
+  harvestDate: string;
 }
 
 
@@ -58,6 +60,43 @@ export default function Page() {
   function checkFarmId(){
     
   }
+
+
+  async function handleDelete(cropId: string) {
+
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this crop?"
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+
+    const response = await fetchWithAuth(
+      `/api/crops/${cropId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete crop");
+    }
+
+    // Remove deleted crop from the current list
+    setCrops((currentCrops) =>
+      currentCrops.filter((crop) => crop.id !== cropId)
+    );
+
+  } catch (error) {
+
+    console.error(error);
+    setError("Failed to delete crop.");
+
+  }
+}
 
   // ------------- methods -------------  
 
@@ -141,36 +180,41 @@ export default function Page() {
       <div className="max-w-7xl mx-auto space-y-6">
 
     {/* cropinserting button and choose farm button*/}
-      <div>  
+      {/* Crop actions and farm selection */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
 
-        {error && (
-          <p className="text-red-600 text-sm">{error}</p>
-        )}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Select Farm
+            </p>
 
-        {/* cropinserting button */}
-        <div>
-          <button onClick={() => navigate("/home/cropInsert")}>
-            Insert Crops
+            <select
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              className="w-full sm:w-64 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">Select a farm</option>
+
+              {items.map((item) => (
+                <option key={item.farmIDs} value={item.farmIDs}>
+                  {item.farmNames}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={() => navigate("/home/cropInsert")}
+            className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-700 text-white text-sm font-semibold shadow-sm hover:bg-emerald-800 transition-colors"
+          >
+            + Insert Crop
           </button>
 
-        {/* choose farm dropdown list */}
-        </div>
-          <select value={selected} onChange={(e) => setSelected(e.target.value)}>
-            <option value="">Select an option</option>
-            
-            {items.map((item) => (
-              <option key={item.farmIDs} value={item.farmIDs}> 
-                {/* What the user actually reads on the screen */}
-                {item.farmNames} 
-              </option>
-            ))}
-          </select>
-
-        <div>
-
         </div>
 
-      </div>
+        {error && (
+          <p className="text-red-600 text-sm mt-2">{error}</p>
+        )}
 
 
         {/* Top Metrics Grid */}
@@ -289,14 +333,55 @@ export default function Page() {
 
               {/* Footer Icons / Dates */}
               <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-gray-400 text-xs">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Planted</span>
+
+                {/* Planted Date */}
+                <div className="flex flex-col items-start">
+                  <div className="flex items-center gap-1 text-gray-900 font-semibold">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>
+                      {crop.plantDate
+                        ? new Date(crop.plantDate).toLocaleDateString()
+                        : 'N/A'}
+                    </span>
+                  </div>
+
+                  <span className="text-gray-400 mt-1">
+                    Planted
+                  </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Harvest</span>
+
+                {/* Harvest Date */}
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center gap-1 text-gray-900 font-semibold">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>
+                      {crop.harvestDate
+                        ? new Date(crop.harvestDate).toLocaleDateString()
+                        : 'N/A'}
+                    </span>
+                  </div>
+
+                  <span className="text-gray-400 mt-1">
+                    Harvest
+                  </span>
                 </div>
+
+              </div>
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => navigate(`/home/cropUpdate/${crop.id}`)}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition"
+                >
+                  Update
+                </button>
+
+                <button
+                  onClick={() => handleDelete(crop.id)}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 transition"
+                >
+                  Delete
+                </button>
               </div>
 
             </div>

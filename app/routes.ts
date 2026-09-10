@@ -15,6 +15,7 @@ export default [
     route("farm-management", "routes/farm-management.tsx"),
     route("crops", "routes/crops.tsx"), 
     route("cropInsert", "routes/cropInsert.tsx"),
+    route("cropUpdate/:id", "routes/cropUpdate.tsx"),
     route("attendance", "routes/attendance.tsx"),
     route("weather", "routes/weather.tsx"),
     route("tasks", "routes/tasks.tsx"),
