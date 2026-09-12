@@ -64,6 +64,21 @@ export default function Page() {
   const [selectedField, setSelectedField] = useState('');
   const [selectedfarmname, setSelectedFarmName] = useState('Select a farm');
   const [selectedfieldname, setSelectedFieldName] = useState('Select a farm');
+  const [cropImage, setCropImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const [formData, setFormData] = useState({
+    cropName: '',
+    variety: '',
+    farmId: '',
+    fieldId: '',
+    growthStage: 'Planted',
+    progress: 0 as 0 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100,
+    status: 'Healthy' as 'Healthy' | 'Moderate' | 'Critical',
+    plantDate: '',
+    harvestDate: '',
+  });
 
 
 
@@ -127,43 +142,11 @@ export default function Page() {
 
   }, [selectedFarm]);
 
-// fetchWithAuth('/api/crops/crops', {
- //     method: "POST",
-  //    body: JSON.stringify(Number(selected)),
-  //  })
-  //    .then((res) => res.json())
-  //    .then((data: unknown) => {
-
-   //     const crops = data as Crop[];
-
-   //      if (crops.length === 0) {
-   //       setError("No crops found.");
-    //      setCrops([]);
-    //     } else{
-   //       console.log(data);
-    //      setCrops(data as Crop[]);
-    //     }
-    //  })
-    //  .catch(console.error); 
 
 
 
+  
 
-  const [formData, setFormData] = useState({
-    cropName: '',
-    variety: '',
-    farmId: '',
-    fieldId: '',
-    growthStage: 'Planted',
-    progress: 0 as 0 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100,
-    status: 'Healthy' as 'Healthy' | 'Moderate' | 'Critical',
-    plantDate: '',
-    harvestDate: '',
-  });
-
-
-
-  const [submitted, setSubmitted] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -174,6 +157,9 @@ export default function Page() {
     e.preventDefault();
     setSubmitted(true);
 
+
+    const data = new FormData();
+
     const cropData = {
     ...formData,
     farmId: Number(formData.farmId),
@@ -182,20 +168,25 @@ export default function Page() {
      plantDate: formData.plantDate
     ? `${formData.plantDate}T00:00:00`
     : null,
-  harvestDate: formData.harvestDate
+    harvestDate: formData.harvestDate
     ? `${formData.harvestDate}T00:00:00`
     : null,
     };
 
-    console.log("Sending", cropData);
+    data.append('crop',JSON.stringify(cropData))
+
+    if (cropImage !== null) {
+      data.append('image',cropImage)
+    }
+
+    
+
+    console.log("Sending", data);
 
     // submit API request  
     fetchWithAuth('/api/crops/new', {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(cropData),
+      body: data,
     })
       
 
@@ -421,6 +412,37 @@ export default function Page() {
               />
             </div>
 
+          </div>
+          
+          {/* --- insert picture ---- */}
+          <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Crop Image
+                </label>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+
+                    if (file) {
+                      setCropImage(file);
+                      setImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm"
+                />
+
+                {imagePreview && (
+                  <div className="mt-4">
+                    <img
+                      src={imagePreview}
+                      alt="Crop preview"
+                      className="w-48 h-48 object-cover rounded-xl border border-gray-200"
+                    />
+                  </div>
+                )}
           </div>
 
           {/* Submit Button */}
