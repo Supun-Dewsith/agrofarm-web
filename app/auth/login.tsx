@@ -57,7 +57,7 @@ export default function Login() {
             <Form method="post" className="space-y-4">
               <div>
                 <label htmlFor="username" className="text-sm font-bold text-[#1e293b] block mb-1.5">
-                  Email Address:
+                  Email / Username:
                 </label>
                 <div className="relative group">
                   <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-[#2a5e47] transition-colors" />
