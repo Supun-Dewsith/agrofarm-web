@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   fetchWithAuth,
   registerUserByAdmin,
+  getAuthData,
   type RegisterUserPayload,
 } from "~/utils/auth";
 import { AVAILABLE_PERMISSIONS } from "../utils/constants";
@@ -10,25 +11,47 @@ export interface RegisteredUser {
   id?: string | number;
   username: string;
   email: string;
-  role: string;
+  role: "SUPERVISOR" | "ADMIN" | "FARMER";
   permissions: string[];
-  imageUrl?: string | null; // Added to support avatar images
+  imageUrl?: string | null;
 }
 
-const AVAILABLE_ROLES = ["SUPERVISOR", "ADMIN", "FARMER"];
+export interface FarmSummary {
+  id: number;
+  ownerId: number;
+  farmName: string;
+  farmAddress: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface AvailableFarmsResponse {
+  farms: FarmSummary[];
+  totalCount: number;
+}
+
+export interface ExtendedRegisterPayload extends RegisterUserPayload {
+  farmIds: number[];
+}
+
+const AVAILABLE_ROLES = ["SUPERVISOR", "ADMIN", "FARMER"] as const;
 
 export default function UserRegistration() {
-  const [formData, setFormData] = useState<RegisterUserPayload>({
+  const [formData, setFormData] = useState<ExtendedRegisterPayload>({
     username: "",
     email: "",
     password: "",
     role: "SUPERVISOR",
     permissions: [],
+    farmIds: [],
   });
 
-  // Profile image state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [availableFarms, setAvailableFarms] = useState<FarmSummary[]>([]);
+  const [loadingFarms, setLoadingFarms] = useState(false);
 
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -38,17 +61,40 @@ export default function UserRegistration() {
     text: string;
   } | null>(null);
 
-  // Fetch users from backend
+  const fetchAvailableFarms = async () => {
+    const authData = getAuthData();
+    const userId = authData?.id;
+
+    if (!userId) {
+      console.warn("No active user ID found in session.");
+      return;
+    }
+
+    setLoadingFarms(true);
+    try {
+      const response = await fetchWithAuth(`/api/users/farms/${userId}`, {
+        method: "GET",
+      });
+      if (response.ok) {
+        const data = (await response.json()) as AvailableFarmsResponse;
+        setAvailableFarms(data.farms || []);
+      }
+    } catch (err) {
+      console.error("Failed to load available farms:", err);
+    } finally {
+      setLoadingFarms(false);
+    }
+  };
+
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
       const response = await fetchWithAuth("/api/users", { method: "GET" });
-      if (!response.ok) {
-        throw new Error("Failed to fetch registered users");
+      if (response.ok) {
+        const data = (await response.json()) as RegisteredUser[];
+        setUsers(data);
       }
-      const data = (await response.json()) as RegisteredUser[];
-      setUsers(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching users:", err);
     } finally {
       setLoadingUsers(false);
@@ -57,13 +103,23 @@ export default function UserRegistration() {
 
   useEffect(() => {
     fetchUsers();
+    fetchAvailableFarms();
   }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      if (name === "role" && value === "ADMIN") {
+        updated.farmIds = [];
+      }
+      if (name === "role" && value === "FARMER" && updated.farmIds.length > 1) {
+        updated.farmIds = [updated.farmIds[0]];
+      }
+      return updated;
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,16 +127,18 @@ export default function UserRegistration() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setStatusMessage({ type: "error", text: "Please select an image file." });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setStatusMessage({ type: "error", text: "Image size must be under 5MB." });
+      setStatusMessage({ type: "error", text: "Please select a valid image file." });
       return;
     }
 
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const clearImage = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handlePermissionToggle = (permission: string) => {
@@ -95,469 +153,267 @@ export default function UserRegistration() {
     });
   };
 
+  const handleFarmToggle = (farmId: number) => {
+    if (formData.role === "ADMIN") return;
+
+    setFormData((prev) => {
+      if (prev.role === "FARMER") {
+        const isSelected = prev.farmIds.includes(farmId);
+        return { ...prev, farmIds: isSelected ? [] : [farmId] };
+      } else {
+        const exists = prev.farmIds.includes(farmId);
+        return {
+          ...prev,
+          farmIds: exists
+            ? prev.farmIds.filter((id) => id !== farmId)
+            : [...prev.farmIds, farmId],
+        };
+      }
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingSubmit(true);
     setStatusMessage(null);
 
+    if (formData.role === "FARMER" && formData.farmIds.length > 1) {
+      setStatusMessage({ type: "error", text: "Farmers can only be assigned to a single farm." });
+      setLoadingSubmit(false);
+      return;
+    }
+
     try {
-      // Pass both formData and the binary image file
-      await registerUserByAdmin(formData, avatarFile);
+      await registerUserByAdmin(formData as any, avatarFile);
+      setStatusMessage({ type: "success", text: `User "${formData.username}" registered successfully!` });
 
-      setStatusMessage({
-        type: "success",
-        text: `User "${formData.username}" registered successfully!`,
-      });
-
-      // Reset form and image preview
-      setFormData({
-        username: "",
-        email: "",
-        password: "",
-        role: "SUPERVISOR",
-        permissions: [],
-      });
-      setAvatarFile(null);
-      setAvatarPreview(null);
-
-      // Refresh registered users list
+      setFormData({ username: "", email: "", password: "", role: "SUPERVISOR", permissions: [], farmIds: [] });
+      clearImage();
       await fetchUsers();
     } catch (err: any) {
-      setStatusMessage({
-        type: "error",
-        text: err.message || "An error occurred while registering user.",
-      });
+      setStatusMessage({ type: "error", text: err.message || "An error occurred while registering user." });
     } finally {
       setLoadingSubmit(false);
     }
   };
 
+  const isAdmin = formData.role === "ADMIN";
+  const isFarmer = formData.role === "FARMER";
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: "13px",
+    fontWeight: 700,
+    color: "#475569",
+    marginBottom: "8px",
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "12px 14px",
+    borderRadius: "6px",
+    border: "1px solid #cbd5e1",
+    fontSize: "14px",
+    color: "#1e293b",
+    boxSizing: "border-box",
+    outline: "none",
+    transition: "border-color 0.2s",
+  };
+
+  const sectionHeaderStyle: React.CSSProperties = {
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#334155",
+    marginTop: 0,
+    marginBottom: "24px",
+  };
+
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 380px",
-        gap: "40px",
-        maxWidth: "1100px",
-        margin: "20px auto",
-        fontFamily:
-          'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        color: "#333",
-      }}
-    >
-      {/* LEFT COLUMN: Registration Form */}
-      <div>
-        <h2
-          style={{
-            fontSize: "18px",
-            fontWeight: 600,
-            color: "#222",
-            marginBottom: "4px",
-          }}
-        >
-          Admin User Registration
-        </h2>
-        <p
-          style={{
-            fontSize: "14px",
-            color: "#666",
-            marginTop: 0,
-            marginBottom: "24px",
-          }}
-        >
-          Create a new user profile and configure their system permissions.
-        </p>
+    <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 24px", fontFamily: "Inter, system-ui, sans-serif" }}>
+      
+      {statusMessage && (
+        <div style={{
+          padding: "16px", marginBottom: "32px", borderRadius: "8px", fontSize: "14px", fontWeight: 500,
+          backgroundColor: statusMessage.type === "success" ? "#f0fdf4" : "#fef2f2",
+          color: statusMessage.type === "success" ? "#166534" : "#991b1b",
+          border: `1px solid ${statusMessage.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+        }}>
+          {statusMessage.text}
+        </div>
+      )}
 
-        {statusMessage && (
-          <div
-            style={{
-              padding: "10px 14px",
-              marginBottom: "20px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              backgroundColor:
-                statusMessage.type === "success" ? "#d4edda" : "#f8d7da",
-              color: statusMessage.type === "success" ? "#155724" : "#721c24",
-              border: `1px solid ${statusMessage.type === "success" ? "#c3e6cb" : "#f5c6cb"
-                }`,
-            }}
-          >
-            {statusMessage.text}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          {/* Profile Picture Upload & Preview */}
-          <div style={{ marginBottom: "18px" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "14px",
-                color: "#333",
-                marginBottom: "8px",
-              }}
-            >
-              Profile Picture:
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", gap: "60px", alignItems: "flex-start" }}>
+        
+        {/* LEFT PANE (Media & Registered Accounts) */}
+        <div style={{ width: "300px", flexShrink: 0 }}>
+          
+          {/* Media Block */}
+          <div>
+            <h3 style={sectionHeaderStyle}>Account Media</h3>
+            
+            <div style={{
+              position: "relative", width: "100%", aspectRatio: "4/3", backgroundColor: "#f8fafc",
+              borderRadius: "8px", border: "1px solid #e2e8f0", overflow: "hidden", marginBottom: "16px",
+              display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
               {avatarPreview ? (
-                <img
-                  src={avatarPreview}
-                  alt="Avatar preview"
-                  style={{
-                    width: "56px",
-                    height: "56px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "2px solid #059669",
-                  }}
-                />
+                <>
+                  <img src={avatarPreview} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button type="button" onClick={clearImage} style={{
+                    position: "absolute", top: "12px", right: "12px", width: "28px", height: "28px",
+                    borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.9)", border: "none",
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#64748b", fontWeight: "bold", boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                  }}>✕</button>
+                </>
               ) : (
-                <div
-                  style={{
-                    width: "56px",
-                    height: "56px",
-                    borderRadius: "50%",
-                    backgroundColor: "#e5e7eb",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#9ca3af",
-                    fontSize: "12px",
-                  }}
-                >
-                  No Image
-                </div>
+                <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 500 }}>No Image Selected</span>
               )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                style={{ fontSize: "13px", color: "#555" }}
-              />
             </div>
+
+            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageChange} style={{ display: "none" }} />
+            
+            <button type="button" onClick={() => fileInputRef.current?.click()} style={{
+              width: "100%", padding: "12px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1",
+              borderRadius: "6px", color: "#334155", fontSize: "14px", fontWeight: 600, cursor: "pointer", marginBottom: "40px"
+            }}>
+              Upload Photo
+            </button>
+
+            <button type="submit" disabled={loadingSubmit} style={{
+              width: "100%", padding: "14px", backgroundColor: "#059669", color: "#ffffff",
+              border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: 600, cursor: loadingSubmit ? "not-allowed" : "pointer",
+              opacity: loadingSubmit ? 0.7 : 1
+            }}>
+              {loadingSubmit ? "Processing..." : "Register New User"}
+            </button>
           </div>
 
-          {/* Username */}
-          <div style={{ marginBottom: "18px" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "14px",
-                color: "#333",
-                marginBottom: "6px",
-              }}
-            >
-              Username:
-            </label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                fontSize: "14px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
+          {/* Left Pane Divider */}
+          <div style={{ height: "1px", backgroundColor: "#e2e8f0", margin: "40px 0" }} />
 
-          {/* Email */}
-          <div style={{ marginBottom: "18px" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "14px",
-                color: "#333",
-                marginBottom: "6px",
-              }}
-            >
-              Email:
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                fontSize: "14px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {/* Password */}
-          <div style={{ marginBottom: "18px" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "14px",
-                color: "#333",
-                marginBottom: "6px",
-              }}
-            >
-              Password:
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                fontSize: "14px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {/* Role */}
-          <div style={{ marginBottom: "20px" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "14px",
-                color: "#333",
-                marginBottom: "6px",
-              }}
-            >
-              Role:
-            </label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleInputChange}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                fontSize: "14px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                backgroundColor: "#fff",
-                boxSizing: "border-box",
-                cursor: "pointer",
-              }}
-            >
-              {AVAILABLE_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Permissions Grid */}
-          <div style={{ marginBottom: "24px" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "14px",
-                color: "#333",
-                marginBottom: "12px",
-              }}
-            >
-              Permissions:
-            </label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                rowGap: "12px",
-                columnGap: "16px",
-              }}
-            >
-              {AVAILABLE_PERMISSIONS.map((permission) => (
-                <label
-                  key={permission}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    fontSize: "13px",
-                    color: "#333",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.permissions.includes(permission)}
-                    onChange={() => handlePermissionToggle(permission)}
-                    style={{
-                      width: "15px",
-                      height: "15px",
-                      cursor: "pointer",
-                      accentColor: "#059669",
-                    }}
-                  />
-                  {permission}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loadingSubmit}
-            style={{
-              padding: "10px 24px",
-              backgroundColor: "#059669",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: loadingSubmit ? "not-allowed" : "pointer",
-              opacity: loadingSubmit ? 0.7 : 1,
-              transition: "background-color 0.2s",
-            }}
-          >
-            {loadingSubmit ? "Registering..." : "Register User"}
-          </button>
-        </form>
-      </div>
-
-      {/* RIGHT COLUMN: Registered Users Side List */}
-      <div
-        style={{
-          borderLeft: "1px solid #e5e7eb",
-          paddingLeft: "24px",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "16px",
-            fontWeight: 600,
-            color: "#222",
-            marginBottom: "6px",
-            marginTop: 0,
-          }}
-        >
-          Registered Users
-        </h3>
-        <p style={{ fontSize: "13px", color: "#666", marginBottom: "16px" }}>
-          Current users registered in the system.
-        </p>
-
-        {loadingUsers ? (
-          <p style={{ fontSize: "14px", color: "#888" }}>Loading users...</p>
-        ) : users.length === 0 ? (
-          <p style={{ fontSize: "14px", color: "#888" }}>No users found.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {users.map((u, idx) => (
-              <div
-                key={u.id || idx}
-                style={{
-                  padding: "12px",
-                  borderRadius: "6px",
-                  border: "1px solid #e5e7eb",
-                  backgroundColor: "#f9fafb",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                }}
-              >
-                {/* User Avatar or Initials Fallback */}
-                {u.imageUrl ? (
-                  <img
-                    src={u.imageUrl}
-                    alt={u.username}
-                    style={{
-                      width: "38px",
-                      height: "38px",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      border: "1px solid #e5e7eb",
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "38px",
-                      height: "38px",
-                      borderRadius: "50%",
-                      backgroundColor: "#059669",
-                      color: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 600,
-                      fontSize: "14px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {u.username.charAt(0).toUpperCase()}
+          {/* Registered Accounts Block */}
+          <div>
+            <h3 style={{ ...sectionHeaderStyle, marginBottom: "16px" }}>Registered Accounts</h3>
+            
+            {loadingUsers ? (
+              <p style={{ fontSize: "14px", color: "#64748b" }}>Loading accounts...</p>
+            ) : users.length === 0 ? (
+              <p style={{ fontSize: "14px", color: "#64748b" }}>No users registered.</p>
+            ) : (
+              <div style={{ 
+                display: "flex", 
+                flexDirection: "column", 
+                gap: "12px",
+                maxHeight: "450px", // Enables scrolling if the list gets too long
+                overflowY: "auto",
+                paddingRight: "6px" // Prevents scrollbar from overlapping border
+              }}>
+                {users.map((u, idx) => (
+                  <div key={u.id || idx} style={{ 
+                    display: "flex", alignItems: "center", gap: "12px", padding: "12px", 
+                    border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#ffffff" 
+                  }}>
+                    {u.imageUrl ? (
+                      <img src={u.imageUrl} alt={u.username} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ 
+                        width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#f1f5f9", 
+                        color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", 
+                        fontWeight: 700, fontSize: "14px", flexShrink: 0 
+                      }}>
+                        {u.username.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <span style={{ fontWeight: 700, fontSize: "13px", color: "#334155", overflow: "hidden", textOverflow: "ellipsis" }}>{u.username}</span>
+                        <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "12px", backgroundColor: "#f1f5f9", color: "#475569" }}>
+                          {u.role}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#64748b", overflow: "hidden", textOverflow: "ellipsis" }}>{u.email}</div>
+                    </div>
                   </div>
-                )}
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "2px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        fontSize: "14px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {u.username}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        backgroundColor: "#d1fae5",
-                        color: "#065f46",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {u.role}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#6b7280",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {u.email}
-                  </div>
-                </div>
+                ))}
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* CENTER DIVIDER LINE */}
+        <div style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }} />
+
+        {/* RIGHT PANE (Data Entry) */}
+        <div style={{ flex: 1 }}>
+          <h3 style={sectionHeaderStyle}>Profile Information</h3>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "48px" }}>
+            <div>
+              <label style={labelStyle}>Username</label>
+              <input type="text" name="username" value={formData.username} onChange={handleInputChange} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Email Address</label>
+              <input type="email" name="email" value={formData.email} onChange={handleInputChange} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Temporary Password</label>
+              <input type="password" name="password" value={formData.password} onChange={handleInputChange} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>System Role</label>
+              <select name="role" value={formData.role} onChange={handleInputChange} style={{ ...inputStyle, cursor: "pointer", backgroundColor: "#fff" }}>
+                {AVAILABLE_ROLES.map((role) => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <h3 style={sectionHeaderStyle}>System Permissions</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "48px" }}>
+            {AVAILABLE_PERMISSIONS.map((perm) => (
+              <label key={perm} style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", color: "#475569", cursor: "pointer" }}>
+                <input type="checkbox" checked={formData.permissions.includes(perm)} onChange={() => handlePermissionToggle(perm)} style={{ width: "16px", height: "16px", accentColor: "#059669" }} />
+                {perm.replace(/_/g, ' ')}
+              </label>
             ))}
           </div>
-        )}
-      </div>
+
+          <h3 style={sectionHeaderStyle}>Farm Allocations</h3>
+          <div style={{ opacity: isAdmin ? 0.5 : 1, pointerEvents: isAdmin ? "none" : "auto" }}>
+            {isAdmin && <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px" }}>Admins have global access. Farm assignment is disabled.</p>}
+            
+            {loadingFarms ? (
+              <p style={{ fontSize: "14px", color: "#64748b" }}>Loading your farms...</p>
+            ) : availableFarms.length === 0 ? (
+              <div style={{ padding: "24px", border: "1px dashed #cbd5e1", borderRadius: "8px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
+                No farms available for allocation.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                {availableFarms.map((farm) => {
+                  const isSelected = formData.farmIds.includes(farm.id);
+                  return (
+                    <div key={farm.id} onClick={() => handleFarmToggle(farm.id)} style={{
+                      padding: "16px", borderRadius: "8px", cursor: "pointer", transition: "all 0.2s",
+                      border: `1px solid ${isSelected ? "#059669" : "#e2e8f0"}`,
+                      backgroundColor: isSelected ? "#f0fdf4" : "#ffffff",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 700, color: isSelected ? "#065f46" : "#334155" }}>{farm.farmName}</span>
+                        <input type={isFarmer ? "radio" : "checkbox"} checked={isSelected} readOnly style={{ accentColor: "#059669" }} />
+                      </div>
+                      <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>{farm.farmAddress}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </form>
     </div>
   );
 }

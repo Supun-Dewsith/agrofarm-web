@@ -1,4 +1,5 @@
 export interface AuthResponse {
+  id: number;
   accessToken: string;
   refreshToken: string;
   username: string;
@@ -13,6 +14,7 @@ export interface RegisterUserPayload {
   password: string;
   role: string;
   permissions: string[];
+  farmIds?: number[];
 }
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
