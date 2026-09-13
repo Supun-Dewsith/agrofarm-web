@@ -10,6 +10,12 @@ import HeavySnowy from '../asserts/icons/animated/snowy-6.svg';
 import Thunder from '../asserts/icons/animated/thunder.svg';
 import { fetchWithAuth, getAuthData } from '../utils/auth';
 
+// Define the Farm interface matching your backend DTO
+interface Farms {
+  farmIDs: number;
+  farmNames: string;
+}
+
 // getWeatherIcon function for choosing the weather icon according to the weather code
 function getWeatherIcons(code: number | undefined) {
   const containerClass = "w-[100px] h-[100px]";
@@ -121,7 +127,7 @@ function getWeatherCondition(code: number | undefined) {
     case 1:
     case 2:
     case 3:
-      return (<h2>Party Cloudy</h2>);
+      return (<h2>Partly Cloudy</h2>);
     case 45:
     case 48:
       return (<h2>Foggy</h2>);
@@ -167,12 +173,6 @@ interface ApiErrorResponse {
   status?: number;
 }
 
-function findUsername(): string | undefined {
-  const authData = getAuthData();
-  const username = authData?.username;
-  return username;
-}
-
 // Helper safely extracting text/data or fallback to "N/A"
 const val = (value: any, suffix: string = '') => {
   if (value === undefined || value === null || value === '') {
@@ -183,19 +183,51 @@ const val = (value: any, suffix: string = '') => {
 
 export default function WeatherPage() {
   const [weather, setWeather] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Farm selection states (matching your crop page implementation)
+  const [items, setItems] = useState<Farms[]>([]);
+  const [selected, setSelected] = useState<string>('');
+
+  // 1. Fetch available farms on component mount
   useEffect(() => {
+    fetchWithAuth('/api/crops/farms')
+      .then((res) => res.json())
+      .then((data: unknown) => {
+        const farmsList = data as Farms[];
+        if (farmsList.length === 0) {
+          setErrorMessage("No farms found.");
+        } else {
+          setItems(farmsList);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setErrorMessage("Failed to load farms.");
+      });
+  }, []);
+
+  // 2. Fetch weather details whenever a farm is selected
+  useEffect(() => {
+    if (!selected) {
+      setWeather(null);
+      return;
+    }
+
     const loadWeather = async () => {
       setLoading(true);
       setErrorMessage(null);
 
       try {
+        // Adjust endpoint payload/path depending on how your backend expects the selected farm ID
+        // Assuming your backend can take the farm ID (e.g., via query parameter or body). 
+        // If your backend endpoint requires a POST body like crops, use:
         const response = await fetchWithAuth(
-          "/api/weather/all",
+          `/api/weather/all`, // Change to your specific weather endpoint route if needed
           {
-            method: "GET"
+            method: "POST",
+            body: JSON.stringify(Number(selected)),
           }
         );
 
@@ -203,7 +235,7 @@ export default function WeatherPage() {
 
         if (!response.ok) {
           const errorData = data as ApiErrorResponse;
-          setErrorMessage(errorData.message || "Location data is empty. Please configure your farm location.");
+          setErrorMessage(errorData.message || "Weather data is empty. Please configure your farm location.");
           setWeather(null);
         } else {
           setWeather(data);
@@ -218,15 +250,29 @@ export default function WeatherPage() {
     };
 
     loadWeather();
-  }, []);
-
-  if (loading) {
-    return <div className="p-6 font-semibold text-gray-700">Loading...</div>;
-  }
+  }, [selected]);
 
   return (
-    // main page of the weather page
     <div className="bg-[#E8F5E9] flex flex-col gap-4 items-start rounded-2xl p-4 w-full">
+
+      {/* Farm Selection Dropdown Section */}
+      <div className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-1">Select Farm for Weather</p>
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            className="w-full sm:w-64 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Select a farm</option>
+            {items.map((item) => (
+              <option key={item.farmIDs} value={item.farmIDs}>
+                {item.farmNames}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* Show Backend Exception Message at top if it failed */}
       {errorMessage && (
@@ -235,133 +281,77 @@ export default function WeatherPage() {
         </div>
       )}
 
-      <div className='flex flex-wrap gap-4'>
-        {/* current weather page part */}
-        <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900">Current Weather</h1>
-          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-md">
-            <div className='flex gap-2'>
-              <h2 className='font-bold'>Current temperature : </h2>
-              <h2>{val(weather?.current?.temperature_2m)}</h2>
-              <h2>°C</h2>
+      {/* Loading State */}
+      {loading && (
+        <div className="p-6 font-semibold text-gray-700">Loading weather details...</div>
+      )}
+
+      {/* Weather Content - only displays if a farm is selected and not loading */}
+      {!loading && selected && weather && (
+        <>
+          <div className='flex flex-wrap gap-4 w-full'>
+            {/* current weather page part */}
+            <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100 flex-1">
+              <h1 className="text-xl font-bold text-gray-900 mb-2">Current Weather</h1>
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-md">
+                <div className='flex gap-2'>
+                  <h2 className='font-bold'>Current temperature : </h2>
+                  <h2>{val(weather?.current?.temperature_2m)}</h2>
+                  <h2>°C</h2>
+                </div>
+                <div className='flex gap-2'>
+                  <h2 className='font-bold'>Weather Condition :</h2>
+                  {getWeatherCondition(weather?.current?.weather_code)}
+                </div>
+                <div>{getWeatherIcons(weather?.current?.weather_code)}</div>
+                <div className='flex gap-2'>
+                  <h2 className='font-bold'>humidity: </h2>
+                  <h2>{val(weather?.current?.relative_humidity_2m)}%</h2>
+                </div>
+                <div className='flex gap-2'>
+                  <h2 className='font-bold'>Wind speed: </h2>
+                  <h2>{val(weather?.current?.wind_speed_10m)}</h2>
+                  <h2>km/h</h2>
+                </div>
+              </div>
             </div>
-            <div className='flex gap-2'>
-              <h2 className='font-bold'>Weather Condition :</h2>
-              {getWeatherCondition(weather?.current?.weather_code)}
-            </div>
-            <div>{getWeatherIcons(weather?.current?.weather_code)}</div>
-            <div className='flex gap-2'>
-              <h2 className='font-bold'>humidity: </h2>
-              <h2>{val(weather?.current?.relative_humidity_2m)}%</h2>
-            </div>
-            <div className='flex gap-2'>
-              <h2 className='font-bold'>Wind speed: </h2>
-              <h2>{val(weather?.current?.wind_speed_10m)}</h2>
-              <h2>km/h</h2>
+
+            {/* Additional data page part */}
+            <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100">
+              <h1 className="text-xl font-bold text-gray-900 mb-2">Additional Data</h1>
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-md">
+                <h2 className='font-bold'>UV Index: </h2>
+                <h2>{val(weather?.daily?.uv_index_max?.[0])}</h2>
+                <h2 className='font-bold mt-2'>Expected Rainfall: </h2>
+                <h2>{val(weather?.current?.rain)} mm</h2>
+              </div>
             </div>
           </div>
+
+          {/* weather forecast page part */}
+          <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100 w-full">
+            <h1 className="text-xl font-bold text-gray-900 mb-2">Daily Forecast</h1>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 p-4 gap-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((index) => (
+                <div key={index} className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
+                  <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[index])}</h2>
+                  <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[index])}</h2>
+                  <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[index])}</h2>
+                  <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[index])}
+                  <div>{getWeatherIcons(weather?.daily?.weather_code?.[index])}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {!selected && !loading && (
+        <div className="w-full text-center py-12 text-gray-500 font-medium">
+          Please select a farm from the dropdown above to view weather details.
         </div>
-
-        {/* Additional data page part */}
-        <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900">Additional Data</h1>
-          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-md">
-            <h2 className='font-bold'>UV Index: </h2>
-            <h2>{val(weather?.daily?.uv_index_max?.[0])}</h2>
-            <h2 className='font-bold mt-2'>Expected Rainfall: </h2>
-            <h2>{val(weather?.current?.rain)} mm</h2>
-          </div>
-        </div>
-      </div>
-
-      {/* weather forecast page part */}
-      <div className="bg-[#E8F5E9] p-6 rounded-2xl border border-gray-100 w-full">
-        <h1 className="text-xl font-bold text-gray-900">Daily Forecast</h1>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 p-4 gap-4">
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[1])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[1])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[1])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[1])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[1])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[2])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[2])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[2])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[2])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[2])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[3])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[3])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[3])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[3])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[3])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[4])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[4])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[4])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[4])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[4])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[5])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[5])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[5])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[5])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[5])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[6])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[6])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[6])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[6])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[6])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[7])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[7])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[7])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[7])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[7])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[8])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[8])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[8])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[8])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[8])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[9])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[9])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[9])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[9])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[9])}</div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-2">
-            <h2 className='font-bold'>Date :</h2><h2>{val(weather?.daily?.time?.[10])}</h2>
-            <h2 className='font-bold'>High temperature :</h2><h2>{val(weather?.daily?.temperature_2m_max?.[10])}</h2>
-            <h2 className='font-bold'>Low temperature :</h2><h2>{val(weather?.daily?.temperature_2m_min?.[10])}</h2>
-            <h2 className='font-bold'>Weather Condition :</h2>{getWeatherCondition(weather?.daily?.weather_code?.[10])}
-            <div>{getWeatherIcons(weather?.daily?.weather_code?.[10])}</div>
-          </div>
-
-        </div>
-      </div>
+      )}
 
     </div>
   );
