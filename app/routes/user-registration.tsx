@@ -230,7 +230,7 @@ export default function UserRegistration() {
 
   return (
     <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 24px", fontFamily: "Inter, system-ui, sans-serif" }}>
-      
+
       {statusMessage && (
         <div style={{
           padding: "16px", marginBottom: "32px", borderRadius: "8px", fontSize: "14px", fontWeight: 500,
@@ -243,14 +243,14 @@ export default function UserRegistration() {
       )}
 
       <form onSubmit={handleSubmit} style={{ display: "flex", gap: "60px", alignItems: "flex-start" }}>
-        
+
         {/* LEFT PANE (Media & Registered Accounts) */}
         <div style={{ width: "300px", flexShrink: 0 }}>
-          
+
           {/* Media Block */}
           <div>
             <h3 style={sectionHeaderStyle}>Account Media</h3>
-            
+
             <div style={{
               position: "relative", width: "100%", aspectRatio: "4/3", backgroundColor: "#f8fafc",
               borderRadius: "8px", border: "1px solid #e2e8f0", overflow: "hidden", marginBottom: "16px",
@@ -272,7 +272,7 @@ export default function UserRegistration() {
             </div>
 
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageChange} style={{ display: "none" }} />
-            
+
             <button type="button" onClick={() => fileInputRef.current?.click()} style={{
               width: "100%", padding: "12px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1",
               borderRadius: "6px", color: "#334155", fontSize: "14px", fontWeight: 600, cursor: "pointer", marginBottom: "40px"
@@ -295,32 +295,32 @@ export default function UserRegistration() {
           {/* Registered Accounts Block */}
           <div>
             <h3 style={{ ...sectionHeaderStyle, marginBottom: "16px" }}>Registered Accounts</h3>
-            
+
             {loadingUsers ? (
               <p style={{ fontSize: "14px", color: "#64748b" }}>Loading accounts...</p>
             ) : users.length === 0 ? (
               <p style={{ fontSize: "14px", color: "#64748b" }}>No users registered.</p>
             ) : (
-              <div style={{ 
-                display: "flex", 
-                flexDirection: "column", 
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
                 gap: "12px",
                 maxHeight: "450px", // Enables scrolling if the list gets too long
                 overflowY: "auto",
                 paddingRight: "6px" // Prevents scrollbar from overlapping border
               }}>
                 {users.map((u, idx) => (
-                  <div key={u.id || idx} style={{ 
-                    display: "flex", alignItems: "center", gap: "12px", padding: "12px", 
-                    border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#ffffff" 
+                  <div key={u.id || idx} style={{
+                    display: "flex", alignItems: "center", gap: "12px", padding: "12px",
+                    border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#ffffff"
                   }}>
                     {u.imageUrl ? (
                       <img src={u.imageUrl} alt={u.username} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} />
                     ) : (
-                      <div style={{ 
-                        width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#f1f5f9", 
-                        color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", 
-                        fontWeight: 700, fontSize: "14px", flexShrink: 0 
+                      <div style={{
+                        width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#f1f5f9",
+                        color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: 700, fontSize: "14px", flexShrink: 0
                       }}>
                         {u.username.charAt(0).toUpperCase()}
                       </div>
@@ -347,19 +347,46 @@ export default function UserRegistration() {
         {/* RIGHT PANE (Data Entry) */}
         <div style={{ flex: 1 }}>
           <h3 style={sectionHeaderStyle}>Profile Information</h3>
-          
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "48px" }}>
             <div>
               <label style={labelStyle}>Username</label>
-              <input type="text" name="username" value={formData.username} onChange={handleInputChange} required style={inputStyle} />
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                required
+                style={inputStyle}
+                placeholder="Enter username (3-50 characters)"
+                minLength={3}
+                maxLength={50}
+              />
             </div>
             <div>
               <label style={labelStyle}>Email Address</label>
-              <input type="email" name="email" value={formData.email} onChange={handleInputChange} required style={inputStyle} />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                style={inputStyle}
+                placeholder="e.g., alex@example.com"
+              />
             </div>
             <div>
               <label style={labelStyle}>Temporary Password</label>
-              <input type="password" name="password" value={formData.password} onChange={handleInputChange} required style={inputStyle} />
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+                style={inputStyle}
+                placeholder="Enter password (min 6 characters)"
+                minLength={6}
+                maxLength={100}
+              />
             </div>
             <div>
               <label style={labelStyle}>System Role</label>
@@ -384,7 +411,7 @@ export default function UserRegistration() {
           <h3 style={sectionHeaderStyle}>Farm Allocations</h3>
           <div style={{ opacity: isAdmin ? 0.5 : 1, pointerEvents: isAdmin ? "none" : "auto" }}>
             {isAdmin && <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px" }}>Admins have global access. Farm assignment is disabled.</p>}
-            
+
             {loadingFarms ? (
               <p style={{ fontSize: "14px", color: "#64748b" }}>Loading your farms...</p>
             ) : availableFarms.length === 0 ? (
