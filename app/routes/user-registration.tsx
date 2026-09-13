@@ -229,7 +229,7 @@ export default function UserRegistration() {
   };
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 24px", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={{ margin: "10px auto", padding: "0 24px", fontFamily: "Inter, system-ui, sans-serif" }}>
 
       {statusMessage && (
         <div style={{
@@ -399,14 +399,39 @@ export default function UserRegistration() {
           </div>
 
           <h3 style={sectionHeaderStyle}>System Permissions</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "48px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "16px",
+              marginBottom: "48px"
+            }}
+          >
             {AVAILABLE_PERMISSIONS.map((perm) => (
-              <label key={perm} style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", color: "#475569", cursor: "pointer" }}>
-                <input type="checkbox" checked={formData.permissions.includes(perm)} onChange={() => handlePermissionToggle(perm)} style={{ width: "16px", height: "16px", accentColor: "#059669" }} />
-                {perm.replace(/_/g, ' ')}
+              <label
+                key={perm}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  fontSize: "13px",
+                  color: "#475569",
+                  cursor: "pointer"
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.permissions.includes(perm)}
+                  onChange={() => handlePermissionToggle(perm)}
+                  style={{ width: "16px", height: "16px", accentColor: "#059669" }}
+                />
+                <span style={{ textTransform: "capitalize" }}>
+                  {perm.replace(/_/g, ' ')}
+                </span>
               </label>
             ))}
           </div>
+
 
           <h3 style={sectionHeaderStyle}>Farm Allocations</h3>
           <div style={{ opacity: isAdmin ? 0.5 : 1, pointerEvents: isAdmin ? "none" : "auto" }}>
