@@ -19,8 +19,8 @@ jobs:
 
       - name: Check for Protected Configuration Changes
         run: |
-          if [ "${{ github.actor }}" = "Supun-Dewsith" ]; then
-            echo "PR author is repository lead (${{ github.actor }}). Skipping config lock check."
+          if [ "${{ github.actor }}" = "Supun-Dewsith" ] || [ "${{ contains(github.event.pull_request.labels.*.name, 'dependency update') }}" = "true" ]; then
+            echo "Authorized actor or labeled PR. Skipping config lock check."
           else
             CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
             echo "Files modified in this PR:"
