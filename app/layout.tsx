@@ -5,7 +5,7 @@ import {
   Sprout,
   LogOut
 } from "lucide-react";
-import { Label } from "recharts";
+import NotificationBell from "./components/NotificationBell";
 
 export default function DashboardLayout() {
   const user = getAuthData();
@@ -84,7 +84,7 @@ export default function DashboardLayout() {
 
       {/* MAIN CONTAINER */}
       <div className="flex-1 flex flex-col min-w-0">
-
+      
         {/* TOPBAR */}
         <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 sticky top-0 z-10 backdrop-blur-md bg-white/95">
           <h2 className="text-xl sm:text-2xl font-semibold tracking-wide text-emerald-900 uppercase">
@@ -92,6 +92,12 @@ export default function DashboardLayout() {
           </h2>
 
           <div className="flex items-center gap-4">
+            {/* Notification Bell */}
+              <NotificationBell />
+            {/* User Profile Card Group */}
+             <div className="flex items-center gap-3 pl-4 border-l border-slate-200/80"></div> 
+
+ 
             {/* User Profile Card Group */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200/80">
               {user?.imageUrl ? (
