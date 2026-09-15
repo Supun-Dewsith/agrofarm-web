@@ -14,13 +14,20 @@ A modern, production-ready template for building full-stack React applications u
 
 ## Getting Started
 
+### Prerequisites
+Make sure you have [Node.js](https://nodejs.org) installed.
+
 ### Installation
-
-Install the dependencies:
-
+To install the dependencies exactly as locked in the project, run:
 ```bash
-npm install
+npm ci
 ```
+
+> ⚠️ **Important for Developers:** 
+> Always use `npm ci` instead of `npm install` when syncing your local environment. 
+> * **`npm ci`** guarantees everyone uses the exact same package versions and prevents `package-lock.json` merge conflicts.
+> * Only use `npm install <package-name>` when you are intentionally adding or updating a specific dependency.
+
 
 ### Development
 
