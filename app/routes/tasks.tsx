@@ -1,16 +1,41 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
 } from "react";
 
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  ClipboardList,
+  Clock3,
+  Leaf,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Sprout,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
+
+import {
+  fetchWithAuth,
+  getAuthData,
+} from "../utils/auth";
+
 /* =========================================================
    TYPES
 ========================================================= */
-
-type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 type TaskStatus =
   | "PENDING"
@@ -18,264 +43,465 @@ type TaskStatus =
   | "COMPLETED"
   | "CANCELLED";
 
-type TaskFilter =
-  | "ALL"
-  | "PENDING"
-  | "IN_PROGRESS"
-  | "COMPLETED";
+type TaskPriority =
+  | "LOW"
+  | "MEDIUM"
+  | "HIGH"
+  | "URGENT";
+
+type TaskFilter = "ALL" | TaskStatus;
+
+type SortOrder =
+  | "NEWEST"
+  | "DUE_DATE"
+  | "PRIORITY";
 
 interface Task {
   id: number;
   title: string;
   description: string | null;
+
+  farmId: number;
   farmName: string;
+
+  fieldId: number | null;
   fieldName: string | null;
-  assigneeName: string;
+
+  supervisorId: number | null;
   supervisorName: string | null;
+
+  workerIds: number[];
   workerNames: string[];
-  dueDate: string;
+
   priority: TaskPriority;
   status: TaskStatus;
-  createdAt: string;
+  dueDate: string;
+}
+
+interface SelectOption {
+  id: number;
+  name: string;
+}
+
+interface TaskOptions {
+  farms: SelectOption[];
+  fields: SelectOption[];
+  supervisors: SelectOption[];
+  workers: SelectOption[];
 }
 
 interface TaskForm {
   title: string;
   description: string;
-  farmName: string;
-  fieldName: string;
-  assigneeName: string;
-  supervisorName: string;
-  workerNames: string;
-  dueDate: string;
+
+  farmId: string;
+  fieldId: string;
+  supervisorId: string;
+
+  workerIds: number[];
+
   priority: TaskPriority;
+  status: TaskStatus;
+  dueDate: string;
+}
+
+interface ModalProps {
+  titleId: string;
+  children: ReactNode;
+  onCancel: () => void;
+  compact?: boolean;
+}
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const STATUSES: TaskStatus[] = [
+  "PENDING",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+];
+
+const PRIORITIES: TaskPriority[] = [
+  "LOW",
+  "MEDIUM",
+  "HIGH",
+  "URGENT",
+];
+
+const FILTERS: TaskFilter[] = [
+  "ALL",
+  ...STATUSES,
+];
+
+const PRIORITY_ORDER: Record<TaskPriority, number> = {
+  LOW: 1,
+  MEDIUM: 2,
+  HIGH: 3,
+  URGENT: 4,
+};
+
+const EMPTY_OPTIONS: TaskOptions = {
+  farms: [],
+  fields: [],
+  supervisors: [],
+  workers: [],
+};
+
+const SUMMARY_CARDS = [
+  {
+    key: "ALL",
+    title: "Total Tasks",
+    Icon: ClipboardList,
+    color: "blue",
+  },
+  {
+    key: "PENDING",
+    title: "Pending",
+    Icon: Circle,
+    color: "orange",
+  },
+  {
+    key: "IN_PROGRESS",
+    title: "In Progress",
+    Icon: Clock3,
+    color: "blue",
+  },
+  {
+    key: "COMPLETED",
+    title: "Completed",
+    Icon: CheckCircle2,
+    color: "green",
+  },
+] as const;
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function createEmptyForm(): TaskForm {
+  return {
+    title: "",
+    description: "",
+    farmId: "",
+    fieldId: "",
+    supervisorId: "",
+    workerIds: [],
+    priority: "MEDIUM",
+    status: "PENDING",
+    dueDate: "",
+  };
+}
+
+function formatLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getInitials(name: string): string {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .map((part) => part.charAt(0))
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
+
+function getLocalDate(): string {
+  const date = new Date();
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function formatDate(value: string): string {
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return value || "No date";
+  }
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getError(
+  error: unknown,
+  fallback: string
+): string {
+  return error instanceof Error
+    ? error.message
+    : fallback;
+}
+
+function formSnapshot(form: TaskForm): string {
+  return JSON.stringify({
+    ...form,
+    workerIds: [...form.workerIds].sort((a, b) => a - b),
+  });
+}
+
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function isOption(value: unknown): value is SelectOption {
+  return (
+    isRecord(value) &&
+    typeof value.id === "number" &&
+    Number.isFinite(value.id) &&
+    typeof value.name === "string"
+  );
+}
+
+function isTaskOptions(
+  value: unknown
+): value is TaskOptions {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return [
+    "farms",
+    "fields",
+    "supervisors",
+    "workers",
+  ].every((key) => {
+    const items = value[key];
+
+    return (
+      Array.isArray(items) &&
+      items.every(isOption)
+    );
+  });
+}
+
+function normalizeTask(value: unknown): Task {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "number" ||
+    typeof value.title !== "string" ||
+    typeof value.farmId !== "number" ||
+    typeof value.farmName !== "string" ||
+    typeof value.dueDate !== "string" ||
+    !STATUSES.includes(value.status as TaskStatus) ||
+    !PRIORITIES.includes(value.priority as TaskPriority)
+  ) {
+    throw new Error(
+      "Unexpected task response. Check that the matching Task backend update is installed."
+    );
+  }
+
+  return {
+    id: value.id,
+    title: value.title,
+
+    description:
+      typeof value.description === "string"
+        ? value.description
+        : null,
+
+    farmId: value.farmId,
+    farmName: value.farmName,
+
+    fieldId:
+      typeof value.fieldId === "number"
+        ? value.fieldId
+        : null,
+
+    fieldName:
+      typeof value.fieldName === "string"
+        ? value.fieldName
+        : null,
+
+    supervisorId:
+      typeof value.supervisorId === "number"
+        ? value.supervisorId
+        : null,
+
+    supervisorName:
+      typeof value.supervisorName === "string"
+        ? value.supervisorName
+        : null,
+
+    workerIds: Array.isArray(value.workerIds)
+      ? value.workerIds.filter(
+          (id): id is number =>
+            typeof id === "number"
+        )
+      : [],
+
+    workerNames: Array.isArray(value.workerNames)
+      ? value.workerNames.filter(
+          (name): name is string =>
+            typeof name === "string"
+        )
+      : [],
+
+    priority: value.priority as TaskPriority,
+    status: value.status as TaskStatus,
+    dueDate: value.dueDate,
+  };
 }
 
 /* =========================================================
    API
 ========================================================= */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+async function taskApi<T>(
+  path = "",
+  options?: RequestInit
+): Promise<T> {
+  const response = await fetchWithAuth(
+    `/api/tasks${path}`,
+    options
+  );
 
-const TASK_API = `${API_BASE_URL}/api/tasks`;
+  if (!response.ok) {
+    const body: unknown = await response
+      .json()
+      .catch(() => null);
+
+    let message = "";
+
+    if (isRecord(body)) {
+      for (const key of [
+        "detail",
+        "message",
+        "reason",
+      ]) {
+        const value = body[key];
+
+        if (typeof value === "string" && value) {
+          message = value;
+          break;
+        }
+      }
+    }
+
+    if (!message) {
+      message =
+        response.status === 403
+          ? "You do not have permission for this task or farm."
+          : response.status === 401
+            ? "Your session has expired. Please sign in again."
+            : `Request failed (${response.status}). Please try again.`;
+    }
+
+    throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
+}
 
 /* =========================================================
-   AUTH
+   MODAL SCROLL LOCK
 ========================================================= */
 
-function getAuthHeaders(): HeadersInit {
-  const tokenData = localStorage.getItem("token_data");
+let modalLockCount = 0;
+let originalBodyOverflow = "";
 
-  if (!tokenData) {
-    return {
-      "Content-Type": "application/json",
-    };
+function lockBodyScroll(): () => void {
+  if (modalLockCount === 0) {
+    originalBodyOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
   }
 
-  try {
-    const parsed = JSON.parse(tokenData);
+  modalLockCount += 1;
 
-    const token =
-      parsed?.accessToken ||
-      parsed?.access_token ||
-      parsed?.token ||
-      parsed?.jwt;
+  let released = false;
 
-    if (token) {
-      return {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
+  return () => {
+    if (released) {
+      return;
     }
-  } catch {
-    console.warn("Invalid token_data");
-  }
 
-  return {
-    "Content-Type": "application/json",
+    released = true;
+
+    modalLockCount = Math.max(
+      0,
+      modalLockCount - 1
+    );
+
+    if (modalLockCount === 0) {
+      document.body.style.overflow =
+        originalBodyOverflow;
+    }
   };
 }
 
 /* =========================================================
-   HELPERS
+   MODAL
 ========================================================= */
 
-const EMPTY_FORM: TaskForm = {
-  title: "",
-  description: "",
-  farmName: "",
-  fieldName: "",
-  assigneeName: "",
-  supervisorName: "",
-  workerNames: "",
-  dueDate: "",
-  priority: "MEDIUM",
-};
+function Modal({
+  titleId,
+  children,
+  onCancel,
+  compact = false,
+}: ModalProps) {
+  const dialogRef =
+    useRef<HTMLDialogElement>(null);
 
-function normalizeTasks(data: unknown): Task[] {
-  if (Array.isArray(data)) {
-    return data as Task[];
-  }
+  useEffect(() => {
+    const dialog = dialogRef.current;
 
-  if (
-    data &&
-    typeof data === "object" &&
-    "content" in data &&
-    Array.isArray((data as { content?: unknown }).content)
-  ) {
-    return (data as { content: Task[] }).content;
-  }
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
 
-  if (
-    data &&
-    typeof data === "object" &&
-    "tasks" in data &&
-    Array.isArray((data as { tasks?: unknown }).tasks)
-  ) {
-    return (data as { tasks: Task[] }).tasks;
-  }
+    const unlockScroll = lockBodyScroll();
 
-  return [];
-}
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
 
-function formatStatus(status: TaskStatus): string {
-  switch (status) {
-    case "PENDING":
-      return "Pending";
-    case "IN_PROGRESS":
-      return "In Progress";
-    case "COMPLETED":
-      return "Completed";
-    case "CANCELLED":
-      return "Cancelled";
-    default:
-      return status;
-  }
-}
+    return () => {
+      dialog?.close();
+      unlockScroll();
 
-function formatPriority(priority: TaskPriority): string {
-  return priority.charAt(0) + priority.slice(1).toLowerCase();
-}
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
+  }, []);
 
-function formatDate(date?: string | null): string {
-  if (!date) {
-    return "No due date";
-  }
-
-  const parsed = new Date(`${date}T00:00:00`);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return date;
-  }
-
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function toWorkerString(workerNames?: string[] | null): string {
-  return Array.isArray(workerNames) ? workerNames.join(", ") : "";
-}
-
-function parseWorkerNames(value: string): string[] {
-  return Array.from(
-    new Set(
-      value
-        .split(",")
-        .map((name) => name.trim())
-        .filter(Boolean)
-    )
+  return (
+    <dialog
+      ref={dialogRef}
+      className={`tm-modal ${
+        compact ? "tm-modal-compact" : ""
+      }`}
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+    >
+      {children}
+    </dialog>
   );
-}
-
-function getTaskEmoji(task: Task): string {
-  const value = `${task.title} ${task.description ?? ""}`.toLowerCase();
-
-  if (
-    value.includes("water") ||
-    value.includes("irrigation")
-  ) {
-    return "💧";
-  }
-
-  if (
-    value.includes("fertilizer") ||
-    value.includes("fertilise") ||
-    value.includes("plant")
-  ) {
-    return "🌱";
-  }
-
-  if (
-    value.includes("harvest") ||
-    value.includes("wheat") ||
-    value.includes("crop")
-  ) {
-    return "🌾";
-  }
-
-  if (
-    value.includes("spray") ||
-    value.includes("pest") ||
-    value.includes("disease")
-  ) {
-    return "🧪";
-  }
-
-  if (
-    value.includes("check") ||
-    value.includes("inspect") ||
-    value.includes("monitor")
-  ) {
-    return "✅";
-  }
-
-  return "📋";
-}
-
-function getInitials(name?: string | null): string {
-  if (!name?.trim()) {
-    return "?";
-  }
-
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-}
-
-function statusClasses(status: TaskStatus): string {
-  switch (status) {
-    case "PENDING":
-      return "border-orange-300 bg-orange-50 text-orange-600";
-    case "IN_PROGRESS":
-      return "border-blue-300 bg-blue-50 text-blue-600";
-    case "COMPLETED":
-      return "border-emerald-300 bg-emerald-50 text-emerald-600";
-    case "CANCELLED":
-      return "border-slate-300 bg-slate-100 text-slate-500";
-    default:
-      return "border-slate-300 bg-white text-slate-600";
-  }
-}
-
-function priorityClasses(priority: TaskPriority): string {
-  switch (priority) {
-    case "LOW":
-      return "bg-emerald-500 text-white";
-    case "MEDIUM":
-      return "bg-orange-500 text-white";
-    case "HIGH":
-      return "bg-rose-500 text-white";
-    case "URGENT":
-      return "bg-red-600 text-white";
-    default:
-      return "bg-slate-500 text-white";
-  }
 }
 
 /* =========================================================
@@ -283,1372 +509,4008 @@ function priorityClasses(priority: TaskPriority): string {
 ========================================================= */
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [activeFilter, setActiveFilter] =
-    useState<TaskFilter>("ALL");
+  const [role, setRole] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [changingStatusId, setChangingStatusId] =
-    useState<number | null>(null);
-  const [deletingId, setDeletingId] =
-    useState<number | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
-  const [showTaskModal, setShowTaskModal] =
-    useState(false);
+  const [notice, setNotice] = useState("");
+
+  const [filter, setFilter] =
+    useState<TaskFilter>("ALL");
+
+  const [search, setSearch] = useState("");
+  const [farmFilter, setFarmFilter] = useState("");
+
+  const [sortOrder, setSortOrder] =
+    useState<SortOrder>("NEWEST");
+
+  const [expandedTaskId, setExpandedTaskId] =
+    useState<number | null>(null);
+
+  const [busyTaskId, setBusyTaskId] =
+    useState<number | null>(null);
+
+  const [showForm, setShowForm] = useState(false);
+
   const [editingTaskId, setEditingTaskId] =
     useState<number | null>(null);
 
   const [form, setForm] =
-    useState<TaskForm>(EMPTY_FORM);
+    useState<TaskForm>(createEmptyForm);
+
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [options, setOptions] =
+    useState<TaskOptions>(EMPTY_OPTIONS);
+
+  const [optionsLoading, setOptionsLoading] =
+    useState(false);
+
+  const [optionsError, setOptionsError] =
+    useState("");
+
+  const [optionsRetry, setOptionsRetry] =
+    useState(0);
+
+  const [workerSearch, setWorkerSearch] =
+    useState("");
+
+  const [deleteTarget, setDeleteTarget] =
+    useState<Task | null>(null);
+
+  const [deleteError, setDeleteError] =
+    useState("");
+
+  const [showDiscard, setShowDiscard] =
+    useState(false);
+
+  const initialFormSnapshot = useRef("");
+  const mounted = useRef(false);
+  const loadSequence = useRef(0);
+
+  const mutationPending = useRef(false);
+  const savePending = useRef(false);
+
+  const canManage =
+    role === "ADMIN" || role === "SUPERVISOR";
+
+  const today = getLocalDate();
 
   /* =======================================================
      LOAD TASKS
   ======================================================= */
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
+    const requestNumber =
+      ++loadSequence.current;
+
+    setLoading(true);
+    setError("");
+
     try {
-      setLoading(true);
-      setError("");
+      const data = await taskApi<unknown>();
 
-      const response = await fetch(TASK_API, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-
+      if (!Array.isArray(data)) {
         throw new Error(
-          message ||
-            `Failed to load tasks (${response.status})`
+          "Unexpected task response. Check the Task backend update."
         );
       }
 
-      const data: unknown = await response.json();
+      const normalized =
+        data.map(normalizeTask);
 
-      setTasks(normalizeTasks(data));
+      if (
+        mounted.current &&
+        requestNumber === loadSequence.current
+      ) {
+        setTasks(normalized);
+      }
     } catch (err) {
-      console.error(err);
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load tasks"
-      );
+      if (
+        mounted.current &&
+        requestNumber === loadSequence.current
+      ) {
+        setError(
+          getError(err, "Unable to load tasks.")
+        );
+      }
     } finally {
-      setLoading(false);
+      if (
+        mounted.current &&
+        requestNumber === loadSequence.current
+      ) {
+        setLoading(false);
+      }
     }
-  };
-
-  useEffect(() => {
-    void loadTasks();
   }, []);
 
+  useEffect(() => {
+    mounted.current = true;
+
+    try {
+      const auth = getAuthData();
+
+      setRole(
+        (auth?.role || "").toUpperCase()
+      );
+
+      void loadTasks();
+    } catch {
+      setError(
+        "Your session is invalid. Please sign in again."
+      );
+
+      setLoading(false);
+    }
+
+    return () => {
+      mounted.current = false;
+      loadSequence.current += 1;
+    };
+  }, [loadTasks]);
+
   /* =======================================================
-     COUNTS
+     LOAD FORM OPTIONS
+  ======================================================= */
+
+  useEffect(() => {
+    if (!showForm || !canManage) {
+      return;
+    }
+
+    let active = true;
+
+    setOptionsLoading(true);
+    setOptionsError("");
+
+    setOptions((previous) => ({
+      ...previous,
+      fields: [],
+      supervisors: [],
+      workers: [],
+    }));
+
+    const query = form.farmId
+      ? `?farmId=${encodeURIComponent(form.farmId)}`
+      : "";
+
+    taskApi<unknown>(`/options${query}`)
+      .then((data) => {
+        if (!isTaskOptions(data)) {
+          throw new Error(
+            "Unexpected selection response. Check the Task backend update."
+          );
+        }
+
+        if (active) {
+          setOptions(data);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setOptionsError(
+            getError(
+              err,
+              "Unable to load farm selections."
+            )
+          );
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setOptionsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    showForm,
+    canManage,
+    form.farmId,
+    optionsRetry,
+  ]);
+
+  /* =======================================================
+     COUNTS AND FILTERS
   ======================================================= */
 
   const counts = useMemo(
     () => ({
-      total: tasks.length,
-      pending: tasks.filter(
+      ALL: tasks.length,
+
+      PENDING: tasks.filter(
         (task) => task.status === "PENDING"
       ).length,
-      inProgress: tasks.filter(
-        (task) => task.status === "IN_PROGRESS"
+
+      IN_PROGRESS: tasks.filter(
+        (task) =>
+          task.status === "IN_PROGRESS"
       ).length,
-      completed: tasks.filter(
-        (task) => task.status === "COMPLETED"
+
+      COMPLETED: tasks.filter(
+        (task) =>
+          task.status === "COMPLETED"
+      ).length,
+
+      CANCELLED: tasks.filter(
+        (task) =>
+          task.status === "CANCELLED"
       ).length,
     }),
     [tasks]
   );
 
-  /* =======================================================
-     FILTERED TASKS
-  ======================================================= */
+  const filterFarms = useMemo(() => {
+    const farms = new Map<number, string>();
 
-  const filteredTasks = useMemo(() => {
-    if (activeFilter === "ALL") {
-      return tasks;
-    }
-
-    return tasks.filter(
-      (task) => task.status === activeFilter
-    );
-  }, [tasks, activeFilter]);
-
-  /* =======================================================
-     OPEN CREATE
-  ======================================================= */
-
-  const openCreateTask = () => {
-    setEditingTaskId(null);
-    setForm(EMPTY_FORM);
-    setShowTaskModal(true);
-  };
-
-  /* =======================================================
-     OPEN EDIT
-  ======================================================= */
-
-  const openEditTask = (task: Task) => {
-    setEditingTaskId(task.id);
-
-    setForm({
-      title: task.title ?? "",
-      description: task.description ?? "",
-      farmName: task.farmName ?? "",
-      fieldName: task.fieldName ?? "",
-      assigneeName: task.assigneeName ?? "",
-      supervisorName: task.supervisorName ?? "",
-      workerNames: toWorkerString(task.workerNames),
-      dueDate: task.dueDate ?? "",
-      priority: task.priority ?? "MEDIUM",
+    tasks.forEach((task) => {
+      farms.set(task.farmId, task.farmName);
     });
 
-    setShowTaskModal(true);
-  };
+    return Array.from(farms.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    const query =
+      search.toLowerCase().trim();
+
+    const result = tasks.filter((task) => {
+      const matchesStatus =
+        filter === "ALL" ||
+        task.status === filter;
+
+      const matchesFarm =
+        !farmFilter ||
+        task.farmId === Number(farmFilter);
+
+      const searchableText = [
+        task.title,
+        task.description || "",
+        task.farmName,
+        task.fieldName || "",
+        task.supervisorName || "",
+        ...task.workerNames,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return (
+        matchesStatus &&
+        matchesFarm &&
+        searchableText.includes(query)
+      );
+    });
+
+    return result.sort((a, b) => {
+      if (sortOrder === "DUE_DATE") {
+        return (
+          a.dueDate.localeCompare(b.dueDate) ||
+          b.id - a.id
+        );
+      }
+
+      if (sortOrder === "PRIORITY") {
+        return (
+          PRIORITY_ORDER[b.priority] -
+            PRIORITY_ORDER[a.priority] ||
+          a.dueDate.localeCompare(b.dueDate)
+        );
+      }
+
+      return b.id - a.id;
+    });
+  }, [
+    tasks,
+    filter,
+    farmFilter,
+    search,
+    sortOrder,
+  ]);
+
+  const filteredWorkers = useMemo(() => {
+    const query =
+      workerSearch.toLowerCase().trim();
+
+    return options.workers.filter((worker) =>
+      worker.name.toLowerCase().includes(query)
+    );
+  }, [options.workers, workerSearch]);
+
+  const selectedWorkers = useMemo(
+    () =>
+      form.workerIds.map((id) => ({
+        id,
+        name:
+          options.workers.find(
+            (worker) => worker.id === id
+          )?.name || `Farmer #${id}`,
+      })),
+    [form.workerIds, options.workers]
+  );
+
+  const hasUnavailableWorkers =
+    !optionsLoading &&
+    !optionsError &&
+    form.workerIds.some(
+      (id) =>
+        !options.workers.some(
+          (worker) => worker.id === id
+        )
+    );
+
+  const hasFilters =
+    filter !== "ALL" ||
+    search.trim() !== "" ||
+    farmFilter !== "";
+
+  const formIsDirty =
+    showForm &&
+    formSnapshot(form) !==
+      initialFormSnapshot.current;
+
+  /* =======================================================
+     FORM HELPERS
+  ======================================================= */
+
+  function updateForm<K extends keyof TaskForm>(
+    key: K,
+    value: TaskForm[K]
+  ) {
+    setForm((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+
+    setFormError("");
+  }
+
+  function openTaskForm(task?: Task) {
+    if (
+      !canManage ||
+      loading ||
+      mutationPending.current
+    ) {
+      return;
+    }
+
+    const nextForm: TaskForm = task
+      ? {
+          title: task.title,
+          description:
+            task.description || "",
+
+          farmId: String(task.farmId),
+
+          fieldId:
+            task.fieldId !== null
+              ? String(task.fieldId)
+              : "",
+
+          supervisorId:
+            task.supervisorId !== null
+              ? String(task.supervisorId)
+              : "",
+
+          workerIds: [...task.workerIds],
+
+          priority: task.priority,
+          status: task.status,
+          dueDate: task.dueDate,
+        }
+      : createEmptyForm();
+
+    initialFormSnapshot.current =
+      formSnapshot(nextForm);
+
+    setEditingTaskId(task?.id ?? null);
+
+    setForm(nextForm);
+    setFormError("");
+
+    setOptions(EMPTY_OPTIONS);
+    setOptionsError("");
+    setOptionsLoading(true);
+
+    setWorkerSearch("");
+    setShowDiscard(false);
+    setShowForm(true);
+  }
+
+  function closeTaskForm() {
+    if (savePending.current) {
+      return;
+    }
+
+    if (formIsDirty) {
+      setShowDiscard(true);
+      return;
+    }
+
+    setShowForm(false);
+  }
+
+  function discardChanges() {
+    setShowDiscard(false);
+    setShowForm(false);
+  }
+
+  function changeFarm(farmId: string) {
+    setOptionsLoading(true);
+    setOptionsError("");
+    setWorkerSearch("");
+    setFormError("");
+
+    setForm((previous) => ({
+      ...previous,
+      farmId,
+      fieldId: "",
+      supervisorId: "",
+      workerIds: [],
+    }));
+  }
+
+  function toggleWorker(
+    workerId: number,
+    checked: boolean
+  ) {
+    setForm((previous) => ({
+      ...previous,
+
+      workerIds: checked
+        ? Array.from(
+            new Set([
+              ...previous.workerIds,
+              workerId,
+            ])
+          )
+        : previous.workerIds.filter(
+            (id) => id !== workerId
+          ),
+    }));
+
+    setFormError("");
+  }
+
+  function selectAllShownWorkers() {
+    setForm((previous) => ({
+      ...previous,
+
+      workerIds: Array.from(
+        new Set([
+          ...previous.workerIds,
+          ...filteredWorkers.map(
+            (worker) => worker.id
+          ),
+        ])
+      ),
+    }));
+
+    setFormError("");
+  }
+
+  function resetFilters() {
+    setFilter("ALL");
+    setSearch("");
+    setFarmFilter("");
+    setSortOrder("NEWEST");
+  }
+
+  function isOverdue(task: Task): boolean {
+    return (
+      task.dueDate < today &&
+      task.status !== "COMPLETED" &&
+      task.status !== "CANCELLED"
+    );
+  }
+
+  function isDueToday(task: Task): boolean {
+    return (
+      task.dueDate === today &&
+      task.status !== "COMPLETED" &&
+      task.status !== "CANCELLED"
+    );
+  }
 
   /* =======================================================
      CREATE / UPDATE
   ======================================================= */
 
-  const handleTaskSubmit = async (
-    event: FormEvent
-  ) => {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
+    if (
+      savePending.current ||
+      !canManage ||
+      optionsLoading ||
+      optionsError
+    ) {
+      return;
+    }
+
+    setFormError("");
+
     if (!form.title.trim()) {
-      alert("Please enter a task title.");
+      setFormError("Enter a task title.");
       return;
     }
 
-    if (!form.farmName.trim()) {
-      alert("Please enter the farm name.");
+    if (!form.farmId) {
+      setFormError("Select a farm.");
       return;
     }
 
-    if (!form.assigneeName.trim()) {
-      alert("Please enter the assignee name.");
+    if (!form.supervisorId) {
+      setFormError("Select a supervisor.");
+      return;
+    }
+
+    if (form.workerIds.length === 0) {
+      setFormError(
+        "Select at least one farmer."
+      );
       return;
     }
 
     if (!form.dueDate) {
-      alert("Please select a due date.");
+      setFormError("Select a due date.");
       return;
     }
 
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim(),
-      farmName: form.farmName.trim(),
-      fieldName: form.fieldName.trim(),
-      assigneeName: form.assigneeName.trim(),
-      supervisorName: form.supervisorName.trim(),
-      workerNames: parseWorkerNames(
-        form.workerNames
-      ),
-      dueDate: form.dueDate,
-      priority: form.priority,
-    };
+    const validFarm = options.farms.some(
+      (item) =>
+        item.id === Number(form.farmId)
+    );
 
-    const isCreating = editingTaskId === null;
+    const validSupervisor =
+      options.supervisors.some(
+        (item) =>
+          item.id === Number(form.supervisorId)
+      );
+
+    const validField =
+      !form.fieldId ||
+      options.fields.some(
+        (item) =>
+          item.id === Number(form.fieldId)
+      );
+
+    const validWorkers =
+      form.workerIds.every((workerId) =>
+        options.workers.some(
+          (worker) => worker.id === workerId
+        )
+      );
+
+    if (
+      !validFarm ||
+      !validSupervisor ||
+      !validField ||
+      !validWorkers
+    ) {
+      setFormError(
+        "Some selections are no longer available. Check the farm, field and assigned team."
+      );
+      return;
+    }
+
+    savePending.current = true;
+    setSaving(true);
 
     try {
-      setSaving(true);
-      setError("");
-
-      const response = await fetch(
-        isCreating
-          ? TASK_API
-          : `${TASK_API}/${editingTaskId}`,
+      const data = await taskApi<unknown>(
+        editingTaskId === null
+          ? ""
+          : `/${editingTaskId}`,
         {
-          method: isCreating ? "POST" : "PUT",
-          headers: getAuthHeaders(),
-          body: JSON.stringify(payload),
+          method:
+            editingTaskId === null
+              ? "POST"
+              : "PUT",
+
+          body: JSON.stringify({
+            title: form.title.trim(),
+            description:
+              form.description.trim(),
+
+            farmId: Number(form.farmId),
+
+            fieldId: form.fieldId
+              ? Number(form.fieldId)
+              : null,
+
+            supervisorId: Number(
+              form.supervisorId
+            ),
+
+            workerIds: form.workerIds,
+            priority: form.priority,
+            status: form.status,
+            dueDate: form.dueDate,
+          }),
         }
       );
 
-      if (!response.ok) {
-        const message = await response.text();
+      const savedTask = normalizeTask(data);
 
-        throw new Error(
-          message ||
-            `Failed to ${
-              isCreating ? "create" : "update"
-            } task`
-        );
-      }
-
-      setShowTaskModal(false);
-      setEditingTaskId(null);
-      setForm(EMPTY_FORM);
-
-      await loadTasks();
-
-      alert(
-        isCreating
-          ? "Task created successfully."
-          : "Task updated successfully."
+      setTasks((previous) =>
+        editingTaskId === null
+          ? [savedTask, ...previous]
+          : previous.map((task) =>
+              task.id === savedTask.id
+                ? savedTask
+                : task
+            )
       );
-    } catch (err) {
-      console.error(err);
 
-      alert(
-        err instanceof Error
-          ? err.message
-          : "Failed to save task"
+      resetFilters();
+      setExpandedTaskId(savedTask.id);
+
+      setNotice(
+        editingTaskId === null
+          ? "Task created and assigned successfully."
+          : "Task changes saved successfully."
+      );
+
+      setShowForm(false);
+    } catch (err) {
+      setFormError(
+        getError(err, "Unable to save task.")
       );
     } finally {
+      savePending.current = false;
       setSaving(false);
     }
-  };
+  }
 
   /* =======================================================
-     STATUS UPDATE
+     STATUS UPDATE — PUT
   ======================================================= */
 
-  const updateTaskStatus = async (
+  async function changeTaskStatus(
     task: Task,
-    status: TaskStatus
-  ) => {
-    if (task.status === status) {
+    nextStatus: TaskStatus
+  ) {
+    if (
+      !canManage ||
+      loading ||
+      mutationPending.current ||
+      task.status === nextStatus
+    ) {
       return;
     }
 
-    try {
-      setChangingStatusId(task.id);
-      setError("");
+    mutationPending.current = true;
 
-      const response = await fetch(
-        `${TASK_API}/${task.id}/status?status=${encodeURIComponent(
-          status
+    setBusyTaskId(task.id);
+    setError("");
+
+    try {
+      const data = await taskApi<unknown>(
+        `/${task.id}/status?status=${encodeURIComponent(
+          nextStatus
         )}`,
         {
-          method: "PATCH",
-          headers: getAuthHeaders(),
+          method: "PUT",
         }
       );
 
-      if (!response.ok) {
-        const message = await response.text();
+      const updatedTask =
+        normalizeTask(data);
 
-        throw new Error(
-          message ||
-            `Failed to update task status (${response.status})`
-        );
-      }
+      setTasks((previous) =>
+        previous.map((item) =>
+          item.id === task.id
+            ? updatedTask
+            : item
+        )
+      );
 
-      await loadTasks();
+      setNotice(
+        `“${task.title}” marked ${formatLabel(
+          nextStatus
+        ).toLowerCase()}.`
+      );
     } catch (err) {
-      console.error(err);
-
-      alert(
-        err instanceof Error
-          ? err.message
-          : "Failed to update task status"
+      setError(
+        getError(
+          err,
+          "Unable to update task status."
+        )
       );
     } finally {
-      setChangingStatusId(null);
+      mutationPending.current = false;
+      setBusyTaskId(null);
     }
-  };
+  }
 
   /* =======================================================
      DELETE
   ======================================================= */
 
-  const handleDeleteTask = async (
-    task: Task
-  ) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${task.title}"?`
-    );
-
-    if (!confirmed) {
+  async function confirmDelete() {
+    if (
+      !deleteTarget ||
+      !canManage ||
+      mutationPending.current
+    ) {
       return;
     }
 
-    try {
-      setDeletingId(task.id);
-      setError("");
+    const task = deleteTarget;
 
-      const response = await fetch(
-        `${TASK_API}/${task.id}`,
-        {
-          method: "DELETE",
-          headers: getAuthHeaders(),
-        }
+    mutationPending.current = true;
+    setBusyTaskId(task.id);
+    setDeleteError("");
+
+    try {
+      await taskApi<void>(`/${task.id}`, {
+        method: "DELETE",
+      });
+
+      setTasks((previous) =>
+        previous.filter(
+          (item) => item.id !== task.id
+        )
       );
 
-      if (!response.ok) {
-        const message = await response.text();
-
-        throw new Error(
-          message ||
-            `Failed to delete task (${response.status})`
-        );
+      if (expandedTaskId === task.id) {
+        setExpandedTaskId(null);
       }
 
-      await loadTasks();
+      setDeleteTarget(null);
+      setNotice("Task deleted successfully.");
     } catch (err) {
-      console.error(err);
-
-      alert(
-        err instanceof Error
-          ? err.message
-          : "Failed to delete task"
+      setDeleteError(
+        getError(err, "Unable to delete task.")
       );
     } finally {
-      setDeletingId(null);
+      mutationPending.current = false;
+      setBusyTaskId(null);
     }
-  };
+  }
 
   /* =======================================================
      RENDER
   ======================================================= */
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="tm-page">
+      <style>{styles}</style>
 
       {/* HEADER */}
 
-      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-            Task Management
-          </h1>
+      <header className="tm-header">
+        <div className="tm-heading">
+          <span className="tm-logo">
+            <Leaf size={27} />
+          </span>
 
-          <p className="mt-1 text-sm font-medium text-emerald-700/80">
-            Assign and track farm activities
-          </p>
+          <div>
+            <h1>Task Management</h1>
+
+            <p>
+              {role === "FARMER"
+                ? "Your assigned tasks, all in one place"
+                : "Plan, assign and track farm activities"}
+            </p>
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateTask}
-          className="inline-flex w-fit items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-700/15 transition hover:-translate-y-0.5 hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-100"
-        >
-          <span className="text-lg leading-none">
-            +
-          </span>
-          Create Task
-        </button>
-      </div>
+        {canManage && (
+          <button
+            type="button"
+            className="tm-primary"
+            disabled={
+              loading || busyTaskId !== null
+            }
+            onClick={() => openTaskForm()}
+          >
+            <Plus size={18} />
+            Create Task
+          </button>
+        )}
+      </header>
 
-      {/* ERROR */}
+      {/* MESSAGES */}
 
       {error && (
-        <div className="mb-5 flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-sm">
+        <div className="tm-alert" role="alert">
           <span>{error}</span>
 
           <button
             type="button"
+            disabled={
+              loading || busyTaskId !== null
+            }
             onClick={() => void loadTasks()}
-            className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* STATS */}
+      {notice && (
+        <div className="tm-notice" role="status">
+          <CheckCircle2 size={19} />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <TaskStatCard
-          title="Total Tasks"
-          value={counts.total}
-          icon={
-            <CheckCircleIcon className="h-5 w-5" />
-          }
-          iconClassName="bg-blue-50 text-blue-500 ring-blue-100"
-          valueClassName="text-slate-800"
-        />
+          <span>{notice}</span>
 
-        <TaskStatCard
-          title="Pending"
-          value={counts.pending}
-          icon={
-            <CircleIcon className="h-5 w-5" />
-          }
-          iconClassName="bg-orange-50 text-orange-500 ring-orange-100"
-          valueClassName="text-orange-600"
-        />
+          <button
+            type="button"
+            aria-label="Dismiss notification"
+            onClick={() => setNotice("")}
+          >
+            <X size={17} />
+          </button>
+        </div>
+      )}
 
-        <TaskStatCard
-          title="In Progress"
-          value={counts.inProgress}
-          icon={
-            <ClockIcon className="h-5 w-5" />
-          }
-          iconClassName="bg-blue-50 text-blue-500 ring-blue-100"
-          valueClassName="text-blue-600"
-        />
+      {/* SUMMARY */}
 
-        <TaskStatCard
-          title="Completed"
-          value={counts.completed}
-          icon={
-            <CheckCircleIcon className="h-5 w-5" />
-          }
-          iconClassName="bg-emerald-50 text-emerald-500 ring-emerald-100"
-          valueClassName="text-emerald-600"
-        />
-      </div>
+      <section
+        className="tm-stats"
+        aria-label="Task summary"
+      >
+        {SUMMARY_CARDS.map(
+          ({ key, title, Icon, color }) => (
+            <button
+              type="button"
+              key={key}
+              className={`tm-stat ${color}`}
+              aria-pressed={filter === key}
+              onClick={() => setFilter(key)}
+            >
+              <span className="tm-stat-copy">
+                <span>{title}</span>
+
+                <strong>
+                  {loading && tasks.length === 0
+                    ? "—"
+                    : counts[key]}
+                </strong>
+              </span>
+
+              <span className="tm-stat-icon">
+                <Icon size={23} />
+              </span>
+            </button>
+          )
+        )}
+      </section>
 
       {/* TASK PANEL */}
 
-      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/60">
-        <div className="p-4 sm:p-5">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="text-sm font-extrabold text-slate-700">
-              All Tasks
+      <section
+        className="tm-panel"
+        aria-busy={loading}
+      >
+        <div className="tm-toolbar">
+          <div>
+            <h2>
+              {role === "FARMER"
+                ? "My Tasks"
+                : "All Tasks"}
             </h2>
+
+            <p>
+              {role === "SUPERVISOR"
+                ? "Tasks across your assigned farms"
+                : role === "FARMER"
+                  ? "Your supervisor reviews and updates progress"
+                  : "Keep every farm activity on track"}
+            </p>
+          </div>
+
+          <div className="tm-tools">
+            <label className="tm-search">
+              <Search size={18} />
+
+              <input
+                aria-label="Search tasks"
+                placeholder="Search tasks, farms or people..."
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setSearch("")}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </label>
 
             <button
               type="button"
+              className="tm-icon"
+              aria-label="Refresh tasks"
+              disabled={
+                loading || busyTaskId !== null
+              }
               onClick={() => void loadTasks()}
-              disabled={loading}
-              className="w-fit rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "Refreshing..." : "Refresh"}
+              <RefreshCw
+                size={18}
+                className={
+                  loading ? "tm-spin" : ""
+                }
+              />
             </button>
           </div>
+        </div>
 
-          {/* FILTERS */}
+        {/* FILTERS */}
 
-          <div className="mb-5 inline-flex max-w-full flex-wrap rounded-xl bg-emerald-50/80 p-1 ring-1 ring-emerald-100">
-            <FilterButton
-              active={activeFilter === "ALL"}
-              onClick={() =>
-                setActiveFilter("ALL")
-              }
-            >
-              All Tasks
-            </FilterButton>
+        <div className="tm-filter-row">
+          <div
+            className="tm-tabs"
+            aria-label="Filter by task status"
+          >
+            {FILTERS.map((status) => (
+              <button
+                type="button"
+                key={status}
+                aria-pressed={filter === status}
+                className={
+                  filter === status
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setFilter(status)
+                }
+              >
+                {status === "ALL"
+                  ? "All Tasks"
+                  : formatLabel(status)}
 
-            <FilterButton
-              active={activeFilter === "PENDING"}
-              onClick={() =>
-                setActiveFilter("PENDING")
-              }
-            >
-              Pending
-            </FilterButton>
-
-            <FilterButton
-              active={
-                activeFilter === "IN_PROGRESS"
-              }
-              onClick={() =>
-                setActiveFilter("IN_PROGRESS")
-              }
-            >
-              In Progress
-            </FilterButton>
-
-            <FilterButton
-              active={
-                activeFilter === "COMPLETED"
-              }
-              onClick={() =>
-                setActiveFilter("COMPLETED")
-              }
-            >
-              Completed
-            </FilterButton>
+                <span>{counts[status]}</span>
+              </button>
+            ))}
           </div>
 
-          {/* LIST */}
+          <div className="tm-filter-selects">
+            <select
+              aria-label="Filter by farm"
+              value={farmFilter}
+              onChange={(event) =>
+                setFarmFilter(
+                  event.target.value
+                )
+              }
+            >
+              <option value="">All farms</option>
 
-          {loading && tasks.length === 0 ? (
-            <LoadingState text="Loading tasks..." />
-          ) : filteredTasks.length === 0 ? (
-            <EmptyState
-              title={
-                activeFilter === "ALL"
-                  ? "No tasks found"
-                  : `No ${formatStatus(
-                      activeFilter
-                    ).toLowerCase()} tasks found`
-              }
-              description={
-                activeFilter === "ALL"
-                  ? "Create your first farm task."
-                  : "There are no tasks in this status."
-              }
-            />
-          ) : (
-            <div className="space-y-3">
-              {filteredTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  busy={
-                    changingStatusId === task.id ||
-                    deletingId === task.id
-                  }
-                  onEdit={() =>
-                    openEditTask(task)
-                  }
-                  onDelete={() =>
-                    void handleDeleteTask(task)
-                  }
-                  onStatusChange={(status) =>
-                    void updateTaskStatus(
-                      task,
-                      status
-                    )
-                  }
-                />
+              {filterFarms.map((farm) => (
+                <option
+                  key={farm.id}
+                  value={farm.id}
+                >
+                  {farm.name}
+                </option>
               ))}
+            </select>
+
+            <select
+              aria-label="Sort tasks"
+              value={sortOrder}
+              onChange={(event) =>
+                setSortOrder(
+                  event.target.value as SortOrder
+                )
+              }
+            >
+              <option value="NEWEST">
+                Newest first
+              </option>
+
+              <option value="DUE_DATE">
+                Due date
+              </option>
+
+              <option value="PRIORITY">
+                Highest priority
+              </option>
+            </select>
+          </div>
+        </div>
+
+        {/* TASK LIST */}
+
+        <div className="tm-list">
+          {loading && tasks.length === 0 ? (
+            <div className="tm-empty">
+              <RefreshCw
+                size={32}
+                className="tm-spin"
+              />
+
+              <h3>Loading tasks...</h3>
             </div>
+          ) : filteredTasks.length === 0 ? (
+            <div className="tm-empty">
+              <ClipboardList size={40} />
+
+              <h3>
+                {error
+                  ? "Tasks could not be loaded"
+                  : hasFilters
+                    ? "No matching tasks"
+                    : "No tasks yet"}
+              </h3>
+
+              <p>
+                {error
+                  ? "Use Retry to load your tasks."
+                  : hasFilters
+                    ? "Try another search, farm or status."
+                    : canManage
+                      ? "Use Create Task to assign your first activity."
+                      : "Your assigned tasks will appear here."}
+              </p>
+
+              {hasFilters && (
+                <button
+                  type="button"
+                  className="tm-secondary"
+                  onClick={resetFilters}
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredTasks.map((task) => {
+              const expanded =
+                expandedTaskId === task.id;
+
+              const taskBusy =
+                busyTaskId === task.id;
+
+              return (
+                <article
+                  key={task.id}
+                  className={`tm-task ${
+                    expanded
+                      ? "tm-task-expanded"
+                      : ""
+                  }`}
+                >
+                  <div className="tm-task-top">
+                    <div className="tm-task-main">
+                      <span
+                        className={`tm-task-symbol ${
+                          task.status === "COMPLETED"
+                            ? "done"
+                            : ""
+                        }`}
+                      >
+                        {task.status ===
+                        "COMPLETED" ? (
+                          <CheckCircle2 size={22} />
+                        ) : (
+                          <Sprout size={22} />
+                        )}
+                      </span>
+
+                      <div className="tm-task-content">
+                        <div className="tm-task-title">
+                          <h3>
+                            <button
+                              type="button"
+                              aria-expanded={expanded}
+                              aria-controls={`task-details-${task.id}`}
+                              onClick={() =>
+                                setExpandedTaskId(
+                                  expanded
+                                    ? null
+                                    : task.id
+                                )
+                              }
+                            >
+                              {task.title}
+                            </button>
+                          </h3>
+
+                          <span
+                            className={`tm-priority ${task.priority.toLowerCase()}`}
+                          >
+                            {formatLabel(
+                              task.priority
+                            )}
+                          </span>
+                        </div>
+
+                        {!expanded &&
+                          task.description && (
+                            <p className="tm-description tm-truncate">
+                              {task.description}
+                            </p>
+                          )}
+
+                        <div className="tm-meta">
+                          <span>
+                            <Leaf size={15} />
+                            {task.farmName}
+                          </span>
+
+                          {task.fieldName && (
+                            <span className="tm-field">
+                              {task.fieldName}
+                            </span>
+                          )}
+
+                          <span>
+                            <CalendarDays
+                              size={15}
+                            />
+
+                            {formatDate(
+                              task.dueDate
+                            )}
+                          </span>
+
+                          {isOverdue(task) && (
+                            <span className="tm-overdue">
+                              Overdue
+                            </span>
+                          )}
+
+                          {isDueToday(task) && (
+                            <span className="tm-due-today">
+                              Due today
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="tm-team">
+                          <Users size={16} />
+
+                          {task.workerNames
+                            .slice(0, 3)
+                            .map((name, index) => (
+                              <span
+                                className="tm-person"
+                                key={`${task.id}-${index}`}
+                              >
+                                <span className="tm-avatar">
+                                  {getInitials(name)}
+                                </span>
+
+                                {name}
+                              </span>
+                            ))}
+
+                          {task.workerNames.length >
+                            3 && (
+                            <button
+                              type="button"
+                              className="tm-more-workers"
+                              aria-label="View all assigned farmers"
+                              onClick={() =>
+                                setExpandedTaskId(
+                                  task.id
+                                )
+                              }
+                            >
+                              +
+                              {task.workerNames
+                                .length - 3}{" "}
+                              more
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="tm-task-actions">
+                      <span
+                        className={`tm-status ${task.status.toLowerCase()}`}
+                      >
+                        {formatLabel(task.status)}
+                      </span>
+
+                      {canManage && (
+                        <div className="tm-row-actions">
+                          <select
+                            aria-label={`Status for ${task.title}`}
+                            value={task.status}
+                            disabled={
+                              loading ||
+                              busyTaskId !== null
+                            }
+                            onChange={(event) =>
+                              void changeTaskStatus(
+                                task,
+                                event.target
+                                  .value as TaskStatus
+                              )
+                            }
+                          >
+                            {STATUSES.map(
+                              (status) => (
+                                <option
+                                  key={status}
+                                  value={status}
+                                >
+                                  {formatLabel(
+                                    status
+                                  )}
+                                </option>
+                              )
+                            )}
+                          </select>
+
+                          <button
+                            type="button"
+                            className="tm-icon"
+                            aria-label={`Edit ${task.title}`}
+                            disabled={
+                              loading ||
+                              busyTaskId !== null
+                            }
+                            onClick={() =>
+                              openTaskForm(task)
+                            }
+                          >
+                            <Pencil size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="tm-icon tm-delete"
+                            aria-label={`Delete ${task.title}`}
+                            disabled={
+                              loading ||
+                              busyTaskId !== null
+                            }
+                            onClick={() => {
+                              setDeleteError("");
+                              setDeleteTarget(task);
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+
+                      {taskBusy && (
+                        <span
+                          className="tm-saving"
+                          role="status"
+                        >
+                          <RefreshCw
+                            size={14}
+                            className="tm-spin"
+                          />
+                          Updating...
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* EXPANDED DETAILS */}
+
+                  <div
+                    id={`task-details-${task.id}`}
+                    hidden={!expanded}
+                    className="tm-details"
+                  >
+                    <div className="tm-detail-grid">
+                      <div>
+                        <span className="tm-detail-label">
+                          DESCRIPTION
+                        </span>
+
+                        <p className="tm-full-description">
+                          {task.description ||
+                            "No description has been added."}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span className="tm-detail-label">
+                          SUPERVISING OFFICER
+                        </span>
+
+                        <p className="tm-supervisor">
+                          <ShieldCheck size={18} />
+
+                          {task.supervisorName ||
+                            "No supervisor assigned"}
+                        </p>
+
+                        <span className="tm-detail-label">
+                          WORK AREA
+                        </span>
+
+                        <p>
+                          {task.fieldName ||
+                            "Entire farm"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="tm-detail-team">
+                      <span className="tm-detail-label">
+                        ASSIGNED FARMERS ·{" "}
+                        {task.workerNames.length}
+                      </span>
+
+                      <div className="tm-team">
+                        {task.workerNames.map(
+                          (name, index) => (
+                            <span
+                              className="tm-person"
+                              key={`detail-${task.id}-${index}`}
+                            >
+                              <span className="tm-avatar">
+                                {getInitials(name)}
+                              </span>
+
+                              {name}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="tm-expand-button"
+                    aria-expanded={expanded}
+                    aria-controls={`task-details-${task.id}`}
+                    onClick={() =>
+                      setExpandedTaskId(
+                        expanded ? null : task.id
+                      )
+                    }
+                  >
+                    {expanded
+                      ? "Hide details"
+                      : "View details"}
+
+                    {expanded ? (
+                      <ChevronUp size={16} />
+                    ) : (
+                      <ChevronDown size={16} />
+                    )}
+                  </button>
+                </article>
+              );
+            })
           )}
         </div>
+
+        <footer className="tm-panel-footer">
+          <span>
+            Showing {filteredTasks.length} of{" "}
+            {tasks.length} tasks
+          </span>
+
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+            >
+              Clear filters
+            </button>
+          )}
+        </footer>
       </section>
 
       {/* CREATE / EDIT MODAL */}
 
-      {showTaskModal && (
+      {showForm && (
         <Modal
-          title={
-            editingTaskId === null
-              ? "Create New Task"
-              : "Edit Task"
-          }
-          onClose={() => {
-            if (!saving) {
-              setShowTaskModal(false);
-            }
-          }}
+          titleId="task-form-title"
+          onCancel={closeTaskForm}
         >
           <form
-            onSubmit={handleTaskSubmit}
-            className="space-y-5"
+            className="tm-form"
+            onSubmit={handleSubmit}
           >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Input
-                label="Task Title *"
-                placeholder="e.g. Irrigation System Check"
-                value={form.title}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    title: value,
-                  }))
-                }
-              />
+            <header className="tm-modal-header">
+              <div>
+                <span className="tm-eyebrow">
+                  FARM ACTIVITIES
+                </span>
 
-              <Select
-                label="Priority *"
-                value={form.priority}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    priority:
-                      value as TaskPriority,
-                  }))
-                }
-              >
-                <option value="LOW">
-                  Low
-                </option>
-                <option value="MEDIUM">
-                  Medium
-                </option>
-                <option value="HIGH">
-                  High
-                </option>
-                <option value="URGENT">
-                  Urgent
-                </option>
-              </Select>
-            </div>
+                <h2 id="task-form-title">
+                  {editingTaskId === null
+                    ? "Create Task"
+                    : "Edit Task"}
+                </h2>
 
-            <TextArea
-              label="Description"
-              placeholder="Describe what needs to be done..."
-              value={form.description}
-              onChange={(value) =>
-                setForm((previous) => ({
-                  ...previous,
-                  description: value,
-                }))
-              }
-            />
+                <p>
+                  Choose the location, assign your
+                  team and set the schedule.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Input
-                label="Farm Name *"
-                placeholder="e.g. Green Valley Farm"
-                value={form.farmName}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    farmName: value,
-                  }))
-                }
-              />
-
-              <Input
-                label="Field Name"
-                placeholder="e.g. Field A"
-                value={form.fieldName}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    fieldName: value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Input
-                label="Assignee Name *"
-                placeholder="e.g. Kamal Perera"
-                value={form.assigneeName}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    assigneeName: value,
-                  }))
-                }
-              />
-
-              <Input
-                label="Supervisor Name"
-                placeholder="e.g. Nimal Silva"
-                value={form.supervisorName}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    supervisorName: value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Input
-                label="Due Date *"
-                placeholder=""
-                type="date"
-                value={form.dueDate}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    dueDate: value,
-                  }))
-                }
-              />
-
-              <Input
-                label="Worker Names"
-                placeholder="Sunil Silva, Amal Fernando, Kasun Perera"
-                value={form.workerNames}
-                onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    workerNames: value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-800">
-              Worker names must be separated by commas.
-              Example:{" "}
-              <span className="font-bold">
-                Sunil Silva, Amal Fernando
-              </span>
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
+                className="tm-icon"
+                aria-label="Close task form"
                 disabled={saving}
-                onClick={() =>
-                  setShowTaskModal(false)
-                }
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={closeTaskForm}
               >
-                Cancel
+                <X size={21} />
               </button>
+            </header>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-700/15 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving
-                  ? "Saving..."
-                  : editingTaskId === null
-                  ? "Create Task"
-                  : "Update Task"}
-              </button>
+            <div className="tm-form-body">
+              {formError && (
+                <div
+                  className="tm-alert"
+                  role="alert"
+                >
+                  {formError}
+                </div>
+              )}
+
+              {optionsError && (
+                <div
+                  className="tm-alert"
+                  role="alert"
+                >
+                  <span>{optionsError}</span>
+
+                  <button
+                    type="button"
+                    disabled={optionsLoading}
+                    onClick={() =>
+                      setOptionsRetry(
+                        (previous) => previous + 1
+                      )
+                    }
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* DETAILS */}
+
+              <fieldset disabled={saving}>
+                <legend className="tm-section-title">
+                  <span>01</span>
+                  Task details
+                </legend>
+
+                <label className="tm-input-label">
+                  Task title <b>*</b>
+
+                  <input
+                    autoFocus
+                    required
+                    maxLength={255}
+                    placeholder="e.g. Inspect the irrigation system"
+                    value={form.title}
+                    onChange={(event) =>
+                      updateForm(
+                        "title",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+
+                <label className="tm-input-label">
+                  Description
+
+                  <textarea
+                    rows={4}
+                    maxLength={1000}
+                    placeholder="Explain the work, equipment needed and what the supervisor should check..."
+                    value={form.description}
+                    onChange={(event) =>
+                      updateForm(
+                        "description",
+                        event.target.value
+                      )
+                    }
+                  />
+
+                  <small className="tm-character-count">
+                    {form.description.length}/1000
+                    characters
+                  </small>
+                </label>
+              </fieldset>
+
+              {/* LOCATION AND TEAM */}
+
+              <fieldset disabled={saving}>
+                <legend className="tm-section-title">
+                  <span>02</span>
+                  Location & team
+                </legend>
+
+                <div className="tm-grid">
+                  <label className="tm-input-label">
+                    Farm <b>*</b>
+
+                    <select
+                      required
+                      value={form.farmId}
+                      disabled={optionsLoading}
+                      onChange={(event) =>
+                        changeFarm(
+                          event.target.value
+                        )
+                      }
+                    >
+                      <option value="">
+                        Select a farm
+                      </option>
+
+                      {options.farms.map((farm) => (
+                        <option
+                          key={farm.id}
+                          value={farm.id}
+                        >
+                          {farm.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="tm-input-label">
+                    Field <small>Optional</small>
+
+                    <select
+                      value={form.fieldId}
+                      disabled={
+                        !form.farmId ||
+                        optionsLoading ||
+                        !!optionsError
+                      }
+                      onChange={(event) =>
+                        updateForm(
+                          "fieldId",
+                          event.target.value
+                        )
+                      }
+                    >
+                      <option value="">
+                        Entire farm / no specific field
+                      </option>
+
+                      {options.fields.map(
+                        (field) => (
+                          <option
+                            key={field.id}
+                            value={field.id}
+                          >
+                            {field.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+                </div>
+
+                <p className="tm-help">
+                  Changing the farm clears the selected
+                  field, supervisor and farmers.
+                </p>
+
+                <label className="tm-input-label">
+                  Supervising officer <b>*</b>
+
+                  <select
+                    required
+                    value={form.supervisorId}
+                    disabled={
+                      !form.farmId ||
+                      optionsLoading ||
+                      !!optionsError
+                    }
+                    onChange={(event) =>
+                      updateForm(
+                        "supervisorId",
+                        event.target.value
+                      )
+                    }
+                  >
+                    <option value="">
+                      Select a supervisor
+                    </option>
+
+                    {options.supervisors.map(
+                      (supervisor) => (
+                        <option
+                          key={supervisor.id}
+                          value={supervisor.id}
+                        >
+                          {supervisor.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+
+                {form.farmId &&
+                  !optionsLoading &&
+                  !optionsError &&
+                  options.supervisors.length ===
+                    0 && (
+                    <p className="tm-hint">
+                      No active supervisor is assigned
+                      to this farm. Update farm
+                      assignments in User Management
+                      first.
+                    </p>
+                  )}
+
+                {/* FARMER MULTI-SELECTION */}
+
+                <div className="tm-worker-heading">
+                  <span>
+                    Assign farmers <b>*</b>
+                  </span>
+
+                  <span aria-live="polite">
+                    {form.workerIds.length} selected
+                  </span>
+                </div>
+
+                <div className="tm-selection-actions">
+                  <button
+                    type="button"
+                    disabled={
+                      optionsLoading ||
+                      !!optionsError ||
+                      filteredWorkers.length === 0
+                    }
+                    onClick={selectAllShownWorkers}
+                  >
+                    Select all shown
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      form.workerIds.length === 0
+                    }
+                    onClick={() =>
+                      updateForm("workerIds", [])
+                    }
+                  >
+                    Clear selection
+                  </button>
+                </div>
+
+                {selectedWorkers.length > 0 && (
+                  <div
+                    className="tm-selected-chips"
+                    aria-label="Selected farmers"
+                  >
+                    {selectedWorkers.map((worker) => (
+                      <button
+                        type="button"
+                        key={worker.id}
+                        aria-label={`Remove ${worker.name}`}
+                        onClick={() =>
+                          toggleWorker(
+                            worker.id,
+                            false
+                          )
+                        }
+                      >
+                        {worker.name}
+                        <X size={14} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="tm-worker-box">
+                  <label className="tm-search">
+                    <Search size={17} />
+
+                    <input
+                      aria-label="Search farmers"
+                      placeholder="Search farmers..."
+                      value={workerSearch}
+                      disabled={
+                        !form.farmId ||
+                        optionsLoading ||
+                        !!optionsError
+                      }
+                      onChange={(event) =>
+                        setWorkerSearch(
+                          event.target.value
+                        )
+                      }
+                    />
+                  </label>
+
+                  <div className="tm-worker-list">
+                    {optionsLoading ? (
+                      <p className="tm-worker-empty">
+                        Loading farm and team
+                        selections...
+                      </p>
+                    ) : optionsError ? (
+                      <p className="tm-worker-empty">
+                        Use Retry above to load your team.
+                      </p>
+                    ) : !form.farmId ? (
+                      <p className="tm-worker-empty">
+                        Select a farm to see its farmers.
+                      </p>
+                    ) : filteredWorkers.length === 0 ? (
+                      <p className="tm-worker-empty">
+                        {workerSearch
+                          ? "No farmers match your search."
+                          : "No active farmers are assigned to this farm."}
+                      </p>
+                    ) : (
+                      filteredWorkers.map((worker) => {
+                        const selected =
+                          form.workerIds.includes(
+                            worker.id
+                          );
+
+                        return (
+                          <label
+                            key={worker.id}
+                            className={`tm-worker ${
+                              selected
+                                ? "selected"
+                                : ""
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={(event) =>
+                                toggleWorker(
+                                  worker.id,
+                                  event.target.checked
+                                )
+                              }
+                            />
+
+                            <span className="tm-avatar">
+                              {getInitials(
+                                worker.name
+                              )}
+                            </span>
+
+                            <span>
+                              {worker.name}
+                              <small>Farmer</small>
+                            </span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {hasUnavailableWorkers && (
+                  <p className="tm-hint">
+                    Some previously selected farmers
+                    are no longer available.{" "}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateForm(
+                          "workerIds",
+                          form.workerIds.filter(
+                            (id) =>
+                              options.workers.some(
+                                (worker) =>
+                                  worker.id === id
+                              )
+                          )
+                        )
+                      }
+                    >
+                      Remove unavailable selections
+                    </button>
+                  </p>
+                )}
+              </fieldset>
+
+              {/* SCHEDULE */}
+
+              <fieldset disabled={saving}>
+                <legend className="tm-section-title">
+                  <span>03</span>
+                  Schedule & progress
+                </legend>
+
+                <div className="tm-grid tm-three">
+                  <label className="tm-input-label">
+                    Priority <b>*</b>
+
+                    <select
+                      value={form.priority}
+                      onChange={(event) =>
+                        updateForm(
+                          "priority",
+                          event.target
+                            .value as TaskPriority
+                        )
+                      }
+                    >
+                      {PRIORITIES.map(
+                        (priority) => (
+                          <option
+                            key={priority}
+                            value={priority}
+                          >
+                            {formatLabel(priority)}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  <label className="tm-input-label">
+                    Status <b>*</b>
+
+                    <select
+                      value={form.status}
+                      onChange={(event) =>
+                        updateForm(
+                          "status",
+                          event.target
+                            .value as TaskStatus
+                        )
+                      }
+                    >
+                      {STATUSES.map((status) => (
+                        <option
+                          key={status}
+                          value={status}
+                        >
+                          {formatLabel(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="tm-input-label">
+                    Due date <b>*</b>
+
+                    <input
+                      type="date"
+                      required
+                      value={form.dueDate}
+                      onChange={(event) =>
+                        updateForm(
+                          "dueDate",
+                          event.target.value
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+
+                {form.dueDate &&
+                  form.dueDate < today &&
+                  form.status !== "COMPLETED" &&
+                  form.status !== "CANCELLED" && (
+                    <p className="tm-hint">
+                      This date is in the past.
+                      The task will appear as overdue.
+                    </p>
+                  )}
+              </fieldset>
             </div>
+
+            {/* FOOTER */}
+
+            <footer className="tm-modal-footer">
+              <span>
+                <b>*</b> Required fields
+              </span>
+
+              <div>
+                <button
+                  type="button"
+                  className="tm-secondary"
+                  disabled={saving}
+                  onClick={closeTaskForm}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="tm-primary"
+                  disabled={
+                    saving ||
+                    optionsLoading ||
+                    !!optionsError
+                  }
+                >
+                  {saving && (
+                    <RefreshCw
+                      size={16}
+                      className="tm-spin"
+                    />
+                  )}
+
+                  {saving
+                    ? "Saving..."
+                    : editingTaskId === null
+                      ? "Create Task"
+                      : "Save Changes"}
+                </button>
+              </div>
+            </footer>
           </form>
         </Modal>
       )}
-    </div>
-  );
-}
 
-/* =========================================================
-   TASK CARD
-========================================================= */
+      {/* DELETE CONFIRMATION */}
 
-function TaskCard({
-  task,
-  busy,
-  onEdit,
-  onDelete,
-  onStatusChange,
-}: {
-  task: Task;
-  busy: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onStatusChange: (
-    status: TaskStatus
-  ) => void;
-}) {
-  const [showDetails, setShowDetails] =
-    useState(false);
-
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:border-emerald-200 hover:shadow-md hover:shadow-emerald-950/5 sm:px-5">
-      <div className="flex items-start gap-3">
-        <label className="mt-0.5 flex shrink-0 items-center">
-          <input
-            type="checkbox"
-            checked={
-              task.status === "COMPLETED"
+      {deleteTarget && (
+        <Modal
+          compact
+          titleId="task-delete-title"
+          onCancel={() => {
+            if (!mutationPending.current) {
+              setDeleteTarget(null);
             }
-            disabled={busy}
-            onChange={(event) =>
-              onStatusChange(
-                event.target.checked
-                  ? "COMPLETED"
-                  : "PENDING"
-              )
-            }
-            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-            title={
-              task.status === "COMPLETED"
-                ? "Mark as pending"
-                : "Mark as completed"
-            }
-          />
-        </label>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className="text-lg"
-                  aria-hidden="true"
-                >
-                  {getTaskEmoji(task)}
-                </span>
-
-                <h3
-                  className={`text-sm font-extrabold sm:text-[15px] ${
-                    task.status === "COMPLETED"
-                      ? "text-slate-500 line-through"
-                      : "text-slate-800"
-                  }`}
-                >
-                  {task.title}
-                </h3>
-
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold lowercase ${priorityClasses(
-                    task.priority
-                  )}`}
-                >
-                  {formatPriority(
-                    task.priority
-                  )}
-                </span>
-              </div>
-
-              {task.description && (
-                <p className="mt-2 text-xs leading-5 text-emerald-900/70 sm:text-sm">
-                  {task.description}
-                </p>
-              )}
-            </div>
-
-            <span
-              className={`inline-flex w-fit shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold lowercase ${statusClasses(
-                task.status
-              )}`}
-            >
-              {formatStatus(task.status)}
-            </span>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-slate-600">
-            <span className="inline-flex items-center gap-1.5">
-              <UserIcon className="h-3.5 w-3.5 text-emerald-700" />
-
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-800 px-1 text-[8px] font-extrabold text-white">
-                {getInitials(
-                  task.assigneeName
-                )}
-              </span>
-
-              {task.assigneeName}
-            </span>
-
-            <span className="inline-flex items-center gap-1.5">
-              <CalendarIcon className="h-3.5 w-3.5 text-emerald-700" />
-              {formatDate(task.dueDate)}
-            </span>
-
-            {task.fieldName && (
-              <span className="rounded-lg bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800">
-                {task.fieldName}
-              </span>
-            )}
-
-            <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-              {task.farmName}
-            </span>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
-              <StatusActionButton
-                active={
-                  task.status === "PENDING"
-                }
-                disabled={busy}
-                onClick={() =>
-                  onStatusChange("PENDING")
-                }
-              >
-                Pending
-              </StatusActionButton>
-
-              <StatusActionButton
-                active={
-                  task.status ===
-                  "IN_PROGRESS"
-                }
-                disabled={busy}
-                onClick={() =>
-                  onStatusChange(
-                    "IN_PROGRESS"
-                  )
-                }
-              >
-                In Progress
-              </StatusActionButton>
-
-              <StatusActionButton
-                active={
-                  task.status ===
-                  "COMPLETED"
-                }
-                disabled={busy}
-                onClick={() =>
-                  onStatusChange("COMPLETED")
-                }
-              >
-                Completed
-              </StatusActionButton>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setShowDetails(
-                    (previous) => !previous
-                  )
-                }
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50"
-              >
-                {showDetails
-                  ? "Hide Details"
-                  : "Details"}
-              </button>
-
-              <button
-                type="button"
-                onClick={onEdit}
-                disabled={busy}
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Edit
-              </button>
-
-              <button
-                type="button"
-                onClick={onDelete}
-                disabled={busy}
-                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-bold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busy ? "Please wait..." : "Delete"}
-              </button>
-            </div>
-          </div>
-
-          {showDetails && (
-            <div className="mt-3 grid grid-cols-1 gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 sm:grid-cols-2 xl:grid-cols-4">
-              <TaskDetail
-                label="Supervisor"
-                value={
-                  task.supervisorName ||
-                  "Not assigned"
-                }
-              />
-
-              <TaskDetail
-                label="Workers"
-                value={
-                  task.workerNames?.length
-                    ? task.workerNames.join(
-                        ", "
-                      )
-                    : "No workers"
-                }
-              />
-
-              <TaskDetail
-                label="Created"
-                value={
-                  task.createdAt
-                    ? new Date(
-                        task.createdAt
-                      ).toLocaleString()
-                    : "Unknown"
-                }
-              />
-
-              <TaskDetail
-                label="Task ID"
-                value={`#${task.id}`}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-/* =========================================================
-   SMALL COMPONENTS
-========================================================= */
-
-function TaskStatCard({
-  title,
-  value,
-  icon,
-  iconClassName,
-  valueClassName,
-}: {
-  title: string;
-  value: number;
-  icon: ReactNode;
-  iconClassName: string;
-  valueClassName: string;
-}) {
-  return (
-    <div className="flex min-h-[112px] items-center justify-between rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-sm shadow-slate-200/60">
-      <div>
-        <p className="text-[11px] font-medium text-emerald-900/70">
-          {title}
-        </p>
-
-        <p
-          className={`mt-2 text-2xl font-medium ${valueClassName}`}
+          }}
         >
-          {value}
-        </p>
-      </div>
+          <div className="tm-confirm-content">
+            <span className="tm-confirm-icon">
+              <Trash2 size={25} />
+            </span>
 
-      <div
-        className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ${iconClassName}`}
-      >
-        {icon}
-      </div>
-    </div>
-  );
-}
-
-function FilterButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-[11px] font-bold transition ${
-        active
-          ? "bg-white text-slate-800 shadow-sm"
-          : "text-slate-600 hover:bg-white/70"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function StatusActionButton({
-  active,
-  disabled,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled || active}
-      className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition ${
-        active
-          ? "border-emerald-200 bg-emerald-100 text-emerald-800"
-          : "border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-      } disabled:cursor-not-allowed disabled:opacity-60`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function TaskDetail({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div>
-      <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 break-words text-xs font-semibold text-slate-700">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function Input({
-  label,
-  placeholder,
-  value,
-  onChange,
-  type = "text",
-}: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-50"
-      />
-    </div>
-  );
-}
-
-function TextArea({
-  label,
-  placeholder,
-  value,
-  onChange,
-}: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-
-      <textarea
-        rows={4}
-        placeholder={placeholder}
-        value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
-        className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-50"
-      />
-    </div>
-  );
-}
-
-function Select({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-
-      <select
-        value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-700 outline-none transition-all focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-50"
-      >
-        {children}
-      </select>
-    </div>
-  );
-}
-
-function Modal({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-5">
-      <div className="max-h-[95vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-white/70 bg-white shadow-2xl shadow-slate-950/20">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur">
-          <div>
-            <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
-              {title}
+            <h2 id="task-delete-title">
+              Delete this task?
             </h2>
 
-            <p className="mt-0.5 text-xs font-medium text-slate-500">
-              Fill the task details below.
+            <p>
+              “{deleteTarget.title}” and its farmer
+              assignments will be removed.
+              This cannot be undone.
             </p>
+
+            {deleteError && (
+              <div
+                className="tm-alert"
+                role="alert"
+              >
+                {deleteError}
+              </div>
+            )}
+
+            <div className="tm-confirm-actions">
+              <button
+                autoFocus
+                type="button"
+                className="tm-secondary"
+                disabled={busyTaskId !== null}
+                onClick={() =>
+                  setDeleteTarget(null)
+                }
+              >
+                Keep task
+              </button>
+
+              <button
+                type="button"
+                className="tm-primary tm-danger"
+                disabled={busyTaskId !== null}
+                onClick={() =>
+                  void confirmDelete()
+                }
+              >
+                {busyTaskId !== null
+                  ? "Deleting..."
+                  : "Delete task"}
+              </button>
+            </div>
           </div>
+        </Modal>
+      )}
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-2xl leading-none text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
+      {/* UNSAVED CHANGES CONFIRMATION */}
 
-        <div className="p-5 sm:p-6">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
+      {showDiscard && (
+        <Modal
+          compact
+          titleId="task-discard-title"
+          onCancel={() =>
+            setShowDiscard(false)
+          }
+        >
+          <div className="tm-confirm-content">
+            <h2 id="task-discard-title">
+              Discard unsaved changes?
+            </h2>
 
-function LoadingState({
-  text,
-}: {
-  text: string;
-}) {
-  return (
-    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 text-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
+            <p>
+              Your changes have not been saved.
+              Continue editing to keep working,
+              or discard them to close the form.
+            </p>
 
-      <p className="mt-4 text-sm font-bold text-slate-600">
-        {text}
-      </p>
-    </div>
-  );
-}
+            <div className="tm-confirm-actions">
+              <button
+                autoFocus
+                type="button"
+                className="tm-secondary"
+                onClick={() =>
+                  setShowDiscard(false)
+                }
+              >
+                Keep editing
+              </button>
 
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl ring-1 ring-emerald-100">
-        📋
-      </div>
-
-      <h3 className="mt-4 text-sm font-extrabold text-slate-800">
-        {title}
-      </h3>
-
-      <p className="mt-1 max-w-md text-xs leading-5 text-slate-500">
-        {description}
-      </p>
-    </div>
+              <button
+                type="button"
+                className="tm-primary tm-danger"
+                onClick={discardChanges}
+              >
+                Discard changes
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </main>
   );
 }
 
 /* =========================================================
-   INLINE ICONS
-   No extra icon package is required.
+   COMPLETE DESIGN
+   Strong readable text and normal solid colours.
 ========================================================= */
 
-function CheckCircleIcon({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="8" />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="m8.8 12.2 2 2 4.5-4.8"
-      />
-    </svg>
-  );
+const styles = `
+/* BASE */
+
+.tm-page {
+  --tm-ink: #172d22;
+  --tm-green: #166534;
+  --tm-border: #c9d4cb;
+  --tm-muted: #46574b;
+
+  min-height: 100%;
+  padding: 28px;
+  background: #f3f5f3;
+  color: var(--tm-ink);
+
+  font-family: inherit;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
-function CircleIcon({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="8" />
-    </svg>
-  );
+.tm-page *,
+.tm-page *::before,
+.tm-page *::after {
+  box-sizing: border-box;
 }
 
-function ClockIcon({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="8" />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 8v4l2.8 1.7"
-      />
-    </svg>
-  );
+.tm-page h1,
+.tm-page h2,
+.tm-page h3,
+.tm-page p {
+  margin: 0;
 }
 
-function UserIcon({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8" r="3" />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M6.5 18c.6-3 2.6-4.5 5.5-4.5s4.9 1.5 5.5 4.5"
-      />
-    </svg>
-  );
+.tm-page button,
+.tm-page input,
+.tm-page select,
+.tm-page textarea {
+  font: inherit;
 }
 
-function CalendarIcon({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect
-        x="5"
-        y="6.5"
-        width="14"
-        height="12"
-        rx="2"
-      />
-      <path
-        strokeLinecap="round"
-        d="M8 4.5v4M16 4.5v4M5 10h14"
-      />
-    </svg>
-  );
+.tm-page button {
+  cursor: pointer;
+  transition:
+    background-color .16s ease,
+    border-color .16s ease,
+    color .16s ease,
+    box-shadow .16s ease;
 }
+
+.tm-page button:disabled {
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+.tm-page input:disabled,
+.tm-page select:disabled,
+.tm-page textarea:disabled {
+  color: #59645c;
+  background: #e9eeea;
+  cursor: not-allowed;
+}
+
+.tm-page button:focus-visible,
+.tm-page input:focus-visible,
+.tm-page select:focus-visible,
+.tm-page textarea:focus-visible {
+  outline: 3px solid #337b46;
+  outline-offset: 3px;
+}
+
+.tm-page input::placeholder,
+.tm-page textarea::placeholder {
+  color: #657168;
+  opacity: 1;
+}
+
+.tm-page [hidden] {
+  display: none !important;
+}
+
+.tm-page svg {
+  flex-shrink: 0;
+}
+
+/* HEADER */
+
+.tm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  padding: 28px 30px;
+  margin-bottom: 24px;
+
+  border: 1px solid #16432b;
+  border-radius: 16px;
+
+  color: #ffffff;
+  background: #16432b;
+
+  box-shadow: 0 6px 18px rgba(22, 67, 43, .1);
+}
+
+.tm-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tm-logo {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 55px;
+  height: 55px;
+
+  border: 1px solid #638771;
+  border-radius: 14px;
+
+  color: #ffffff;
+  background: #285b3d;
+}
+
+.tm-header h1 {
+  color: #ffffff;
+  font-size: 29px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -.7px;
+}
+
+.tm-header p {
+  margin-top: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.65;
+}
+
+/* BUTTONS */
+
+.tm-primary,
+.tm-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 43px;
+  padding: 11px 17px;
+
+  border: 1px solid transparent;
+  border-radius: 9px;
+
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.tm-primary {
+  color: #ffffff;
+  background: #166534;
+  border-color: #166534;
+}
+
+.tm-primary:hover:not(:disabled) {
+  background: #104e28;
+  border-color: #104e28;
+}
+
+.tm-header > .tm-primary {
+  color: #16432b;
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.tm-header > .tm-primary:hover:not(:disabled) {
+  color: #10371f;
+  background: #e7efe9;
+  border-color: #e7efe9;
+}
+
+.tm-header button:focus-visible,
+.tm-modal-header button:focus-visible {
+  outline-color: #ffffff;
+}
+
+.tm-secondary {
+  color: #294c35;
+  background: #ffffff;
+  border-color: #9eb3a4;
+}
+
+.tm-secondary:hover:not(:disabled) {
+  background: #e7efe8;
+  border-color: #6a8c73;
+}
+
+.tm-danger {
+  color: #ffffff;
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.tm-danger:hover:not(:disabled) {
+  background: #921d14;
+  border-color: #921d14;
+}
+
+.tm-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 39px;
+  height: 39px;
+  padding: 0;
+
+  border: 1px solid #b7c8bc;
+  border-radius: 9px;
+
+  color: #345c40;
+  background: #ffffff;
+}
+
+.tm-icon:hover:not(:disabled) {
+  color: #16432b;
+  background: #e4eee6;
+  border-color: #6e9378;
+}
+
+.tm-delete {
+  color: #b42318;
+}
+
+.tm-delete:hover:not(:disabled) {
+  color: #921d14;
+  background: #fbe9e6;
+  border-color: #cf8d84;
+}
+
+/* ALERTS */
+
+.tm-alert,
+.tm-notice {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  padding: 13px 16px;
+  margin-bottom: 18px;
+
+  border: 1px solid;
+  border-radius: 10px;
+
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.7;
+}
+
+.tm-alert {
+  color: #8f281c;
+  background: #fff4f1;
+  border-color: #d6a296;
+}
+
+.tm-notice {
+  color: #20572f;
+  background: #edf6ec;
+  border-color: #9fbea3;
+}
+
+.tm-alert > span,
+.tm-notice > span {
+  flex: 1;
+}
+
+.tm-alert button,
+.tm-notice button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 5px;
+  border: 0;
+  border-radius: 5px;
+
+  color: inherit;
+  background: transparent;
+}
+
+.tm-alert button {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* SUMMARY CARDS */
+
+.tm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 24px;
+}
+
+.tm-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  padding: 22px;
+
+  text-align: left;
+  color: #183524;
+  background: #ffffff;
+
+  border: 1px solid #c9d4cb;
+  border-radius: 13px;
+
+  box-shadow: 0 3px 10px rgba(30, 52, 35, .035);
+}
+
+.tm-stat:hover {
+  border-color: #759a7e;
+  box-shadow: 0 5px 16px rgba(30, 52, 35, .07);
+}
+
+.tm-stat[aria-pressed="true"] {
+  border-color: #296b3f;
+  box-shadow: 0 0 0 1px #296b3f;
+}
+
+.tm-stat-copy > span {
+  display: block;
+  color: #3a5041;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.tm-stat-copy strong {
+  display: block;
+  margin-top: 10px;
+
+  color: #163d26;
+  font-size: 33px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-stat-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+}
+
+.tm-stat.blue .tm-stat-icon {
+  color: #ffffff;
+  background: #2457b8;
+}
+
+.tm-stat.orange .tm-stat-icon {
+  color: #ffffff;
+  background: #a54b08;
+}
+
+.tm-stat.orange strong {
+  color: #914000;
+}
+
+.tm-stat.green .tm-stat-icon {
+  color: #ffffff;
+  background: #166534;
+}
+
+.tm-stat.green strong {
+  color: #166534;
+}
+
+/* PANEL */
+
+.tm-panel {
+  overflow: hidden;
+
+  border: 1px solid #c9d4cb;
+  border-radius: 15px;
+
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(32, 54, 36, .035);
+}
+
+.tm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 24px 24px 19px;
+}
+
+.tm-toolbar h2 {
+  color: #1d3926;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+}
+
+.tm-toolbar p {
+  margin-top: 6px;
+  color: #4c5d50;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tm-tools {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.tm-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-height: 42px;
+  padding: 10px 12px;
+
+  border: 1px solid #b7c8bc;
+  border-radius: 9px;
+
+  color: #496050;
+  background: #ffffff;
+}
+
+.tm-search:focus-within {
+  border-color: #337b46;
+  box-shadow: 0 0 0 3px rgba(51, 123, 70, .1);
+}
+
+.tm-search input {
+  width: 235px;
+  min-width: 0;
+  padding: 0;
+
+  border: 0;
+  outline: 0;
+
+  color: #213a28;
+  background: transparent;
+
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tm-search input:focus-visible {
+  outline: 0;
+}
+
+.tm-search button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 2px;
+  border: 0;
+
+  color: #3f5846;
+  background: transparent;
+}
+
+/* FILTERS */
+
+.tm-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+
+  padding: 0 24px 21px;
+}
+
+.tm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+
+  padding: 5px;
+  border: 1px solid #c7d4c8;
+  border-radius: 10px;
+
+  background: #e9eeea;
+}
+
+.tm-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  min-height: 35px;
+  padding: 7px 10px;
+
+  border: 0;
+  border-radius: 7px;
+
+  color: #354d3c;
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tm-tabs button:hover {
+  color: #173e25;
+  background: #d9e5da;
+}
+
+.tm-tabs button.active {
+  color: #ffffff;
+  background: #166534;
+}
+
+.tm-tabs button > span {
+  min-width: 20px;
+  padding: 2px 5px;
+
+  border-radius: 4px;
+
+  color: #2c4632;
+  background: #d3dfd4;
+
+  text-align: center;
+  font-size: 10px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-tabs button.active > span {
+  color: #ffffff;
+  background: #104b27;
+}
+
+.tm-filter-selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tm-filter-selects select,
+.tm-row-actions select {
+  max-width: 175px;
+  min-height: 37px;
+  padding: 8px 10px;
+
+  border: 1px solid #b3c4b7;
+  border-radius: 8px;
+
+  color: #304b36;
+  background: #ffffff;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* TASK LIST */
+
+.tm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+
+  padding: 0 24px 22px;
+}
+
+.tm-task {
+  overflow: hidden;
+
+  border: 1px solid #c3d0c5;
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  transition:
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+
+.tm-task:hover {
+  border-color: #709777;
+  box-shadow: 0 4px 14px rgba(39, 72, 44, .055);
+}
+
+.tm-task-expanded {
+  border-color: #55865f;
+}
+
+.tm-task-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 21px;
+}
+
+.tm-task-main {
+  display: flex;
+  flex: 1;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tm-task-symbol {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 39px;
+  height: 39px;
+
+  border: 1px solid #356d41;
+  border-radius: 10px;
+
+  color: #ffffff;
+  background: #356d41;
+}
+
+.tm-task-symbol.done {
+  color: #ffffff;
+  background: #166534;
+  border-color: #166534;
+}
+
+.tm-task-content {
+  flex: 1;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.tm-task-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.tm-task-title h3 {
+  min-width: 0;
+
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.tm-task-title h3 button {
+  padding: 0;
+  border: 0;
+
+  color: #1c3c25;
+  background: transparent;
+
+  text-align: left;
+  font-weight: inherit;
+  overflow-wrap: anywhere;
+}
+
+.tm-task-title h3 button:hover {
+  color: #166534;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.tm-description {
+  margin-top: 8px !important;
+
+  color: #435446;
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.8;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tm-truncate {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* PRIORITY */
+
+.tm-priority {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 8px;
+  border-radius: 5px;
+
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.tm-priority.low {
+  color: #ffffff;
+  background: #3f6212;
+}
+
+.tm-priority.medium {
+  color: #ffffff;
+  background: #854d0e;
+}
+
+.tm-priority.high {
+  color: #ffffff;
+  background: #b42318;
+}
+
+.tm-priority.urgent {
+  color: #ffffff;
+  background: #881337;
+}
+
+/* METADATA */
+
+.tm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px 15px;
+
+  margin-top: 12px;
+
+  color: #3f5745;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.tm-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tm-field {
+  padding: 4px 7px;
+  border-radius: 5px;
+  color: #ffffff;
+  background: #44662d;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.tm-overdue {
+  padding: 4px 7px;
+  border-radius: 5px;
+  color: #ffffff;
+  background: #b42318;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tm-due-today {
+  padding: 4px 7px;
+  border-radius: 5px;
+  color: #ffffff;
+  background: #854d0e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* TEAM */
+
+.tm-team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  margin-top: 12px;
+  color: #3f5d45;
+}
+
+.tm-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  color: #34513b;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.tm-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 28px;
+  height: 28px;
+
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+
+  color: #ffffff;
+  background: #376f45;
+
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.tm-team .tm-person:nth-of-type(3n + 2) .tm-avatar {
+  background: #285a83;
+}
+
+.tm-team .tm-person:nth-of-type(3n + 3) .tm-avatar {
+  background: #76551b;
+}
+
+.tm-more-workers {
+  padding: 5px 8px;
+
+  border: 1px solid #315d3b;
+  border-radius: 6px;
+
+  color: #ffffff;
+  background: #315d3b;
+
+  font-size: 11px !important;
+  font-weight: 650;
+}
+
+.tm-more-workers:hover {
+  background: #21442b;
+}
+
+/* STATUS AND ACTIONS */
+
+.tm-task-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 17px;
+}
+
+.tm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 10px;
+  border: 1px solid;
+  border-radius: 18px;
+
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.tm-status::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tm-status.pending {
+  color: #ffffff;
+  background: #96500b;
+  border-color: #96500b;
+}
+
+.tm-status.in_progress {
+  color: #ffffff;
+  background: #2457b8;
+  border-color: #2457b8;
+}
+
+.tm-status.completed {
+  color: #ffffff;
+  background: #166534;
+  border-color: #166534;
+}
+
+.tm-status.cancelled {
+  color: #ffffff;
+  background: #475569;
+  border-color: #475569;
+}
+
+.tm-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tm-row-actions select {
+  max-width: 127px;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.tm-row-actions .tm-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.tm-saving {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  color: #375c40;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* EXPANDED DETAILS */
+
+.tm-details {
+  margin: 0 21px 15px 74px;
+  padding: 19px;
+
+  border: 1px solid #c5d4c4;
+  border-radius: 10px;
+
+  background: #f4f7f2;
+}
+
+.tm-detail-grid {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 24px;
+}
+
+.tm-detail-label {
+  display: block;
+  margin-bottom: 8px;
+
+  color: #3d5938;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .7px;
+}
+
+.tm-details p {
+  color: #354b31;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.85;
+}
+
+.tm-full-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tm-supervisor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 17px !important;
+}
+
+.tm-detail-team {
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid #cfdbca;
+}
+
+.tm-expand-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  width: 100%;
+  min-height: 37px;
+  padding: 8px;
+
+  border: 0;
+  border-top: 1px solid #d7e1d3;
+
+  color: #335a2b;
+  background: #f0f5ed;
+
+  font-size: 12px !important;
+  font-weight: 650;
+}
+
+.tm-expand-button:hover {
+  color: #1b3f16;
+  background: #e2ecd9;
+}
+
+/* PANEL FOOTER */
+
+.tm-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 15px 24px;
+  border-top: 1px solid #d5dfd1;
+
+  color: #485d40;
+  background: #f8faf6;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tm-panel-footer button {
+  padding: 3px;
+  border: 0;
+
+  color: #31551f;
+  background: transparent;
+
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* EMPTY STATE */
+
+.tm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+
+  padding: 60px 20px;
+  color: #466b36;
+  text-align: center;
+}
+
+.tm-empty > svg {
+  box-sizing: content-box;
+  padding: 18px;
+
+  border: 1px solid #becfb3;
+  border-radius: 18px;
+
+  background: #eef4e8;
+}
+
+.tm-empty h3 {
+  margin-top: 4px;
+  color: #2d4824;
+  font-size: 19px;
+  font-weight: 750;
+}
+
+.tm-empty p {
+  max-width: 390px;
+  color: #516345;
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+/* MODAL */
+
+.tm-modal {
+  width: min(730px, calc(100vw - 28px));
+  max-height: calc(100dvh - 36px);
+
+  margin: auto;
+  padding: 0;
+
+  border: 1px solid #bdcebd;
+  border-radius: 16px;
+
+  color: #223c22;
+  background: #ffffff;
+
+  box-shadow: 0 25px 90px rgba(18, 42, 24, .25);
+  animation: tm-modal-enter .16s ease-out;
+}
+
+.tm-modal::backdrop {
+  background: rgba(17, 35, 21, .52);
+  backdrop-filter: blur(4px);
+}
+
+.tm-modal-compact {
+  width: min(455px, calc(100vw - 28px));
+}
+
+.tm-form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 38px);
+}
+
+.tm-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 25px 27px;
+  border-bottom: 1px solid #16432b;
+
+  color: #ffffff;
+  background: #16432b;
+}
+
+.tm-eyebrow {
+  display: inline-block;
+  padding: 5px 8px;
+
+  border: 1px solid #6a8d6e;
+  border-radius: 5px;
+
+  color: #ffffff;
+  background: #2b5737;
+
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 1.2px;
+}
+
+.tm-modal-header h2 {
+  margin-top: 10px;
+
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -.5px;
+}
+
+.tm-modal-header p {
+  margin-top: 8px;
+
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tm-modal-header .tm-icon {
+  color: #ffffff;
+  background: #2a583a;
+  border-color: #6a8d72;
+}
+
+.tm-modal-header .tm-icon:hover:not(:disabled) {
+  color: #ffffff;
+  background: #386949;
+  border-color: #9cbda3;
+}
+
+/* FORM */
+
+.tm-form-body {
+  overflow-y: auto;
+  padding: 25px 27px;
+
+  scrollbar-width: thin;
+  scrollbar-color: #829a78 transparent;
+}
+
+.tm-form-body fieldset {
+  min-width: 0;
+  margin: 0 0 23px;
+  padding: 0 0 22px;
+
+  border: 0;
+  border-bottom: 1px solid #dce4d6;
+}
+
+.tm-form-body fieldset:last-child {
+  margin: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.tm-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 18px;
+
+  color: #2f4c25;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.tm-section-title > span {
+  display: inline-grid;
+  place-items: center;
+
+  width: 28px;
+  height: 28px;
+
+  border: 1px solid #416425;
+  border-radius: 8px;
+
+  color: #ffffff;
+  background: #416425;
+
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.tm-input-label {
+  display: block;
+  margin-bottom: 15px;
+
+  color: #354c2b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tm-input-label b,
+.tm-worker-heading b,
+.tm-modal-footer b {
+  color: #a72e22;
+}
+
+.tm-input-label > small {
+  margin-left: 5px;
+  color: #5a684d;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tm-input-label > input,
+.tm-input-label > select,
+.tm-input-label > textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+
+  margin-top: 8px;
+  padding: 11px 12px;
+
+  border: 1px solid #b5c5a9;
+  border-radius: 9px;
+
+  color: #253c1e;
+  background: #ffffff;
+
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+
+  transition:
+    border-color .15s ease,
+    box-shadow .15s ease;
+}
+
+.tm-input-label > input:hover:not(:disabled),
+.tm-input-label > select:hover:not(:disabled),
+.tm-input-label > textarea:hover:not(:disabled) {
+  border-color: #7d9a69;
+}
+
+.tm-input-label > input:focus,
+.tm-input-label > select:focus,
+.tm-input-label > textarea:focus {
+  border-color: #477633;
+  box-shadow: 0 0 0 3px rgba(71, 118, 51, .1);
+}
+
+.tm-input-label textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.tm-character-count {
+  display: block;
+  margin-top: 6px;
+  text-align: right;
+}
+
+.tm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.tm-three {
+  grid-template-columns: 1fr 1fr 1.2fr;
+}
+
+.tm-help {
+  margin: -3px 0 17px !important;
+
+  color: #57684a;
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.75;
+}
+
+/* FARMER SELECTION */
+
+.tm-worker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-top: 18px;
+
+  color: #344e25;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.tm-worker-heading > span:last-child {
+  padding: 5px 8px;
+
+  border: 1px solid #416425;
+  border-radius: 6px;
+
+  color: #ffffff;
+  background: #416425;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tm-selection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin: 9px 0;
+}
+
+.tm-selection-actions button {
+  padding: 5px 0;
+  border: 0;
+
+  color: #3b6223;
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tm-selection-actions button:hover:not(:disabled) {
+  color: #244813;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tm-selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.tm-selected-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 6px 10px;
+  border: 1px solid #416425;
+  border-radius: 18px;
+
+  color: #ffffff;
+  background: #416425;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tm-selected-chips button:hover:not(:disabled) {
+  background: #2d4b18;
+  border-color: #2d4b18;
+}
+
+.tm-worker-box {
+  overflow: hidden;
+  border: 1px solid #b0c29f;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.tm-worker-box .tm-search {
+  padding: 12px;
+
+  border: 0;
+  border-bottom: 1px solid #c7d5b9;
+  border-radius: 0;
+
+  color: #486532;
+  background: #f5f8f0;
+}
+
+.tm-worker-box .tm-search input {
+  width: 100%;
+}
+
+.tm-worker-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+
+  max-height: 210px;
+  overflow-y: auto;
+  padding: 9px;
+
+  scrollbar-width: thin;
+  scrollbar-color: #8caa72 transparent;
+}
+
+.tm-worker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 11px 10px;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  color: #354f24;
+  background: #ffffff;
+
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition:
+    background-color .15s ease,
+    border-color .15s ease;
+}
+
+.tm-worker:hover {
+  background: #eef4e6;
+}
+
+.tm-worker.selected {
+  color: #274117;
+  background: #e7f0db;
+  border-color: #8eaa73;
+}
+
+.tm-worker input {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  accent-color: #416425;
+  cursor: pointer;
+}
+
+.tm-worker .tm-avatar {
+  width: 33px;
+  height: 33px;
+  color: #ffffff;
+  background: #416425;
+  font-size: 10px;
+}
+
+.tm-worker small {
+  display: block;
+  margin-top: 3px;
+  color: #576b44;
+  font-size: 11px;
+  font-weight: 450;
+}
+
+.tm-worker-empty {
+  grid-column: 1 / -1;
+  padding: 25px 12px;
+
+  color: #52683d;
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.tm-hint {
+  margin-top: 11px !important;
+  margin-bottom: 11px !important;
+  padding: 11px 12px;
+
+  border: 1px solid #d5bd83;
+  border-radius: 8px;
+
+  color: #715016;
+  background: #fff8e7;
+
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.8;
+}
+
+.tm-hint button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* MODAL FOOTER */
+
+.tm-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  padding: 18px 27px;
+
+  border-top: 1px solid #d2dfc6;
+  background: #f8faf4;
+}
+
+.tm-modal-footer > span {
+  color: #52673c;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tm-modal-footer > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* CONFIRMATION MODALS */
+
+.tm-confirm-content {
+  padding: 29px;
+}
+
+.tm-confirm-content h2 {
+  color: #2b451c;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -.4px;
+}
+
+.tm-confirm-content > p {
+  margin-top: 13px;
+  margin-bottom: 24px;
+
+  color: #4e613d;
+  font-size: 14px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.tm-confirm-icon {
+  display: inline-grid;
+  place-items: center;
+
+  width: 51px;
+  height: 51px;
+  margin-bottom: 18px;
+
+  border: 1px solid #b42318;
+  border-radius: 13px;
+
+  color: #ffffff;
+  background: #b42318;
+}
+
+.tm-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ANIMATIONS */
+
+.tm-spin {
+  animation: tm-spin 1s linear infinite;
+}
+
+@keyframes tm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes tm-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* TABLET */
+
+@media (max-width: 1100px) {
+  .tm-page {
+    padding: 22px 18px;
+  }
+
+  .tm-header {
+    padding: 25px;
+  }
+
+  .tm-stats {
+    gap: 12px;
+  }
+
+  .tm-stat {
+    padding: 19px;
+  }
+
+  .tm-tools .tm-search input {
+    width: 190px;
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 760px) {
+  .tm-page {
+    padding: 17px 13px;
+  }
+
+  .tm-header {
+    gap: 15px;
+    padding: 23px 20px;
+    border-radius: 13px;
+  }
+
+  .tm-logo {
+    display: none;
+  }
+
+  .tm-header h1 {
+    font-size: 24px;
+  }
+
+  .tm-header p {
+    max-width: 245px;
+    font-size: 13px;
+  }
+
+  .tm-header > .tm-primary {
+    padding: 10px 13px;
+  }
+
+  .tm-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+    margin-bottom: 20px;
+  }
+
+  .tm-stat {
+    padding: 18px;
+  }
+
+  .tm-stat-copy > span {
+    font-size: 12px;
+  }
+
+  .tm-stat-copy strong {
+    font-size: 30px;
+  }
+
+  .tm-stat-icon {
+    width: 41px;
+    height: 41px;
+    border-radius: 10px;
+  }
+
+  .tm-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 21px 17px 17px;
+  }
+
+  .tm-tools .tm-search {
+    flex: 1;
+  }
+
+  .tm-tools .tm-search input {
+    width: 100%;
+  }
+
+  .tm-filter-row {
+    padding: 0 17px 18px;
+  }
+
+  .tm-tabs {
+    width: 100%;
+  }
+
+  .tm-tabs button {
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+
+  .tm-filter-selects {
+    width: 100%;
+  }
+
+  .tm-filter-selects select {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .tm-list {
+    padding: 0 17px 19px;
+  }
+
+  .tm-task-top {
+    flex-direction: column;
+    gap: 16px;
+    padding: 17px;
+  }
+
+  .tm-task-main {
+    gap: 11px;
+  }
+
+  .tm-task-title h3 {
+    font-size: 15px;
+  }
+
+  .tm-task-symbol {
+    width: 35px;
+    height: 35px;
+    border-radius: 9px;
+  }
+
+  .tm-task-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-left: 46px;
+  }
+
+  .tm-details {
+    margin: 0 17px 13px;
+    padding: 16px;
+  }
+
+  .tm-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .tm-modal {
+    border-radius: 14px;
+  }
+
+  .tm-modal-header {
+    padding: 23px 20px;
+  }
+
+  .tm-modal-header h2 {
+    font-size: 24px;
+  }
+
+  .tm-form-body {
+    padding: 22px 20px;
+  }
+
+  .tm-three {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .tm-worker-list {
+    grid-template-columns: 1fr;
+  }
+
+  .tm-modal-footer {
+    padding: 17px 20px;
+  }
+
+  .tm-confirm-content {
+    padding: 25px;
+  }
+
+  .tm-input-label > input,
+  .tm-input-label > select,
+  .tm-input-label > textarea,
+  .tm-search input {
+    font-size: 16px;
+  }
+}
+
+/* SMALL MOBILE */
+
+@media (max-width: 440px) {
+  .tm-page {
+    padding: 13px 10px;
+  }
+
+  .tm-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 17px;
+    padding: 22px;
+  }
+
+  .tm-header h1 {
+    font-size: 25px;
+  }
+
+  .tm-header p {
+    max-width: none;
+  }
+
+  .tm-header > .tm-primary {
+    align-self: flex-end;
+  }
+
+  .tm-primary,
+  .tm-secondary {
+    padding: 10px 12px;
+    font-size: 13px !important;
+  }
+
+  .tm-stat {
+    padding: 15px;
+  }
+
+  .tm-stat-copy > span {
+    font-size: 12px;
+  }
+
+  .tm-stat-copy strong {
+    font-size: 28px;
+  }
+
+  .tm-stat-icon {
+    width: 35px;
+    height: 35px;
+    border-radius: 9px;
+  }
+
+  .tm-stat-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tm-task-actions {
+    margin-left: 0;
+  }
+
+  .tm-row-actions {
+    flex-wrap: wrap;
+  }
+
+  .tm-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .tm-modal-footer > span {
+    display: none;
+  }
+
+  .tm-modal-footer {
+    justify-content: flex-end;
+  }
+
+  .tm-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .tm-confirm-actions button {
+    width: 100%;
+  }
+
+  .tm-empty {
+    padding: 45px 15px;
+  }
+}
+
+/* REDUCED MOTION */
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-page button,
+  .tm-task,
+  .tm-input-label > input,
+  .tm-input-label > select,
+  .tm-input-label > textarea,
+  .tm-worker {
+    transition: none;
+  }
+
+  .tm-spin,
+  .tm-modal {
+    animation: none;
+  }
+}
+`;
