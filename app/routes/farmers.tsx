@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { fetchWithAuth } from '~/utils/auth';
+
 import { 
   Search, 
   Plus, 
@@ -11,21 +13,42 @@ import {
 } from 'lucide-react';
 
 // Define TypeScript interfaces for the data model
-interface Farmer {
-  id: string;
+interface Worker {
+  id: number;
   initials: string;
   name: string;
   phone: string;
   email: string;
   location: string;
-  farmSize: string;
-  crops: string[];
+  farm: string;
+  tasks: string[];
   status: 'active' | 'Inactive';
   joinDate: string;
-  avatarBgColor: string;
+  profilePicture: string;
 }
 
-const initialFarmers: Farmer[] = [
+const [workers, setWorkers] = useState<Worker[]>([]);
+const [error, setError] = useState("");
+
+useEffect(() => {
+    fetchWithAuth('/api/worker/workers')
+      .then((res) => res.json())
+      .then((data: unknown) => {
+
+        const workers = data as [];
+
+         if (workers.length === 0) {
+          setError("No farms found.");
+         } else{
+          console.log(data);
+          setWorkers(data as Worker[]);
+         }
+      })
+      .catch(console.error);
+      
+  }, []); 
+
+const initialFarmers: Worker[] = [
   {
     id: '1',
     initials: 'AP',
@@ -33,11 +56,11 @@ const initialFarmers: Farmer[] = [
     phone: '+94070 23 65 483',
     email: 'Asankapradeep@agri.com',
     location: 'Niwala, SL',
-    farmSize: '25 acres',
-    crops: ['cron', 'cocount', 'Rice'],
+    farm: '25 acres',
+    tasks: ['cron', 'cocount', 'Rice'],
     status: 'active',
     joinDate: '2024.01.12',
-    avatarBgColor: 'bg-emerald-900',
+    profilePicture: 'bg-emerald-900',
   },
   {
     id: '2',
@@ -46,11 +69,11 @@ const initialFarmers: Farmer[] = [
     phone: '+94070 23 65 484',
     email: 'pathumdilshan@agri.com',
     location: 'Gamapaha, SL',
-    farmSize: '15 acres',
-    crops: ['Tomatto'],
+    farm: '15 acres',
+    tasks: ['Tomatto'],
     status: 'active',
     joinDate: '2023.03.12',
-    avatarBgColor: 'bg-emerald-900',
+    profilePicture: 'bg-emerald-900',
   },
   {
     id: '3',
@@ -59,11 +82,11 @@ const initialFarmers: Farmer[] = [
     phone: '+94070 23 65 485',
     email: 'kusuntharindu@agri.com',
     location: 'Athanagalla, SL',
-    farmSize: '4 acres',
-    crops: ['chill', 'cocount'],
+    farm: '4 acres',
+    tasks: ['chill', 'cocount'],
     status: 'active',
     joinDate: '2024.01.12',
-    avatarBgColor: 'bg-emerald-950',
+    profilePicture: 'bg-emerald-950',
   },
   {
     id: '4',
@@ -72,11 +95,11 @@ const initialFarmers: Farmer[] = [
     phone: '+94070 23 65 486',
     email: 'kavinthivakar@agri.com',
     location: 'Mawannalla, SL',
-    farmSize: '5 acres',
-    crops: ['cocount'],
+    farm: '5 acres',
+    tasks: ['cocount'],
     status: 'active',
     joinDate: '2024.11.12',
-    avatarBgColor: 'bg-emerald-950',
+    profilePicture: 'bg-emerald-950',
   },
   {
     id: '5',
@@ -85,11 +108,11 @@ const initialFarmers: Farmer[] = [
     phone: '+94070 23 65 487',
     email: 'nuwanchalanka@agri.com',
     location: 'Kuliyapitiya, SL',
-    farmSize: '2 acres',
-    crops: ['Rice', 'cocount'],
+    farm: '2 acres',
+    tasks: ['Rice', 'cocount'],
     status: 'Inactive',
     joinDate: '2021.01.12',
-    avatarBgColor: 'bg-emerald-800',
+    profilePicture: 'bg-emerald-800',
   },
   {
     id: '6',
@@ -98,11 +121,11 @@ const initialFarmers: Farmer[] = [
     phone: '+94070 23 65 488',
     email: 'sajitheranga@agri.com',
     location: 'Niwala, SL',
-    farmSize: '5 acres',
-    crops: ['cron'],
+    farm: '5 acres',
+    tasks: ['cron'],
     status: 'active',
     joinDate: '2022.06.19',
-    avatarBgColor: 'bg-emerald-900',
+    profilePicture: 'bg-emerald-900',
   },
   {
     id: '7',
@@ -111,11 +134,11 @@ const initialFarmers: Farmer[] = [
     phone: '+94070 23 65 499',
     email: 'kasunmadushanka@agri.com',
     location: 'kandy, SL',
-    farmSize: '7 acres',
-    crops: ['potato'],
+    farm: '7 acres',
+    tasks: ['potato'],
     status: 'active',
     joinDate: '2024.01.12',
-    avatarBgColor: 'bg-emerald-900',
+    profilePicture: 'bg-emerald-900',
   },
 ];
 
@@ -123,14 +146,14 @@ export default function FarmerManagement() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filter logic based on search input
-  const filteredFarmers = initialFarmers.filter((farmer) => 
+  const filteredFarmers = workers.filter((farmer) => 
     farmer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     farmer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     farmer.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const activeCount = initialFarmers.filter(f => f.status === 'active').length;
-  const totalCount = initialFarmers.length;
+  const activeCount = workers.filter(f => f.status === 'active').length;
+  const totalCount = workers.length;
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 font-sans text-gray-800">
@@ -201,11 +224,11 @@ export default function FarmerManagement() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-white">
-                  <th className="py-4 px-6">Framer</th>
+                  <th className="py-4 px-6">Worker</th>
                   <th className="py-4 px-6">Contact</th>
                   <th className="py-4 px-6">Location</th>
                   <th className="py-4 px-6">Farm Size</th>
-                  <th className="py-4 px-6">Crops</th>
+                  <th className="py-4 px-6">tasks</th>
                   <th className="py-4 px-6">Status</th>
                   <th className="py-4 px-6">Join Date</th>
                   <th className="py-4 px-6 text-right">Actions</th>
@@ -219,10 +242,23 @@ export default function FarmerManagement() {
                       {/* Framer Info */}
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-full ${farmer.avatarBgColor} text-white flex items-center justify-center font-semibold text-xs`}>
-                            {farmer.initials}
+                          <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-gray-200">
+                            {farmer.profilePicture ? (
+                              <img
+                                src={farmer.profilePicture}
+                                alt={farmer.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-500 font-semibold text-xs">
+                                {farmer.initials}
+                              </div>
+                            )}
                           </div>
-                          <span className="font-semibold text-gray-900">{farmer.name}</span>
+
+                          <span className="font-semibold text-gray-900">
+                            {farmer.name}
+                          </span>
                         </div>
                       </td>
 
@@ -250,13 +286,13 @@ export default function FarmerManagement() {
 
                       {/* Farm Size */}
                       <td className="py-4 px-6 whitespace-nowrap text-gray-700 text-xs font-medium">
-                        {farmer.farmSize}
+                        {farmer.farm}
                       </td>
 
-                      {/* Crops Tags */}
+                      {/* tasks Tags */}
                       <td className="py-4 px-6">
                         <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                          {farmer.crops.map((crop, index) => (
+                          {farmer.tasks.map((crop, index) => (
                             <span 
                               key={index} 
                               className="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium"
