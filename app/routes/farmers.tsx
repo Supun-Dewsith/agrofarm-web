@@ -39,21 +39,16 @@ export default function FarmerManagement() {
         return res.json();
       })
       .then((data) => {
-        console.log('Worker API response:', data);
 
         if (Array.isArray(data)) {
           setWorkers(data);
           setWorkerError('');
         } else {
-          console.error('Expected worker array but received:', data);
           setWorkers([]);
-          setWorkerError('Worker data is currently unavailable.');
         }
       })
       .catch((err) => {
-        console.error('Worker API error:', err);
         setWorkers([]);
-        setWorkerError('Worker data is currently unavailable.');
       });
   }, []);
 
@@ -68,15 +63,12 @@ export default function FarmerManagement() {
         return res.json();
       })
       .then((data) => {
-        console.log('Farm API response:', data);
 
         if (Array.isArray(data)) {
           setFarms(data);
           setFarmError('');
         } else {
-          console.error('Expected farm array but received:', data);
           setFarms([]);
-          setFarmError('Farm data is currently unavailable.');
         }
       })
       .catch((err) => {
