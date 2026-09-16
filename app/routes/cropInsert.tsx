@@ -11,13 +11,7 @@ interface FarmOption {
 
 
 
-const INITIAL_FARMS: FarmOption[] = [
-  { id: '1', name: 'Asanka Pradeep', location: 'Niwala, SL' },
-  { id: '2', name: 'Pathum Dilshan', location: 'Gamapaha, SL' },
-  { id: '3', name: 'Kasun Tharindu', location: 'Athanagalla, SL' },
-  { id: '4', name: 'Kavin Thivakar', location: 'Mawannalla, SL' },
-  { id: '5', name: 'Nuwan Chalanka', location: 'Kuliyapitiya, SL' },
-];
+
 
 interface ApiErrorResponse {
   message?: string;
@@ -95,7 +89,6 @@ export default function Page() {
            if (farms.length === 0) {
             setError("No farms found.");
            } else{
-            console.log(data);
             setFarms(data as Farms[]);
            }
         })
@@ -119,7 +112,6 @@ export default function Page() {
   })
     .then((res) => res.json())
     .then((data: unknown) => {
-      console.log("FIELDS API RESPONSE:", data);
 
       if (!Array.isArray(data)) {
         console.error("Expected fields array but received:", data);
@@ -181,7 +173,6 @@ export default function Page() {
 
     
 
-    console.log("Sending", data);
 
     // submit API request  
     fetchWithAuth('/api/crops/new', {
@@ -190,7 +181,6 @@ export default function Page() {
     })
       
 
-      console.log("sent newcropdata successfully");
       
  
     };
