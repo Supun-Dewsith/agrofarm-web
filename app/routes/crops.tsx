@@ -114,7 +114,6 @@ export default function Page() {
          if (farms.length === 0) {
           setError("No farms found.");
          } else{
-          console.log(data);
           setItems(data as farms[]);
          }
       })
@@ -130,7 +129,6 @@ export default function Page() {
     if (!selected){
       return;
     }
-    console.log("Selected farm ID: ",selected);
 
     fetchWithAuth('/api/crops/crops', {
       method: "POST",
@@ -145,7 +143,6 @@ export default function Page() {
           setError("No crops found.");
           setCrops([]);
          } else{
-          console.log(data);
           setCrops(data as Crop[]);
          }
       })
