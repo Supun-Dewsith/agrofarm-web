@@ -96,7 +96,7 @@ export default function DashboardLayout() {
           <h2 className="text-xl sm:text-2xl font-semibold tracking-wide text-emerald-900 uppercase">
             {getPageTitle()}
           </h2>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center">
             {/* Notification Bell */}
               <NotificationBell />
             {/* User Profile Card Group */}
