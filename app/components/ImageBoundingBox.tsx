@@ -20,7 +20,7 @@ export const ImageBoundingBox: React.FC<Props> = ({ imageUrl, boxes }) => {
     img.src = imageUrl;
 
     img.onload = () => {
-      // Set canvas size matching image intrinsic dimensions
+      // Set canvas intrinsic dimensions exactly matching the image
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
 
@@ -31,7 +31,7 @@ export const ImageBoundingBox: React.FC<Props> = ({ imageUrl, boxes }) => {
       boxes.forEach((spot) => {
         const [ymin, xmin, ymax, xmax] = spot.box_2d;
 
-        // Convert normalized coordinates (0-1000 range) to real pixel space
+        // Convert normalized coordinates (0-1000 scale) to image pixel space
         const realYmin = (ymin / 1000) * img.naturalHeight;
         const realXmin = (xmin / 1000) * img.naturalWidth;
         const realYmax = (ymax / 1000) * img.naturalHeight;
@@ -40,44 +40,52 @@ export const ImageBoundingBox: React.FC<Props> = ({ imageUrl, boxes }) => {
         const width = realXmax - realXmin;
         const height = realYmax - realYmin;
 
-        // Box styling
-        ctx.strokeStyle = '#ef4444'; // Red outline
-        ctx.lineWidth = Math.max(3, img.naturalWidth * 0.005);
+        // Bounding box border
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = Math.max(3, img.naturalWidth * 0.006);
         ctx.strokeRect(realXmin, realYmin, width, height);
 
         // Semi-transparent highlight fill
         ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
         ctx.fillRect(realXmin, realYmin, width, height);
 
-        // Label background & text
+        // Label typography
         const label = `${(spot.confidence * 100).toFixed(0)}%`;
-        const fontSize = Math.max(14, Math.round(img.naturalWidth * 0.025));
-        ctx.font = `bold ${fontSize}px sans-serif`;
+        const fontSize = Math.max(14, Math.round(img.naturalWidth * 0.035));
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
 
         const textMetrics = ctx.measureText(label);
-        const padding = 6;
+        const paddingX = 8;
+        const badgeHeight = fontSize + 8;
+        const badgeWidth = textMetrics.width + paddingX * 2;
 
+        // Position label inside the box if near the top edge to prevent clipping
+        const badgeY = realYmin >= badgeHeight ? realYmin - badgeHeight : realYmin;
+
+        // Badge background
         ctx.fillStyle = '#ef4444';
-        ctx.fillRect(
-          realXmin,
-          Math.max(0, realYmin - fontSize - padding),
-          textMetrics.width + padding * 2,
-          fontSize + padding
-        );
+        ctx.fillRect(realXmin, badgeY, badgeWidth, badgeHeight);
 
+        // Badge text
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(
-          label,
-          realXmin + padding,
-          Math.max(fontSize, realYmin - padding / 2)
-        );
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, realXmin + paddingX, badgeY + badgeHeight / 2);
       });
     };
   }, [imageUrl, boxes]);
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-2xl shadow-lg border border-slate-200">
-      <canvas ref={canvasRef} className="w-full h-auto block" />
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{
+        display: 'block',
+        maxWidth: '100%',
+        maxHeight: '100%',
+        width: 'auto',
+        height: 'auto',
+        objectFit: 'contain',
+        margin: 'auto'
+      }}
+    />
   );
 };
