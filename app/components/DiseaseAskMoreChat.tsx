@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { askAboutDetection } from '../services/diseaseService';
 import type { ChatMessage, DiseaseAnalysisResult } from '../types/disease';
+import { useTranslation } from 'react-i18next';
 
 export function DiseaseAskMoreChat({
   open,
@@ -11,6 +12,7 @@ export function DiseaseAskMoreChat({
   onClose: () => void;
   analysis?: DiseaseAnalysisResult;
 }) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,11 +63,11 @@ export function DiseaseAskMoreChat({
         display: 'flex', justifyContent: 'space-between', alignItems: 'center'
       }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Ask more</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{t('Ask more')}</div>
           <div style={{ fontSize: 12, color: '#64748b' }}>
             {analysis
               ? `${analysis.plant_name} · ${analysis.disease_name}`
-              : 'Run diagnostics first for crop-specific answers'}
+              : t('Run diagnostics first for crop-specific answers')}
           </div>
         </div>
         <button type="button" onClick={onClose} style={{
@@ -76,7 +78,7 @@ export function DiseaseAskMoreChat({
       <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {messages.length === 0 && (
           <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
-            Ask about treatment, spread risk, or what this scan means.
+            {t('Ask about treatment, spread risk, or what this scan means.')}
           </p>
         )}
         {messages.map((m, i) => (
@@ -89,8 +91,8 @@ export function DiseaseAskMoreChat({
             {m.content}
           </div>
         ))}
-        {loading && <div style={{ fontSize: 12, color: '#64748b' }}>Thinking…</div>}
-        {error && <div style={{ fontSize: 12, color: '#991b1b' }}>{error}</div>}
+        {loading && <div style={{ fontSize: 12, color: '#64748b' }}>{t('Thinking...')}</div>}
+        {error && <div style={{ fontSize: 12, color: '#991b1b' }}>{t(error)}</div>}
         <div ref={endRef} />
       </div>
 
@@ -99,7 +101,7 @@ export function DiseaseAskMoreChat({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
-          placeholder="Ask about this detection…"
+          placeholder={t('Ask about this detection...')}
           style={{
             flex: 1, border: '1px solid #cbd5e1', borderRadius: 8,
             padding: '10px 12px', fontSize: 13, outline: 'none'
@@ -109,7 +111,7 @@ export function DiseaseAskMoreChat({
           background: '#059669', color: '#fff', border: 'none', borderRadius: 8,
           padding: '0 14px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer'
         }}>
-          Send
+          {t('Send')}
         </button>
       </div>
     </div>
