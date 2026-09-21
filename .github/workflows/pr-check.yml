@@ -1,0 +1,55 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ "dev" ]
+    types: [ opened, synchronize, reopened, labeled, unlabeled ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for Protected Configuration Changes
+        run: |
+          if [ "${{ github.actor }}" = "Supun-Dewsith" ] || [ "${{ contains(github.event.pull_request.labels.*.name, 'dependency update') }}" = "true" ]; then
+            echo "Authorized actor or labeled PR. Skipping config lock check."
+          else
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+            echo "Files modified in this PR:"
+            echo "$CHANGED_FILES"
+
+            # Exact patterns matching your root config files
+            PROTECTED_PATTERN="^(\.github/workflows/.*|\.env.*|\.gitignore|package\.json|package-lock\.json|tsconfig(\..*)?\.json|react-router\.config\.ts|vite\.config\.ts|wrangler\.jsonc|worker-configuration\.d\.ts)$"
+
+            BLOCKED=$(echo "$CHANGED_FILES" | grep -E "$PROTECTED_PATTERN" || true)
+
+            if [ -n "$BLOCKED" ]; then
+              echo "::error::Modifications to protected configs, dependencies, or deployment settings are restricted!"
+              echo "Blocked files:"
+              echo "$BLOCKED"
+              exit 1
+            fi
+
+            echo "No protected configuration files were modified."
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate Build
+        run: npm run build

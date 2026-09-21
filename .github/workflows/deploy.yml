@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - infra/cloudflare-test 
+  pull_request:
+    branches:
+      - infra/cloudflare-test
 
 jobs:
   deploy:

@@ -1,0 +1,21 @@
+# Workflow & Deployment
+/.github/workflows/               @Supun-Dewsith
+
+# Cloudflare & Wrangler Config
+/wrangler.jsonc                   @Supun-Dewsith
+/worker-configuration.d.ts        @Supun-Dewsith
+
+# Environment Variables & Git
+/.env*                            @Supun-Dewsith
+/.gitignore                       @Supun-Dewsith
+
+# Dependencies & Lockfiles
+/package.json                     @Supun-Dewsith
+/package-lock.json                @Supun-Dewsith
+
+# TypeScript Configs
+/tsconfig*.json                   @Supun-Dewsith
+
+# Framework & Bundler Configs
+/react-router.config.ts           @Supun-Dewsith
+/vite.config.ts                   @Supun-Dewsith

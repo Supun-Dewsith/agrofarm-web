@@ -5,13 +5,17 @@ export default [
   index("auth/login.tsx"),
   route("login", "auth/login.tsx", { id: "login-explicit" }),
   
-  route("register", "auth/register.tsx"),
+ 
 
   route("home", "layout.tsx", [
     index("routes/home.tsx"), 
     
+    route("register-users", "routes/user-registration.tsx"),
     route("farmers", "routes/farmers.tsx"),
+    route("farm-management", "routes/farm-management.tsx"),
     route("crops", "routes/crops.tsx"), 
+    route("cropInsert", "routes/cropInsert.tsx"),
+    route("cropUpdate/:id", "routes/cropUpdate.tsx"),
     route("attendance", "routes/attendance.tsx"),
     route("weather", "routes/weather.tsx"),
     route("tasks", "routes/tasks.tsx"),
@@ -23,5 +27,6 @@ export default [
     route("settings", "routes/settings.tsx"),
     
     route("dashboard", "routes/dashboard.tsx"),
+
   ]),
 ] satisfies RouteConfig;
