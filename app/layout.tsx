@@ -6,11 +6,16 @@ import {
   LogOut
 } from "lucide-react";
 import NotificationBell from "./components/NotificationBell";
+import { Label } from "recharts";
+import { useTranslation } from 'react-i18next';
+
 
 export default function DashboardLayout() {
   const user = getAuthData();
   const location = useLocation();
   const LOGO_TEXT = "AgriSense AI";
+  const { t } = useTranslation(); 
+
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -20,7 +25,7 @@ export default function DashboardLayout() {
 
   const getPageTitle = () => {
     if (!currentPath || currentPath === "home") {
-      return "Dashboard Overview";
+      return t("Dashboard Overview");
     }
 
     return currentPath
@@ -76,7 +81,7 @@ export default function DashboardLayout() {
                   }`}
               >
                 <Icon className={`h-4 w-4 transition-transform duration-200 ${isActive ? "scale-110 text-emerald-400" : ""}`} />
-                {item.label}
+                {t(item.label)}
               </Link>
             );
           })}
@@ -91,7 +96,6 @@ export default function DashboardLayout() {
           <h2 className="text-xl sm:text-2xl font-semibold tracking-wide text-emerald-900 uppercase">
             {getPageTitle()}
           </h2>
-
           <div className="flex items-center gap-4">
             {/* Notification Bell */}
               <NotificationBell />
@@ -104,7 +108,7 @@ export default function DashboardLayout() {
               {user?.imageUrl ? (
                 <img
                   src={user.imageUrl}
-                  alt={user?.username || "Profile"}
+                  alt={user?.username || t("Profile")}
                   className="h-9 w-9 rounded-full object-cover shadow-sm ring-2 ring-emerald-900/20 border border-white"
                   onError={(e) => {
                     // Fallback if the image URL fails to resolve or 404s
@@ -123,17 +127,17 @@ export default function DashboardLayout() {
               </div>
               <div className="flex flex-col text-left hidden sm:flex">
                 <span className="text-sm font-semibold text-slate-800 leading-none">
-                  {user?.username || "Admin User"}
+                  {user?.username || t("Admin User")}
                 </span>
                 <span className="text-[10px] font-bold tracking-widest text-emerald-700/80 uppercase mt-1">
-                  {user?.role || "SUPERVISOR"}
+                  {user?.role || t("SUPERVISOR")}
                 </span>
               </div>
 
               {/* Sleek Action Logout Button */}
               <button
                 onClick={logout}
-                title="Sign out"
+                title={t("Sign out")}
                 className="ml-1 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
               >
                 <LogOut className="h-4 w-4" />

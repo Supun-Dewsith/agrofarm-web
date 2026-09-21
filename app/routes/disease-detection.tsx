@@ -4,10 +4,16 @@ import { analyzePlantImage } from '../services/diseaseService';
 import type { DiseaseAnalysisResult } from '../types/disease';
 import { ImageBoundingBox } from '../components/ImageBoundingBox';
 import { DiseaseAskMoreChat } from '../components/DiseaseAskMoreChat';
+import { useTranslation } from 'react-i18next';
+import i18n from "../i18n";
+
 
 export async function clientAction({ request }: { request: Request }) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
+
+  const getCurrentLanguage = () =>
+    i18n.resolvedLanguage ?? i18n.language;
 
   if (!file || file.size === 0) {
     return { error: 'Please select a valid image file.' };
@@ -28,6 +34,7 @@ const RECENT_INSPECTIONS = [
 ];
 
 export default function DiseaseDetectionPage() {
+  const { t } = useTranslation();
   const [chatOpen, setChatOpen] = useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -92,7 +99,7 @@ export default function DiseaseDetectionPage() {
           padding: '16px', marginBottom: '32px', borderRadius: '8px', fontSize: '14px', fontWeight: 500,
           backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca'
         }}>
-          {error}
+          {t(error)}
         </div>
       )}
 
@@ -103,7 +110,7 @@ export default function DiseaseDetectionPage() {
           
           {/* Media Block */}
           <div>
-            <h3 style={sectionHeaderStyle}>Sample Media</h3>
+            <h3 style={sectionHeaderStyle}>{t('Sample Media')}</h3>
 
             <div style={{
               position: 'relative',
@@ -136,7 +143,7 @@ export default function DiseaseDetectionPage() {
                   ) : (
                     <img 
                       src={selectedImage} 
-                      alt="Sample Preview" 
+                      alt={t('Sample Preview')} 
                       style={{
                         maxWidth: '100%',
                         maxHeight: '320px',
@@ -194,7 +201,7 @@ export default function DiseaseDetectionPage() {
                   </button>
                 </>
               ) : (
-                <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>No Image Selected</span>
+                <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>{t('No Image Selected')}</span>
               )}
             </div>
 
@@ -224,7 +231,7 @@ export default function DiseaseDetectionPage() {
                 marginBottom: '16px'
               }}
             >
-              Upload Photo
+              {t('Upload Photo')}
             </button>
 
             <button
@@ -244,14 +251,14 @@ export default function DiseaseDetectionPage() {
                 opacity: (!selectedFile || isSubmitting) ? 0.7 : 1
               }}
             >
-              {isSubmitting ? 'Analyzing Sample...' : 'Run Diagnostics'}
+              {isSubmitting ? t('Analyzing Sample...') : t('Run Diagnostics')}
             </button>
           </div>
 
           <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '40px 0' }} />
 
           <div>
-            <h3 style={{ ...sectionHeaderStyle, marginBottom: '16px' }}>Recent Crop Inspections</h3>
+            <h3 style={{ ...sectionHeaderStyle, marginBottom: '16px' }}>{t('Recent Crop Inspections')}</h3>
 
             <div style={{
               display: 'flex', flexDirection: 'column', gap: '12px',
@@ -305,12 +312,12 @@ export default function DiseaseDetectionPage() {
             alignItems: 'center',
             marginBottom: '20px'
           }}>
-            <h3 style={{ ...sectionHeaderStyle, marginBottom: 0 }}>Diagnostic Metrics</h3>
+            <h3 style={{ ...sectionHeaderStyle, marginBottom: 0 }}>{t('Diagnostic Metrics')}</h3>
             <button
               type="button"
               onClick={() => setChatOpen(true)}
               disabled={!data}
-              title={data ? 'Ask about this scan' : 'Run diagnostics first'}
+              title={data ? t('Ask about this scan') : t('Run diagnostics first')}
               style={{
                 padding: '8px 14px',
                 backgroundColor: data ? '#059669' : '#e2e8f0',
@@ -322,7 +329,7 @@ export default function DiseaseDetectionPage() {
                 cursor: data ? 'pointer' : 'not-allowed',
               }}
             >
-              Ask more
+              {t('Ask more')}
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
@@ -333,13 +340,13 @@ export default function DiseaseDetectionPage() {
               backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px'
             }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Identified Host Species
+                {t('Identified Host Species')}
               </span>
               <div style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b' }}>
-                {data?.plant_name || <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '15px' }}>Awaiting sample scan...</span>}
+                {data?.plant_name || <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '15px' }}>{t('Awaiting sample scan...')}</span>}
               </div>
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data ? 'Foliage structure verified via vision matrix' : 'No sample processed'}
+                {data ? t('Foliage structure verified via vision matrix') : t('No sample processed')}
               </span>
             </div>
 
@@ -349,13 +356,13 @@ export default function DiseaseDetectionPage() {
               backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px'
             }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Detected Pathology / Disease
+                {t('Detected Pathology / Disease')}
               </span>
               <div style={{ fontSize: '18px', fontWeight: 700, color: data ? (data.is_healthy ? '#166534' : '#991b1b') : '#94a3b8' }}>
-                {data?.disease_name || <span style={{ fontWeight: 500, fontSize: '15px' }}>Undetermined</span>}
+                {data?.disease_name || <span style={{ fontWeight: 500, fontSize: '15px' }}>{t('Undetermined')}</span>}
               </div>
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data?.is_healthy ? 'No infectious spores or lesions found' : data ? 'Active biological infestation detected' : 'Upload leaf to begin scan'}
+                {data?.is_healthy ? t('No infectious spores or lesions found') : data ? t('Active biological infestation detected') : t('Upload leaf to begin scan')}
               </span>
             </div>
 
@@ -365,7 +372,7 @@ export default function DiseaseDetectionPage() {
               backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '8px'
             }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Pathology Severity State
+                {t('Pathology Severity State')}
               </span>
               <div>
                 {data ? (
@@ -375,14 +382,14 @@ export default function DiseaseDetectionPage() {
                     color: data.is_healthy ? '#166534' : '#991b1b',
                     display: 'inline-block'
                   }}>
-                    ● {data.is_healthy ? 'HEALTHY LEAF MATRIX' : 'PATHOGEN DETECTED'}
+                    ● {data.is_healthy ? t('HEALTHY LEAF MATRIX') : t('PATHOGEN DETECTED')}
                   </span>
                 ) : (
-                  <span style={{ fontSize: '14px', color: '#94a3b8', fontWeight: 500 }}>Pending Evaluation</span>
+                  <span style={{ fontSize: '14px', color: '#94a3b8', fontWeight: 500 }}>{t('Pending Evaluation')}</span>
                 )}
               </div>
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data?.is_healthy ? 'Photosynthetic tissue operational' : data ? 'Immediate intervention advised' : 'System standby'}
+                {data?.is_healthy ? t('Photosynthetic tissue operational') : data ? t('Immediate intervention advised') : t('System standby')}
               </span>
             </div>
 
@@ -393,7 +400,7 @@ export default function DiseaseDetectionPage() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Model Confidence
+                  {t('Model Confidence')}
                 </span>
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
                   {data ? `${confidenceScore}%` : '0%'}
@@ -409,14 +416,14 @@ export default function DiseaseDetectionPage() {
               </div>
 
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data ? 'Inference validated across agricultural neural network' : 'Awaiting model inference'}
+                {data ? t('Inference validated across agricultural neural network') : t('Awaiting model inference')}
               </span>
             </div>
 
           </div>
 
           {/* Section 2: Pathological Overview */}
-          <h3 style={sectionHeaderStyle}>Pathological Overview & Observations</h3>
+          <h3 style={sectionHeaderStyle}>{t('Pathological Overview & Observations')}</h3>
           <div style={{
             padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
             backgroundColor: '#ffffff', minHeight: '80px', marginBottom: '40px'
@@ -427,13 +434,13 @@ export default function DiseaseDetectionPage() {
               </p>
             ) : (
               <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>
-                Diagnostic etiology, surface lesion morphology, and biological infection timelines will populate here once the sample image is analyzed.
+                {t('Diagnostic etiology, surface lesion morphology, and biological infection timelines will populate here once the sample image is analyzed.')}
               </p>
             )}
           </div>
 
           {/* Section 3: Diagnostic Bio-Indicators Checklist */}
-          <h3 style={sectionHeaderStyle}>Diagnostic Indicators & Vectors</h3>
+          <h3 style={sectionHeaderStyle}>{t('Diagnostic Indicators & Vectors')}</h3>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -441,12 +448,12 @@ export default function DiseaseDetectionPage() {
             marginBottom: '40px'
           }}>
             {[
-              { label: 'Foliage Tissue Necrosis', detected: Boolean(data && !data.is_healthy) },
-              { label: 'Chlorotic Ring Formations', detected: Boolean(data && !data.is_healthy) },
-              { label: 'Airborne Spore Spread Risk', detected: Boolean(data && !data.is_healthy) },
-              { label: 'Water Splash Transmission', detected: Boolean(data && !data.is_healthy) },
-              { label: 'Cellular Structure Integrity', detected: Boolean(data?.is_healthy) },
-              { label: 'Quarantine Protocol Required', detected: Boolean(data && !data.is_healthy) },
+              { label: t('Foliage Tissue Necrosis'), detected: Boolean(data && !data.is_healthy) },
+              { label: t('Chlorotic Ring Formations'), detected: Boolean(data && !data.is_healthy) },
+              { label: t('Airborne Spore Spread Risk'), detected: Boolean(data && !data.is_healthy) },
+              { label: t('Water Splash Transmission'), detected: Boolean(data && !data.is_healthy) },
+              { label: t('Cellular Structure Integrity'), detected: Boolean(data?.is_healthy) },
+              { label: t('Quarantine Protocol Required'), detected: Boolean(data && !data.is_healthy) },
             ].map((indicator) => (
               <div
                 key={indicator.label}
@@ -474,7 +481,7 @@ export default function DiseaseDetectionPage() {
           </div>
 
           {/* Section 4: Treatment & Prevention Directives */}
-          <h3 style={sectionHeaderStyle}>Treatment & Protocol Directives</h3>
+          <h3 style={sectionHeaderStyle}>{t('Treatment & Protocol Directives')}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
             
             {/* Remedial Measures Card */}
@@ -482,9 +489,9 @@ export default function DiseaseDetectionPage() {
               padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', minHeight: '180px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Targeted Remedial Actions</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>{t('Targeted Remedial Actions')}</span>
                 <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '12px', backgroundColor: '#fef2f2', color: '#991b1b' }}>
-                  CURATIVE
+                  {t('CURATIVE')}
                 </span>
               </div>
               {data && data.possible_treatments.length > 0 ? (
@@ -497,7 +504,7 @@ export default function DiseaseDetectionPage() {
                   ))}
                 </div>
               ) : (
-                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>No curative actions needed or awaiting diagnostic scan.</p>
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>{t('No curative actions needed or awaiting diagnostic scan.')}</p>
               )}
             </div>
 
@@ -506,9 +513,9 @@ export default function DiseaseDetectionPage() {
               padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', minHeight: '180px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Preventative & Agronomic Controls</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>{t('Preventative & Agronomic Controls')}</span>
                 <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '12px', backgroundColor: '#f0fdf4', color: '#166534' }}>
-                  PROPHYLACTIC
+                  {t('PROPHYLACTIC')}
                 </span>
               </div>
               {data && data.prevention_tips.length > 0 ? (
@@ -521,7 +528,7 @@ export default function DiseaseDetectionPage() {
                   ))}
                 </div>
               ) : (
-                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Prophylactic guidelines will appear upon image identification.</p>
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>{t('Prophylactic guidelines will appear upon image identification.')}</p>
               )}
             </div>
 
