@@ -1,19 +1,23 @@
 module.exports = {
-  input: ['app/**/*.{js,jsx,ts,tsx}'],
+  input: [
+    'app/**/*.{ts,tsx,js,jsx}'
+  ],
   lexers: {
-    ts: ['JavascriptLexer'],
-    tsx: ['JsxLexer'],
-    js: ['JavascriptLexer'],
+    ts: ['JsxLexer'],
+    tsx: ['JsxLexer'], 
+    js: ['JsxLexer'],
     jsx: ['JsxLexer'],
-    default: ['JavascriptLexer']
+    default: ['JsxLexer']
   },
   locales: ['en', 'si'],
   
-  // Make sure it saves to the exact public/locales path
-  output: 'public/locales/$LOCALE.json', 
+  output: 'public/locales/$LOCALE.json',
+  
+  namespaceSeparator: false,
+  keySeparator: false,
   
   keepRemoved: true,
   defaultValue: (lng, ns, key) => {
-    return lng === 'en' ? key : '';
+    return lng === 'en' ? key : ''; 
   }
 };

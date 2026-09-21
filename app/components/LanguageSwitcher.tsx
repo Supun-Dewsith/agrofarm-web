@@ -6,9 +6,10 @@ export default function LanguageSwitcher() {
 
   const toggleLanguage = (lang: 'en' | 'si') => {
     i18n.changeLanguage(lang);
+    // ⚠️ THE SAVE FIX: Remember the user's choice across route jumps and logins
+    localStorage.setItem('i18nextLng', lang); 
   };
 
-  // Check which language is active to highlight the correct button
   const currentLang = i18n.language;
 
   return (
@@ -20,10 +21,9 @@ export default function LanguageSwitcher() {
           borderRadius: '6px',
           cursor: 'pointer',
           border: 'none',
-          fontWeight: currentLang === 'en' ? '600' : 'normal',
-          backgroundColor: currentLang === 'en' ? '#0d321d' : 'transparent',
-          color: currentLang === 'en' ? '#ffffff' : '#475569',
-          transition: 'all 0.2s'
+          fontWeight: currentLang.startsWith('en') ? '600' : 'normal',
+          backgroundColor: currentLang.startsWith('en') ? '#0d321d' : 'transparent',
+          color: currentLang.startsWith('en') ? '#ffffff' : '#475569',
         }}
       >
         EN
@@ -35,10 +35,9 @@ export default function LanguageSwitcher() {
           borderRadius: '6px',
           cursor: 'pointer',
           border: 'none',
-          fontWeight: currentLang === 'si' ? '600' : 'normal',
-          backgroundColor: currentLang === 'si' ? '#0d321d' : 'transparent',
-          color: currentLang === 'si' ? '#ffffff' : '#475569',
-          transition: 'all 0.2s'
+          fontWeight: currentLang.startsWith('si') ? '600' : 'normal',
+          backgroundColor: currentLang.startsWith('si') ? '#0d321d' : 'transparent',
+          color: currentLang.startsWith('si') ? '#ffffff' : '#475569',
         }}
       >
         සිං
