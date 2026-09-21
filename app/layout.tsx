@@ -10,6 +10,7 @@ import NotificationBell from "./components/NotificationBell";
 export default function DashboardLayout() {
   const user = getAuthData();
   const location = useLocation();
+  const LOGO_TEXT = "AgriSense AI";
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -57,7 +58,7 @@ export default function DashboardLayout() {
             <Sprout className="h-5 w-5 text-emerald-400" />
           </div>
           <span className="text-base font-bold text-white tracking-wider uppercase">
-            AgriSense AI
+            {LOGO_TEXT}
           </span>
         </div>
 

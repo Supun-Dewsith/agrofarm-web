@@ -3,6 +3,8 @@ import { Form, replace, useActionData, useNavigation } from "react-router";
 import { Leaf, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { Route } from "../auth/+types/login";
 import { loginRequest, setAuthData } from "../utils/auth";
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
@@ -24,6 +26,8 @@ export default function Login() {
   const navigation = useNavigation();
   const [showPassword, setShowPassword] = useState(false);
   const isSubmitting = navigation.state === "submitting";
+  const LOGO_TEXT = "AgriSense AI";
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen flex font-sans bg-slate-50/50 text-slate-950 antialiased">
@@ -36,9 +40,9 @@ export default function Login() {
             <Leaf className="h-14 w-14" />
           </div>
 
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#163626]">AgriSense AI</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#163626]">{LOGO_TEXT}</h1>
           <p className="text-[11px] font-semibold text-[#3d7a5a] uppercase tracking-wider mt-1.5 mb-8">
-            Smart Agriculture Management System
+            {t('Smart Agriculture Management System')}
           </p>
 
           {/* Form Container Box with Soft Light-Blue Background */}
@@ -135,6 +139,9 @@ export default function Login() {
                 </svg>
                 <span>sign in with google</span>
               </button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+        <LanguageSwitcher />
+      </div>
             </Form>
           </div>
 
