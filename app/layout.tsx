@@ -28,24 +28,59 @@ export default function DashboardLayout() {
       .join(" ");
   };
 
-  const userRole = user?.role?.toUpperCase();
-  const userPermissions = user?.permissions || [];
+const userRole = user?.role?.toUpperCase();
+const userPermissions = user?.permissions || [];
 
-  const visibleMenuItems = menuItems.filter(item => {
-    if (userRole === "ADMIN") return true;
-    return !item.permission || userPermissions.includes(item.permission);
-  });
+const isFarmViewer =
+  userRole === "ADMIN" ||
+  userRole === "SUPERVISOR" ||
+  userRole === "FARMER";
 
-  const currentMenuItem = menuItems.find(item => item.path === location.pathname);
-
-  if (currentMenuItem?.permission && userRole !== "ADMIN") {
-    const hasAccess = userPermissions.includes(currentMenuItem.permission);
-
-    // Redirect unauthorized direct access attempts back to dashboard
-    if (!hasAccess) {
-      return <Navigate to="/home/dashboard" replace />;
-    }
+const visibleMenuItems = menuItems.filter((item) => {
+  if (
+    item.permission === "VIEW_FARM_MANAGEMENT" &&
+    isFarmViewer
+  ) {
+    return true;
   }
+
+  if (userRole === "ADMIN") {
+    return true;
+  }
+
+  return (
+    !item.permission ||
+    userPermissions.includes(item.permission)
+  );
+});
+
+const currentMenuItem = menuItems.find(
+  (item) => item.path === location.pathname
+);
+
+if (
+  currentMenuItem?.permission &&
+  userRole !== "ADMIN"
+) {
+  const hasAccess =
+    userPermissions.includes(
+      currentMenuItem.permission
+    ) ||
+    (
+      currentMenuItem.permission ===
+        "VIEW_FARM_MANAGEMENT" &&
+      isFarmViewer
+    );
+
+  if (!hasAccess) {
+    return (
+      <Navigate
+        to="/home/dashboard"
+        replace
+      />
+    );
+  }
+}
 
   return (
     <div className="h-screen overflow-hidden flex bg-white text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900">
