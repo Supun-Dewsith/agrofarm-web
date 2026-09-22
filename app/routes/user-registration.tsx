@@ -37,6 +37,16 @@ export interface ExtendedRegisterPayload extends RegisterUserPayload {
 
 const AVAILABLE_ROLES = ["SUPERVISOR", "ADMIN", "FARMER"] as const;
 
+// Permissions that are always enabled and cannot be unticked for any role
+const DEFAULT_PERMISSIONS = [
+  "VIEW_DASHBOARD",
+  "VIEW_FARM_MANAGEMENT",
+  "VIEW_ATTENDANCE",
+  "VIEW_WEATHER",
+  "VIEW_TASKS",
+  "VIEW_SETTINGS",
+];
+
 export default function UserRegistration() {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<ExtendedRegisterPayload>({
@@ -44,7 +54,7 @@ export default function UserRegistration() {
     email: "",
     password: "",
     role: "SUPERVISOR",
-    permissions: [],
+    permissions: [...DEFAULT_PERMISSIONS],
     farmIds: [],
   });
 
@@ -144,6 +154,9 @@ export default function UserRegistration() {
   };
 
   const handlePermissionToggle = (permission: string) => {
+    // Default permissions cannot be toggled off
+    if (DEFAULT_PERMISSIONS.includes(permission)) return;
+
     setFormData((prev) => {
       const exists = prev.permissions.includes(permission);
       return {
@@ -194,7 +207,7 @@ export default function UserRegistration() {
         }),
       });
 
-      setFormData({ username: "", email: "", password: "", role: "SUPERVISOR", permissions: [], farmIds: [] });
+      setFormData({ username: "", email: "", password: "", role: "SUPERVISOR", permissions: [...DEFAULT_PERMISSIONS], farmIds: [] });
       clearImage();
       await fetchUsers();
     } catch (err: any) {
@@ -443,29 +456,39 @@ export default function UserRegistration() {
               marginBottom: "48px"
             }}
           >
-            {AVAILABLE_PERMISSIONS.map((perm) => (
-              <label
-                key={perm}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  fontSize: "13px",
-                  color: "#475569",
-                  cursor: "pointer"
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={formData.permissions.includes(perm)}
-                  onChange={() => handlePermissionToggle(perm)}
-                  style={{ width: "16px", height: "16px", accentColor: "#059669" }}
-                />
-                <span style={{ textTransform: "capitalize" }}>
-                  {perm.replace(/_/g, ' ')}
-                </span>
-              </label>
-            ))}
+            {AVAILABLE_PERMISSIONS.map((perm) => {
+              const isDefault = DEFAULT_PERMISSIONS.includes(perm);
+              return (
+                <label
+                  key={perm}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    fontSize: "13px",
+                    color: isDefault ? "#94a3b8" : "#475569",
+                    cursor: isDefault ? "not-allowed" : "pointer",
+                    opacity: isDefault ? 0.7 : 1,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.permissions.includes(perm)}
+                    onChange={() => handlePermissionToggle(perm)}
+                    disabled={isDefault}
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      accentColor: isDefault ? "#94a3b8" : "#059669",
+                      cursor: isDefault ? "not-allowed" : "pointer",
+                    }}
+                  />
+                  <span style={{ textTransform: "capitalize" }}>
+                    {perm.replace(/_/g, ' ')}
+                  </span>
+                </label>
+              );
+            })}
           </div>
 
 
