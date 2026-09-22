@@ -6,10 +6,16 @@ import {
   LogOut
 } from "lucide-react";
 import NotificationBell from "./components/NotificationBell";
+import { Label } from "recharts";
+import { useTranslation } from 'react-i18next';
+
 
 export default function DashboardLayout() {
   const user = getAuthData();
   const location = useLocation();
+  const LOGO_TEXT = "AgriSense AI";
+  const { t } = useTranslation(); 
+
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -19,7 +25,7 @@ export default function DashboardLayout() {
 
   const getPageTitle = () => {
     if (!currentPath || currentPath === "home") {
-      return "Dashboard Overview";
+      return t("Dashboard Overview");
     }
 
     return currentPath
@@ -28,59 +34,24 @@ export default function DashboardLayout() {
       .join(" ");
   };
 
-const userRole = user?.role?.toUpperCase();
-const userPermissions = user?.permissions || [];
+  const userRole = user?.role?.toUpperCase();
+  const userPermissions = user?.permissions || [];
 
-const isFarmViewer =
-  userRole === "ADMIN" ||
-  userRole === "SUPERVISOR" ||
-  userRole === "FARMER";
+  const visibleMenuItems = menuItems.filter(item => {
+    if (userRole === "ADMIN") return true;
+    return !item.permission || userPermissions.includes(item.permission);
+  });
 
-const visibleMenuItems = menuItems.filter((item) => {
-  if (
-    item.permission === "VIEW_FARM_MANAGEMENT" &&
-    isFarmViewer
-  ) {
-    return true;
+  const currentMenuItem = menuItems.find(item => item.path === location.pathname);
+
+  if (currentMenuItem?.permission && userRole !== "ADMIN") {
+    const hasAccess = userPermissions.includes(currentMenuItem.permission);
+
+    // Redirect unauthorized direct access attempts back to dashboard
+    if (!hasAccess) {
+      return <Navigate to="/home/dashboard" replace />;
+    }
   }
-
-  if (userRole === "ADMIN") {
-    return true;
-  }
-
-  return (
-    !item.permission ||
-    userPermissions.includes(item.permission)
-  );
-});
-
-const currentMenuItem = menuItems.find(
-  (item) => item.path === location.pathname
-);
-
-if (
-  currentMenuItem?.permission &&
-  userRole !== "ADMIN"
-) {
-  const hasAccess =
-    userPermissions.includes(
-      currentMenuItem.permission
-    ) ||
-    (
-      currentMenuItem.permission ===
-        "VIEW_FARM_MANAGEMENT" &&
-      isFarmViewer
-    );
-
-  if (!hasAccess) {
-    return (
-      <Navigate
-        to="/home/dashboard"
-        replace
-      />
-    );
-  }
-}
 
   return (
     <div className="h-screen overflow-hidden flex bg-white text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900">
@@ -92,7 +63,7 @@ if (
             <Sprout className="h-5 w-5 text-emerald-400" />
           </div>
           <span className="text-base font-bold text-white tracking-wider uppercase">
-            AgriSense AI
+            {LOGO_TEXT}
           </span>
         </div>
 
@@ -110,7 +81,7 @@ if (
                   }`}
               >
                 <Icon className={`h-4 w-4 transition-transform duration-200 ${isActive ? "scale-110 text-emerald-400" : ""}`} />
-                {item.label}
+                {t(item.label)}
               </Link>
             );
           })}
@@ -125,8 +96,7 @@ if (
           <h2 className="text-xl sm:text-2xl font-semibold tracking-wide text-emerald-900 uppercase">
             {getPageTitle()}
           </h2>
-
-          <div className="flex items-center gap-4">
+          <div className="flex items-center">
             {/* Notification Bell */}
               <NotificationBell />
             {/* User Profile Card Group */}
@@ -138,7 +108,7 @@ if (
               {user?.imageUrl ? (
                 <img
                   src={user.imageUrl}
-                  alt={user?.username || "Profile"}
+                  alt={user?.username || t("Profile")}
                   className="h-9 w-9 rounded-full object-cover shadow-sm ring-2 ring-emerald-900/20 border border-white"
                   onError={(e) => {
                     // Fallback if the image URL fails to resolve or 404s
@@ -157,17 +127,17 @@ if (
               </div>
               <div className="flex flex-col text-left hidden sm:flex">
                 <span className="text-sm font-semibold text-slate-800 leading-none">
-                  {user?.username || "Admin User"}
+                  {user?.username || t("Admin User")}
                 </span>
                 <span className="text-[10px] font-bold tracking-widest text-emerald-700/80 uppercase mt-1">
-                  {user?.role || "SUPERVISOR"}
+                  {user?.role || t("SUPERVISOR")}
                 </span>
               </div>
 
               {/* Sleek Action Logout Button */}
               <button
                 onClick={logout}
-                title="Sign out"
+                title={t("Sign out")}
                 className="ml-1 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
               >
                 <LogOut className="h-4 w-4" />
@@ -177,7 +147,7 @@ if (
         </header>
 
         {/* INNER SCROLLABLE STAGE */}
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className=" mx-auto">
             <Outlet />
           </div>

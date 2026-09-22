@@ -6,6 +6,7 @@ import {
   type RegisterUserPayload,
 } from "~/utils/auth";
 import { AVAILABLE_PERMISSIONS } from "../utils/constants";
+import { useTranslation } from "react-i18next";
 
 export interface RegisteredUser {
   id?: string | number;
@@ -37,6 +38,7 @@ export interface ExtendedRegisterPayload extends RegisterUserPayload {
 const AVAILABLE_ROLES = ["SUPERVISOR", "ADMIN", "FARMER"] as const;
 
 export default function UserRegistration() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<ExtendedRegisterPayload>({
     username: "",
     email: "",
@@ -127,7 +129,7 @@ export default function UserRegistration() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setStatusMessage({ type: "error", text: "Please select a valid image file." });
+      setStatusMessage({ type: "error", text: t("Please select a valid image file.") });
       return;
     }
 
@@ -178,20 +180,25 @@ export default function UserRegistration() {
     setStatusMessage(null);
 
     if (formData.role === "FARMER" && formData.farmIds.length > 1) {
-      setStatusMessage({ type: "error", text: "Farmers can only be assigned to a single farm." });
+      setStatusMessage({ type: "error", text: t("Farmers can only be assigned to a single farm.") });
       setLoadingSubmit(false);
       return;
     }
 
     try {
       await registerUserByAdmin(formData as any, avatarFile);
-      setStatusMessage({ type: "success", text: `User "${formData.username}" registered successfully!` });
+      setStatusMessage({
+        type: "success",
+        text: t('User "{{username}}" registered successfully!', {
+          username: formData.username,
+        }),
+      });
 
       setFormData({ username: "", email: "", password: "", role: "SUPERVISOR", permissions: [], farmIds: [] });
       clearImage();
       await fetchUsers();
     } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.message || "An error occurred while registering user." });
+      setStatusMessage({ type: "error", text: err.message || t("An error occurred while registering user.") });
     } finally {
       setLoadingSubmit(false);
     }
@@ -249,7 +256,7 @@ export default function UserRegistration() {
 
           {/* Media Block */}
           <div>
-            <h3 style={sectionHeaderStyle}>Account Media</h3>
+            <h3 style={sectionHeaderStyle}>{t("Account Media")}</h3>
 
             <div style={{
               position: "relative", width: "100%", aspectRatio: "4/3", backgroundColor: "#f8fafc",
@@ -258,7 +265,7 @@ export default function UserRegistration() {
             }}>
               {avatarPreview ? (
                 <>
-                  <img src={avatarPreview} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={avatarPreview} alt={t("Avatar")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   <button type="button" onClick={clearImage} style={{
                     position: "absolute", top: "12px", right: "12px", width: "28px", height: "28px",
                     borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.9)", border: "none",
@@ -267,7 +274,7 @@ export default function UserRegistration() {
                   }}>✕</button>
                 </>
               ) : (
-                <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 500 }}>No Image Selected</span>
+                <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 500 }}>{t("No Image Selected")}</span>
               )}
             </div>
 
@@ -277,7 +284,7 @@ export default function UserRegistration() {
               width: "100%", padding: "12px", backgroundColor: "#ffffff", border: "1px solid #cbd5e1",
               borderRadius: "6px", color: "#334155", fontSize: "14px", fontWeight: 600, cursor: "pointer", marginBottom: "40px"
             }}>
-              Upload Photo
+              {t("Upload Photo")}
             </button>
 
             <button type="submit" disabled={loadingSubmit} style={{
@@ -285,7 +292,7 @@ export default function UserRegistration() {
               border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: 600, cursor: loadingSubmit ? "not-allowed" : "pointer",
               opacity: loadingSubmit ? 0.7 : 1
             }}>
-              {loadingSubmit ? "Processing..." : "Register New User"}
+              {loadingSubmit ? t("Processing...") : t("Register New User")}
             </button>
           </div>
 
@@ -294,12 +301,12 @@ export default function UserRegistration() {
 
           {/* Registered Accounts Block */}
           <div>
-            <h3 style={{ ...sectionHeaderStyle, marginBottom: "16px" }}>Registered Accounts</h3>
+            <h3 style={{ ...sectionHeaderStyle, marginBottom: "16px" }}>{t("Registered Accounts")}</h3>
 
             {loadingUsers ? (
-              <p style={{ fontSize: "14px", color: "#64748b" }}>Loading accounts...</p>
+              <p style={{ fontSize: "14px", color: "#64748b" }}>{t("Loading accounts...")}</p>
             ) : users.length === 0 ? (
-              <p style={{ fontSize: "14px", color: "#64748b" }}>No users registered.</p>
+              <p style={{ fontSize: "14px", color: "#64748b" }}>{t("No users registered.")}</p>
             ) : (
               <div style={{
                 display: "flex",
@@ -315,16 +322,45 @@ export default function UserRegistration() {
                     border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#ffffff"
                   }}>
                     {u.imageUrl ? (
-                      <img src={u.imageUrl} alt={u.username} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} />
-                    ) : (
-                      <div style={{
-                        width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#f1f5f9",
-                        color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontWeight: 700, fontSize: "14px", flexShrink: 0
-                      }}>
-                        {u.username.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                      <img
+                        src={u.imageUrl}
+                        alt={u.username}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          const fallback = e.currentTarget.parentElement?.querySelector<HTMLElement>(".user-avatar-fallback");
+                          if (fallback) {
+                            fallback.style.display = "flex";
+                          }
+                        }}
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          flexShrink: 0,
+                          border: "1px solid #e2e8f0",
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="user-avatar-fallback"
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "50%",
+                        backgroundColor: "#f1f5f9",
+                        color: "#64748b",
+                        display: u.imageUrl ? "none" : "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 700,
+                        fontSize: "14px",
+                        flexShrink: 0,
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      {u.username.charAt(0).toUpperCase()}
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                         <span style={{ fontWeight: 700, fontSize: "13px", color: "#334155", overflow: "hidden", textOverflow: "ellipsis" }}>{u.username}</span>
@@ -346,10 +382,10 @@ export default function UserRegistration() {
 
         {/* RIGHT PANE (Data Entry) */}
         <div style={{ flex: 1 }}>
-          <h3 style={sectionHeaderStyle}>Profile Information</h3>
+          <h3 style={sectionHeaderStyle}>{t("Profile Information")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "48px" }}>
             <div>
-              <label style={labelStyle}>Username</label>
+              <label style={labelStyle}>{t("Username")}</label>
               <input
                 type="text"
                 name="username"
@@ -357,13 +393,13 @@ export default function UserRegistration() {
                 onChange={handleInputChange}
                 required
                 style={inputStyle}
-                placeholder="Enter username (3-50 characters)"
+                placeholder={t("Enter username (3-50 characters)")}
                 minLength={3}
                 maxLength={50}
               />
             </div>
             <div>
-              <label style={labelStyle}>Email Address</label>
+              <label style={labelStyle}>{t("Email Address")}</label>
               <input
                 type="email"
                 name="email"
@@ -371,11 +407,11 @@ export default function UserRegistration() {
                 onChange={handleInputChange}
                 required
                 style={inputStyle}
-                placeholder="e.g., alex@example.com"
+                placeholder={t("e.g., alex@example.com")}
               />
             </div>
             <div>
-              <label style={labelStyle}>Temporary Password</label>
+              <label style={labelStyle}>{t("Temporary Password")}</label>
               <input
                 type="password"
                 name="password"
@@ -383,13 +419,13 @@ export default function UserRegistration() {
                 onChange={handleInputChange}
                 required
                 style={inputStyle}
-                placeholder="Enter password (min 6 characters)"
+                placeholder={t("Enter password (min 6 characters)")}
                 minLength={6}
                 maxLength={100}
               />
             </div>
             <div>
-              <label style={labelStyle}>System Role</label>
+              <label style={labelStyle}>{t("System Role")}</label>
               <select name="role" value={formData.role} onChange={handleInputChange} style={{ ...inputStyle, cursor: "pointer", backgroundColor: "#fff" }}>
                 {AVAILABLE_ROLES.map((role) => (
                   <option key={role} value={role}>{role}</option>
@@ -398,7 +434,7 @@ export default function UserRegistration() {
             </div>
           </div>
 
-          <h3 style={sectionHeaderStyle}>System Permissions</h3>
+          <h3 style={sectionHeaderStyle}>{t("System Permissions")}</h3>
           <div
             style={{
               display: "grid",
@@ -433,15 +469,15 @@ export default function UserRegistration() {
           </div>
 
 
-          <h3 style={sectionHeaderStyle}>Farm Allocations</h3>
+          <h3 style={sectionHeaderStyle}>{t("Farm Allocations")}</h3>
           <div style={{ opacity: isAdmin ? 0.5 : 1, pointerEvents: isAdmin ? "none" : "auto" }}>
-            {isAdmin && <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px" }}>Admins have global access. Farm assignment is disabled.</p>}
+            {isAdmin && <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px" }}>{t("Admins have global access. Farm assignment is disabled.")}</p>}
 
             {loadingFarms ? (
-              <p style={{ fontSize: "14px", color: "#64748b" }}>Loading your farms...</p>
+              <p style={{ fontSize: "14px", color: "#64748b" }}>{t("Loading your farms...")}</p>
             ) : availableFarms.length === 0 ? (
               <div style={{ padding: "24px", border: "1px dashed #cbd5e1", borderRadius: "8px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
-                No farms available for allocation.
+                {t("No farms available for allocation.")}
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>

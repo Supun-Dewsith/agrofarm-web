@@ -3,6 +3,8 @@ import { useLoaderData } from "react-router";
 import { fetchWithAuth, getAuthData } from "../utils/auth";
 import { useState } from "react";
 import { useRouteError, isRouteErrorResponse } from "react-router";
+import FarmWeatherSlideshow, { getWeatherCondition } from "../components/dashboard/FarmWeatherSlideshow";
+import type { FarmWeatherItem } from "../components/dashboard/FarmWeatherSlideshow";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, PieChart, Label, Pie, Cell
@@ -62,6 +64,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
     financeRes,
     harvestRes,
     activityRes,
+    farmsRes,
   ] = await Promise.all([
     fetchWithAuth("/api/dashboard/stats"),
     fetchWithAuth("/api/dashboard/weather"),
@@ -69,11 +72,11 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
     fetchWithAuth("/api/dashboard/finance"),
     fetchWithAuth("/api/dashboard/harvest"),
     fetchWithAuth("/api/dashboard/activity"),
+    fetchWithAuth("/api/crops/farms").catch(() => null),
   ]);
 
   if (
     !statsRes.ok ||
-    !weatherRes.ok ||
     !cropHealthRes.ok ||
     !financeRes.ok ||
     !harvestRes.ok ||
@@ -84,24 +87,158 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
 
   const [
     stats,
-    weather,
+    fallbackWeather,
     cropHealth,
     financeData,
     harvestSummary,
     recentActivities,
   ] = await Promise.all([
     statsRes.json() as Promise<StatCardProp[]>,
-    weatherRes.json() as Promise<Weather>,
+    weatherRes.ok ? (weatherRes.json() as Promise<Weather>) : Promise.resolve(null),
     cropHealthRes.json() as Promise<CropHealth[]>,
     financeRes.json() as Promise<FinanceData[]>,
     harvestRes.json() as Promise<HarvestSummary[]>,
     activityRes.json() as Promise<ActivityItem[]>,
   ]);
 
+  // Fetch real weather per farm via Open-Meteo backend integration
+  let farmsWeather: FarmWeatherItem[] = [];
+
+  if (farmsRes && farmsRes.ok) {
+    try {
+      const farms = (await farmsRes.json()) as { farmIDs: number; farmNames: string }[];
+      if (Array.isArray(farms) && farms.length > 0) {
+        const weatherPromises = farms.map(async (farm): Promise<FarmWeatherItem> => {
+          try {
+            const res = await fetchWithAuth("/api/weather/all", {
+              method: "POST",
+              body: JSON.stringify(Number(farm.farmIDs)),
+            });
+
+            if (!res.ok) {
+              const errData = (await res.json().catch(() => ({}))) as any;
+              return {
+                farmId: farm.farmIDs,
+                farmName: farm.farmNames || `Farm #${farm.farmIDs}`,
+                temp: 0,
+                condition: "Coordinates Missing",
+                humidity: "N/A",
+                rainfall: "N/A",
+                wind: "N/A",
+                date: "Today",
+                hasError: true,
+                errorMessage: errData?.message || "Location coordinates missing for this farm",
+              };
+            }
+
+            const data = (await res.json()) as any;
+            const current = data?.current;
+            const daily = data?.daily;
+
+            const dateStr = current?.time
+              ? new Date(current.time).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })
+              : new Date().toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                });
+
+            // Extract daily 5-day forecast
+            const forecastDays = [];
+            if (daily && Array.isArray(daily.time)) {
+              const maxDays = Math.min(daily.time.length, 5);
+              for (let i = 0; i < maxDays; i++) {
+                const dayDate = new Date(daily.time[i]);
+                const dayName = i === 0 ? "Today" : dayDate.toLocaleDateString("en-US", { weekday: "short" });
+                forecastDays.push({
+                  date: daily.time[i],
+                  dayName,
+                  weatherCode: daily.weather_code?.[i] ?? 0,
+                  condition: getWeatherCondition(daily.weather_code?.[i]),
+                  maxTemp: Math.round(daily.temperature_2m_max?.[i] ?? current?.temperature_2m ?? 0),
+                  minTemp: Math.round(daily.temperature_2m_min?.[i] ?? current?.temperature_2m ?? 0),
+                  rainProb: daily.precipitation_probability_max?.[i] ?? 0,
+                });
+              }
+            }
+
+            const todayHigh = daily?.temperature_2m_max?.[0] != null
+              ? Math.round(daily.temperature_2m_max[0])
+              : Math.round(current?.temperature_2m ?? 0);
+            const todayLow = daily?.temperature_2m_min?.[0] != null
+              ? Math.round(daily.temperature_2m_min[0])
+              : Math.round(current?.temperature_2m ?? 0);
+            const uvIndex = daily?.uv_index_max?.[0] != null
+              ? Number(daily.uv_index_max[0].toFixed(1))
+              : undefined;
+            const rainProbability = daily?.precipitation_probability_max?.[0] != null
+              ? daily.precipitation_probability_max[0]
+              : undefined;
+
+            return {
+              farmId: farm.farmIDs,
+              farmName: farm.farmNames || `Farm #${farm.farmIDs}`,
+              temp: current?.temperature_2m ?? 0,
+              condition: getWeatherCondition(current?.weather_code),
+              weatherCode: current?.weather_code,
+              humidity: `${current?.relative_humidity_2m ?? 0}%`,
+              rainfall: `${current?.rain ?? 0}mm`,
+              wind: `${current?.wind_speed_10m ?? 0} km/h`,
+              date: dateStr,
+              highTemp: todayHigh,
+              lowTemp: todayLow,
+              uvIndex,
+              rainProbability,
+              forecast: forecastDays,
+            };
+          } catch (err) {
+            return {
+              farmId: farm.farmIDs,
+              farmName: farm.farmNames || `Farm #${farm.farmIDs}`,
+              temp: 0,
+              condition: "Unavailable",
+              humidity: "N/A",
+              rainfall: "N/A",
+              wind: "N/A",
+              date: "Today",
+              hasError: true,
+              errorMessage: "Unable to load live weather",
+            };
+          }
+        });
+
+        farmsWeather = await Promise.all(weatherPromises);
+      }
+    } catch (e) {
+      console.error("Failed to load farms weather:", e);
+    }
+  }
+
+  // Fallback to general dashboard weather if no user farms found
+  if (farmsWeather.length === 0 && fallbackWeather) {
+    farmsWeather = [
+      {
+        farmId: 0,
+        farmName: "Main Farm",
+        temp: fallbackWeather.temp,
+        condition: fallbackWeather.condition,
+        weatherCode: 2,
+        humidity: fallbackWeather.humidity,
+        rainfall: fallbackWeather.rainfall,
+        wind: fallbackWeather.wind,
+        date: fallbackWeather.date,
+      },
+    ];
+  }
+
   return {
     username: authData?.username || "Grower",
     stats,
-    weather,
+    farmsWeather,
     cropHealth,
     financeData,
     harvestSummary,
@@ -111,7 +248,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
 
 // --- Component ---
 export default function DashboardPage() {
-  const { username, stats, weather, cropHealth, financeData, harvestSummary, recentActivities } = useLoaderData<typeof clientLoader>();
+  const { username, stats, farmsWeather, cropHealth, financeData, harvestSummary, recentActivities } = useLoaderData<typeof clientLoader>();
   const [activeCropIndex, setActiveCropIndex] = useState(0);
 
   return (
@@ -191,30 +328,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Weather Widget */}
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-6 rounded-2xl shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-xs font-semibold tracking-wider opacity-80 uppercase">Weather Forecast</span>
-            <div className="flex justify-between items-start mt-2">
-              <div>
-                <h2 className="text-6xl font-light tracking-tighter">{weather.temp}°C</h2>
-                <p className="font-medium mt-1">{weather.condition}</p>
-                <p className="text-xs opacity-70">{weather.date}</p>
-              </div>
-              <div className="w-16 h-16 relative">
-                <div className="w-10 h-10 bg-amber-300 rounded-full absolute top-0 right-0 animate-pulse" />
-                <div className="w-12 h-8 bg-white/30 backdrop-blur-sm rounded-full absolute bottom-2 left-0" />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-2 border-t border-white/20 pt-4 text-center text-xs">
-            <div><p className="opacity-70">Temp</p><p className="font-semibold mt-0.5">{weather.temp}°C</p></div>
-            <div><p className="opacity-70">Humidity</p><p className="font-semibold mt-0.5">{weather.humidity}</p></div>
-            <div><p className="opacity-70">Rainfall</p><p className="font-semibold mt-0.5">{weather.rainfall}</p></div>
-            <div><p className="opacity-70">Wind</p><p className="font-semibold mt-0.5">{weather.wind}</p></div>
-          </div>
-        </div>
+        {/* Weather Widget - Farm Slideshow */}
+        <FarmWeatherSlideshow farmsWeather={farmsWeather} />
       </div>
 
       {/* Analytics Row 2 */}
