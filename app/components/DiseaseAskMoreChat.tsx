@@ -12,7 +12,7 @@ export function DiseaseAskMoreChat({
   onClose: () => void;
   analysis?: DiseaseAnalysisResult;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,8 @@ export function DiseaseAskMoreChat({
     setError(null);
 
     try {
-      const { answer } = await askAboutDetection(question, analysis, nextHistory);
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+      const { answer } = await askAboutDetection(question, analysis, nextHistory, currentLanguage);
       setMessages([...nextHistory, { role: 'assistant', content: answer }]);
     } catch (e: any) {
       setError(e.message || 'Failed to get a reply');
