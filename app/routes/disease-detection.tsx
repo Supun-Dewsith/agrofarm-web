@@ -11,16 +11,14 @@ import i18n from "../i18n";
 export async function clientAction({ request }: { request: Request }) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
-
-  const getCurrentLanguage = () =>
-    i18n.resolvedLanguage ?? i18n.language;
+  const language = (formData.get('language') as string) || i18n.resolvedLanguage || i18n.language || 'en';
 
   if (!file || file.size === 0) {
     return { error: 'Please select a valid image file.' };
   }
 
   try {
-    const result = await analyzePlantImage(file);
+    const result = await analyzePlantImage(file, language);
     return { result };
   } catch (error: any) {
     return { error: error.message || 'Analysis failed. Please try again.' };
@@ -59,6 +57,8 @@ export default function DiseaseDetectionPage() {
     if (!selectedFile || isSubmitting) return;
     const formData = new FormData();
     formData.append('file', selectedFile);
+    const currentLang = i18n.resolvedLanguage || i18n.language || 'en';
+    formData.append('language', currentLang);
     fetcher.submit(formData, { method: 'post', encType: 'multipart/form-data' });
   };
 
