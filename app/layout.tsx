@@ -147,7 +147,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* INNER SCROLLABLE STAGE */}
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className=" mx-auto">
             <Outlet />
           </div>
