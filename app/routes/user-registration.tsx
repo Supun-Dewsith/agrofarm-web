@@ -322,16 +322,45 @@ export default function UserRegistration() {
                     border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#ffffff"
                   }}>
                     {u.imageUrl ? (
-                      <img src={u.imageUrl} alt={u.username} style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} />
-                    ) : (
-                      <div style={{
-                        width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#f1f5f9",
-                        color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontWeight: 700, fontSize: "14px", flexShrink: 0
-                      }}>
-                        {u.username.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                      <img
+                        src={u.imageUrl}
+                        alt={u.username}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          const fallback = e.currentTarget.parentElement?.querySelector<HTMLElement>(".user-avatar-fallback");
+                          if (fallback) {
+                            fallback.style.display = "flex";
+                          }
+                        }}
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          flexShrink: 0,
+                          border: "1px solid #e2e8f0",
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="user-avatar-fallback"
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "50%",
+                        backgroundColor: "#f1f5f9",
+                        color: "#64748b",
+                        display: u.imageUrl ? "none" : "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 700,
+                        fontSize: "14px",
+                        flexShrink: 0,
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      {u.username.charAt(0).toUpperCase()}
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                         <span style={{ fontWeight: 700, fontSize: "13px", color: "#334155", overflow: "hidden", textOverflow: "ellipsis" }}>{u.username}</span>
