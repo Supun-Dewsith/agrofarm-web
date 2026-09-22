@@ -116,7 +116,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
             });
 
             if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
+              const errData = (await res.json().catch(() => ({}))) as any;
               return {
                 farmId: farm.farmIDs,
                 farmName: farm.farmNames || `Farm #${farm.farmIDs}`,
@@ -131,7 +131,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
               };
             }
 
-            const data = await res.json();
+            const data = (await res.json()) as any;
             const current = data?.current;
             const daily = data?.daily;
 
