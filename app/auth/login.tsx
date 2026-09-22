@@ -3,6 +3,8 @@ import { Form, replace, useActionData, useNavigation } from "react-router";
 import { Leaf, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { Route } from "../auth/+types/login";
 import { loginRequest, setAuthData } from "../utils/auth";
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n'; 
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
@@ -14,7 +16,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     setAuthData(data);
     return replace("/home/dashboard");
   } catch (err: any) {
-    return { error: err.message || "Invalid credentials"};
+    const message = i18n.t('Invalid credentials'); 
+    return { error: err.message || message };
   }
 
 }
@@ -24,6 +27,8 @@ export default function Login() {
   const navigation = useNavigation();
   const [showPassword, setShowPassword] = useState(false);
   const isSubmitting = navigation.state === "submitting";
+  const LOGO_TEXT = "AgriSense AI";
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen flex font-sans bg-slate-50/50 text-slate-950 antialiased">
@@ -36,16 +41,16 @@ export default function Login() {
             <Leaf className="h-14 w-14" />
           </div>
 
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#163626]">AgriSense AI</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#163626]">{LOGO_TEXT}</h1>
           <p className="text-[11px] font-semibold text-[#3d7a5a] uppercase tracking-wider mt-1.5 mb-8">
-            Smart Agriculture Management System
+            {t('Smart Agriculture Management System')}
           </p>
 
           {/* Form Container Box with Soft Light-Blue Background */}
           <div className="w-full bg-[#f0f4fa] border border-slate-200/60 rounded-3xl p-8 shadow-sm">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold tracking-tight text-[#1e293b]">Welcome Back</h2>
-              <p className="text-xs text-slate-500 mt-1">Sign in to your account to continue</p>
+              <h2 className="text-xl font-bold tracking-tight text-[#1e293b]">{t("Welcome Back")}</h2>
+              <p className="text-xs text-slate-500 mt-1">{t("Sign in to your account to continue")}</p>
             </div>
 
             {actionData?.error && (
@@ -57,7 +62,7 @@ export default function Login() {
             <Form method="post" className="space-y-4">
               <div>
                 <label htmlFor="username" className="text-sm font-bold text-[#1e293b] block mb-1.5">
-                  Email / Username:
+                  {t("Email / Username:")}
                 </label>
                 <div className="relative group">
                   <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-[#2a5e47] transition-colors" />
@@ -74,7 +79,7 @@ export default function Login() {
 
               <div>
                 <label htmlFor="password" className="text-sm font-bold text-[#1e293b] block mb-1.5">
-                  Password:
+                  {t("Password:")}
                 </label>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-[#2a5e47] transition-colors" />
@@ -83,7 +88,7 @@ export default function Login() {
                     type={showPassword ? "text" : "password"}
                     name="password"
                     className="w-full pl-11 pr-11 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none transition-all focus:border-[#4ade80] focus:ring-2 focus:ring-[#4ade80]/10 text-slate-800 font-medium placeholder:text-slate-400/70 shadow-sm"
-                    placeholder="Enter your password"
+                    placeholder={t("Enter your password")}
                     required
                   />
                   <button
@@ -99,10 +104,10 @@ export default function Login() {
               <div className="flex items-center justify-between text-xs pt-1">
                 <label className="flex items-center text-[#1e293b] font-semibold cursor-pointer select-none">
                   <input type="checkbox" className="mr-2 h-4 w-4 rounded border-slate-300 text-[#2a5e47] focus:ring-[#2a5e47] accent-[#2a5e47] cursor-pointer" />
-                  Remember me
+                  {t("Remember me")}
                 </label>
                 <a href="#" className="text-[#1e293b] font-semibold hover:underline">
-                  Forgot Password?
+                  {t("Forgot Password?")}
                 </a>
               </div>
 
@@ -115,10 +120,10 @@ export default function Login() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Signing In...</span>
+                    <span>{t("Signing In...")}</span>
                   </>
                 ) : (
-                  <span>Sign In</span>
+                  <span>{t("Sign In")}</span>
                 )}
               </button>
 
@@ -133,7 +138,7 @@ export default function Login() {
                   <path fill="#34A853" d="M5.266 14.235L1.145 17.345C3.164 21.291 7.273 24 12 24c3.055 0 5.782-1.01 7.91-2.736l-3.782-2.928a6.99 6.99 0 0 1-4.128 1.173 7.077 7.077 0 0 1-6.734-4.855z" />
                   <path fill="#FBBC05" d="M5.266 9.765A7.043 7.043 0 0 1 4.909 12c0 .79.127 1.545.357 2.235l-4.12 3.11A11.907 11.907 0 0 1 0 12c0-1.927.455-3.755 1.255-5.382l4.01 3.147z" />
                 </svg>
-                <span>sign in with google</span>
+                <span>{t("sign in with google")}</span>
               </button>
             </Form>
           </div>
@@ -149,23 +154,23 @@ export default function Login() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl" />
         <div className="max-w-md text-white relative z-10">
           <span className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30">
-            Enterprise Intelligence
+            {t("Enterprise Intelligence")}
           </span>
           <h2 className="text-4xl font-extrabold leading-tight mb-6 mt-4 tracking-tight">
-            Transform Your Farm with AI-Powered Operations
+            {t("Transform Your Farm with AI-Powered Operations")}
           </h2>
           <ul className="space-y-4 text-sm font-light text-slate-200/90">
             <li className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10 backdrop-blur-sm">
               <div className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>Real-time crop analytics & biological health profiling</span>
+              <span>{t("Real-time crop analytics & biological health profiling")}</span>
             </li>
             <li className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10 backdrop-blur-sm">
               <div className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>Predictive yield telemetry and automated log tracking</span>
+              <span>{t("Predictive yield telemetry and automated log tracking")}</span>
             </li>
             <li className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10 backdrop-blur-sm">
               <div className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>Optimized task, labor, and attendance scheduling matrix</span>
+              <span>{t("Optimized task, labor, and attendance scheduling matrix")}</span>
             </li>
           </ul>
         </div>
