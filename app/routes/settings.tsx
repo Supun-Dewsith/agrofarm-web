@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 
 import { fetchWithAuth } from "../utils/auth";
+import LanguageSwitcher from '../components/LanguageSwitcher';
+
 
 const API_BASE_URL = String(
   import.meta.env.VITE_API_BASE_URL || "http://localhost:80"
@@ -799,7 +801,8 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <div className="flex-1">
         <div className="flex items-center gap-2 text-emerald-700">
           <SettingsIcon className="h-5 w-5" />
           <span className="text-xs font-bold uppercase tracking-[0.18em]">
@@ -813,6 +816,11 @@ export default function Settings() {
           Manage your profile, notifications, security and farm preferences.
         </p>
       </div>
+
+      <div className="flex shrink-0 self-end md:self-start">
+        <LanguageSwitcher />
+      </div>
+    </div>
 
       {message && (
         <div

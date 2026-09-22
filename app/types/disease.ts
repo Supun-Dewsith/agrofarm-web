@@ -14,3 +14,12 @@ export interface DiseaseAnalysisResult {
   possible_treatments: string[];
   prevention_tips: string[];
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface DiseaseChatResponse {
+  answer: string;
+}
