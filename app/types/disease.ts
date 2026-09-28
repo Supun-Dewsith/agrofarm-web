@@ -5,6 +5,10 @@ export interface BoundingBox {
 }
 
 export interface DiseaseAnalysisResult {
+  id?: number;
+  user_id?: number;
+  image_url?: string;
+  created_at?: string;
   plant_name: string;
   is_healthy: boolean;
   disease_name: string;
