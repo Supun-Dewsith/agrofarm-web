@@ -17,6 +17,7 @@ export const ImageBoundingBox: React.FC<Props> = ({ imageUrl, boxes }) => {
     if (!ctx) return;
 
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.src = imageUrl;
 
     img.onload = () => {
