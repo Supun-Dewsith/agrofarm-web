@@ -42,3 +42,14 @@ export const askAboutDetection = async (
 
   return response.json();
 };
+
+export const getRecentDetections = async (limit: number = 20): Promise<DiseaseAnalysisResult[]> => {
+  const response = await fetchWithAuth(`/api/disease/history?limit=${limit}`);
+
+  if (!response.ok) {
+    return [];
+  }
+
+  return response.json();
+};
+

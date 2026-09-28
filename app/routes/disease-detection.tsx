@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFetcher } from 'react-router';
-import { analyzePlantImage } from '../services/diseaseService';
+import { analyzePlantImage, getRecentDetections } from '../services/diseaseService';
 import type { DiseaseAnalysisResult } from '../types/disease';
 import { ImageBoundingBox } from '../components/ImageBoundingBox';
 import { DiseaseAskMoreChat } from '../components/DiseaseAskMoreChat';
@@ -25,11 +25,25 @@ export async function clientAction({ request }: { request: Request }) {
   }
 }
 
-const RECENT_INSPECTIONS = [
-  { id: 1, initial: 'T', crop: 'Tomato Field A', condition: 'Early Blight (Alternaria)', status: 'INFECTED', date: 'Today, 11:20 AM' },
-  { id: 2, initial: 'C', crop: 'Corn Parcel #4', condition: 'Common Rust', status: 'INFECTED', date: 'Yesterday' },
-  { id: 3, initial: 'A', crop: 'Apple Orchard', condition: 'Healthy Foliage', status: 'HEALTHY', date: '10 Sep 2026' },
-];
+function formatInspectionDate(dateString?: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 export default function DiseaseDetectionPage() {
   const { t } = useTranslation();
@@ -39,9 +53,51 @@ export default function DiseaseDetectionPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [recentInspections, setRecentInspections] = useState<DiseaseAnalysisResult[]>([]);
+  const [activeAnalysis, setActiveAnalysis] = useState<DiseaseAnalysisResult | null>(null);
+  const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
+
   const isSubmitting = fetcher.state === 'submitting';
-  const data = fetcher.data?.result as DiseaseAnalysisResult | undefined;
+  const fetcherResult = fetcher.data?.result as DiseaseAnalysisResult | undefined;
+  const currentData = activeAnalysis || fetcherResult;
   const error = fetcher.data?.error;
+
+  useEffect(() => {
+    let mounted = true;
+    getRecentDetections(30)
+      .then((items) => {
+        if (mounted) {
+          setRecentInspections(items || []);
+          setIsLoadingHistory(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load recent inspections:', err);
+        if (mounted) setIsLoadingHistory(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (fetcher.data?.result) {
+      const newResult = fetcher.data.result;
+      setActiveAnalysis(newResult);
+      if (newResult.image_url) {
+        setSelectedImage(newResult.image_url);
+      }
+      if (newResult.id) {
+        setSelectedInspectionId(newResult.id);
+        setRecentInspections((prev) => {
+          const filtered = prev.filter((item) => item.id !== newResult.id);
+          return [newResult, ...filtered];
+        });
+      }
+    }
+  }, [fetcher.data]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isSubmitting) return;
@@ -50,6 +106,18 @@ export default function DiseaseDetectionPage() {
       if (!file.type.startsWith('image/')) return;
       setSelectedFile(file);
       setSelectedImage(URL.createObjectURL(file));
+      setSelectedInspectionId(null);
+      setActiveAnalysis(null);
+    }
+  };
+
+  const handleSelectInspection = (inspection: DiseaseAnalysisResult) => {
+    if (isSubmitting) return;
+    setSelectedInspectionId(inspection.id ?? null);
+    setActiveAnalysis(inspection);
+    setSelectedFile(null);
+    if (inspection.image_url) {
+      setSelectedImage(inspection.image_url);
     }
   };
 
@@ -66,6 +134,8 @@ export default function DiseaseDetectionPage() {
     if (isSubmitting) return;
     setSelectedFile(null);
     setSelectedImage(null);
+    setSelectedInspectionId(null);
+    setActiveAnalysis(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -77,7 +147,7 @@ export default function DiseaseDetectionPage() {
     marginBottom: '20px',
   };
 
-  const confidenceScore = data ? Math.round(data.overall_confidence * 100) : 0;
+  const confidenceScore = currentData ? Math.round(currentData.overall_confidence * 100) : 0;
 
   return (
     <div style={{ margin: '10px auto', padding: '0 24px', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -128,7 +198,7 @@ export default function DiseaseDetectionPage() {
             }}>
               {selectedImage ? (
                 <>
-                  {data && !isSubmitting ? (
+                  {currentData && !isSubmitting ? (
                     <div style={{
                       width: '100%',
                       height: '100%',
@@ -138,7 +208,7 @@ export default function DiseaseDetectionPage() {
                       padding: '8px',
                       boxSizing: 'border-box'
                     }}>
-                      <ImageBoundingBox imageUrl={selectedImage} boxes={data.detected_spots} />
+                      <ImageBoundingBox imageUrl={selectedImage} boxes={currentData.detected_spots || []} />
                     </div>
                   ) : (
                     <img 
@@ -264,37 +334,126 @@ export default function DiseaseDetectionPage() {
               display: 'flex', flexDirection: 'column', gap: '12px',
               maxHeight: '450px', overflowY: 'auto', paddingRight: '6px'
             }}>
-              {RECENT_INSPECTIONS.map((item) => (
-                <div key={item.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
-                  border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#ffffff'
+              {isLoadingHistory ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                  {t('Loading inspections...')}
+                </div>
+              ) : recentInspections.length === 0 ? (
+                <div style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  color: '#94a3b8',
+                  fontSize: '13px',
+                  border: '1px dashed #cbd5e1',
+                  borderRadius: '8px',
+                  backgroundColor: '#f8fafc'
                 }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9',
-                    color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '14px', flexShrink: 0
-                  }}>
-                    {item.initial}
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>🍃</div>
+                  <div style={{ fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
+                    {t('No past inspections yet')}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {item.crop}
-                      </span>
-                      <span style={{
-                        fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '12px',
-                        backgroundColor: item.status === 'HEALTHY' ? '#f0fdf4' : '#fef2f2',
-                        color: item.status === 'HEALTHY' ? '#166534' : '#991b1b'
-                      }}>
-                        {item.status}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.condition}
-                    </div>
+                  <div>
+                    {t('Upload and scan a leaf to record your first diagnosis.')}
                   </div>
                 </div>
-              ))}
+              ) : (
+                recentInspections.map((item) => {
+                  const isSelected = selectedInspectionId === item.id;
+                  const initial = item.plant_name ? item.plant_name.trim().charAt(0).toUpperCase() : '🌿';
+                  const status = item.is_healthy ? 'HEALTHY' : 'INFECTED';
+                  const formattedDate = formatInspectionDate(item.created_at);
+
+                  return (
+                    <div
+                      key={item.id ?? `${item.plant_name}-${item.created_at}`}
+                      onClick={() => handleSelectInspection(item)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        border: isSelected ? '2px solid #059669' : '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = '#cbd5e1';
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.backgroundColor = '#ffffff';
+                        }
+                      }}
+                    >
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: isSelected ? '#dcfce7' : '#f1f5f9',
+                        color: isSelected ? '#15803d' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '14px',
+                        flexShrink: 0,
+                        border: isSelected ? '1px solid #86efac' : '1px solid #e2e8f0'
+                      }}>
+                        {initial}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            color: '#334155',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {item.plant_name || t('Unknown Plant')}
+                          </span>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 6px',
+                            borderRadius: '12px',
+                            backgroundColor: item.is_healthy ? '#f0fdf4' : '#fef2f2',
+                            color: item.is_healthy ? '#166534' : '#991b1b',
+                            border: `1px solid ${item.is_healthy ? '#bbf7d0' : '#fecaca'}`
+                          }}>
+                            {status}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{
+                            fontSize: '12px',
+                            color: '#64748b',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '140px'
+                          }}>
+                            {item.disease_name || (item.is_healthy ? t('Healthy Foliage') : t('Undetermined'))}
+                          </span>
+                          {formattedDate && (
+                            <span style={{ fontSize: '10px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                              {formattedDate}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -316,17 +475,17 @@ export default function DiseaseDetectionPage() {
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              disabled={!data}
-              title={data ? t('Ask about this scan') : t('Run diagnostics first')}
+              disabled={!currentData}
+              title={currentData ? t('Ask about this scan') : t('Run diagnostics first')}
               style={{
                 padding: '8px 14px',
-                backgroundColor: data ? '#059669' : '#e2e8f0',
-                color: data ? '#ffffff' : '#94a3b8',
+                backgroundColor: currentData ? '#059669' : '#e2e8f0',
+                color: currentData ? '#ffffff' : '#94a3b8',
                 border: 'none',
                 borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: 600,
-                cursor: data ? 'pointer' : 'not-allowed',
+                cursor: currentData ? 'pointer' : 'not-allowed',
               }}
             >
               {t('Ask more')}
@@ -343,10 +502,10 @@ export default function DiseaseDetectionPage() {
                 {t('Identified Host Species')}
               </span>
               <div style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b' }}>
-                {data?.plant_name || <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '15px' }}>{t('Awaiting sample scan...')}</span>}
+                {currentData?.plant_name || <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '15px' }}>{t('Awaiting sample scan...')}</span>}
               </div>
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data ? t('Foliage structure verified via vision matrix') : t('No sample processed')}
+                {currentData ? t('Foliage structure verified via vision matrix') : t('No sample processed')}
               </span>
             </div>
 
@@ -358,11 +517,11 @@ export default function DiseaseDetectionPage() {
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {t('Detected Pathology / Disease')}
               </span>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: data ? (data.is_healthy ? '#166534' : '#991b1b') : '#94a3b8' }}>
-                {data?.disease_name || <span style={{ fontWeight: 500, fontSize: '15px' }}>{t('Undetermined')}</span>}
+              <div style={{ fontSize: '18px', fontWeight: 700, color: currentData ? (currentData.is_healthy ? '#166534' : '#991b1b') : '#94a3b8' }}>
+                {currentData?.disease_name || <span style={{ fontWeight: 500, fontSize: '15px' }}>{t('Undetermined')}</span>}
               </div>
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data?.is_healthy ? t('No infectious spores or lesions found') : data ? t('Active biological infestation detected') : t('Upload leaf to begin scan')}
+                {currentData?.is_healthy ? t('No infectious spores or lesions found') : currentData ? t('Active biological infestation detected') : t('Upload leaf to begin scan')}
               </span>
             </div>
 
@@ -375,21 +534,21 @@ export default function DiseaseDetectionPage() {
                 {t('Pathology Severity State')}
               </span>
               <div>
-                {data ? (
+                {currentData ? (
                   <span style={{
                     fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px',
-                    backgroundColor: data.is_healthy ? '#f0fdf4' : '#fef2f2',
-                    color: data.is_healthy ? '#166534' : '#991b1b',
+                    backgroundColor: currentData.is_healthy ? '#f0fdf4' : '#fef2f2',
+                    color: currentData.is_healthy ? '#166534' : '#991b1b',
                     display: 'inline-block'
                   }}>
-                    ● {data.is_healthy ? t('HEALTHY LEAF MATRIX') : t('PATHOGEN DETECTED')}
+                    ● {currentData.is_healthy ? t('HEALTHY LEAF MATRIX') : t('PATHOGEN DETECTED')}
                   </span>
                 ) : (
                   <span style={{ fontSize: '14px', color: '#94a3b8', fontWeight: 500 }}>{t('Pending Evaluation')}</span>
                 )}
               </div>
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data?.is_healthy ? t('Photosynthetic tissue operational') : data ? t('Immediate intervention advised') : t('System standby')}
+                {currentData?.is_healthy ? t('Photosynthetic tissue operational') : currentData ? t('Immediate intervention advised') : t('System standby')}
               </span>
             </div>
 
@@ -403,20 +562,20 @@ export default function DiseaseDetectionPage() {
                   {t('Model Confidence')}
                 </span>
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
-                  {data ? `${confidenceScore}%` : '0%'}
+                  {currentData ? `${confidenceScore}%` : '0%'}
                 </span>
               </div>
               
               <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
                 <div style={{
                   width: `${confidenceScore}%`, height: '100%',
-                  backgroundColor: data?.is_healthy ? '#059669' : '#e11d48',
+                  backgroundColor: currentData?.is_healthy ? '#059669' : '#e11d48',
                   borderRadius: '6px', transition: 'width 0.4s ease'
                 }} />
               </div>
 
               <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {data ? t('Inference validated across agricultural neural network') : t('Awaiting model inference')}
+                {currentData ? t('Inference validated across agricultural neural network') : t('Awaiting model inference')}
               </span>
             </div>
 
@@ -428,9 +587,9 @@ export default function DiseaseDetectionPage() {
             padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
             backgroundColor: '#ffffff', minHeight: '80px', marginBottom: '40px'
           }}>
-            {data?.general_description ? (
+            {currentData?.general_description ? (
               <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', margin: 0 }}>
-                {data.general_description}
+                {currentData.general_description}
               </p>
             ) : (
               <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>
@@ -448,12 +607,12 @@ export default function DiseaseDetectionPage() {
             marginBottom: '40px'
           }}>
             {[
-              { label: t('Foliage Tissue Necrosis'), detected: Boolean(data && !data.is_healthy) },
-              { label: t('Chlorotic Ring Formations'), detected: Boolean(data && !data.is_healthy) },
-              { label: t('Airborne Spore Spread Risk'), detected: Boolean(data && !data.is_healthy) },
-              { label: t('Water Splash Transmission'), detected: Boolean(data && !data.is_healthy) },
-              { label: t('Cellular Structure Integrity'), detected: Boolean(data?.is_healthy) },
-              { label: t('Quarantine Protocol Required'), detected: Boolean(data && !data.is_healthy) },
+              { label: t('Foliage Tissue Necrosis'), detected: Boolean(currentData && !currentData.is_healthy) },
+              { label: t('Chlorotic Ring Formations'), detected: Boolean(currentData && !currentData.is_healthy) },
+              { label: t('Airborne Spore Spread Risk'), detected: Boolean(currentData && !currentData.is_healthy) },
+              { label: t('Water Splash Transmission'), detected: Boolean(currentData && !currentData.is_healthy) },
+              { label: t('Cellular Structure Integrity'), detected: Boolean(currentData?.is_healthy) },
+              { label: t('Quarantine Protocol Required'), detected: Boolean(currentData && !currentData.is_healthy) },
             ].map((indicator) => (
               <div
                 key={indicator.label}
@@ -494,9 +653,9 @@ export default function DiseaseDetectionPage() {
                   {t('CURATIVE')}
                 </span>
               </div>
-              {data && data.possible_treatments.length > 0 ? (
+              {currentData && currentData.possible_treatments && currentData.possible_treatments.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {data.possible_treatments.map((treatment, idx) => (
+                  {currentData.possible_treatments.map((treatment, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                       <span style={{ color: '#dc2626', fontSize: '14px', lineHeight: '1' }}>•</span>
                       <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: '1.4' }}>{treatment}</p>
@@ -518,9 +677,9 @@ export default function DiseaseDetectionPage() {
                   {t('PROPHYLACTIC')}
                 </span>
               </div>
-              {data && data.prevention_tips.length > 0 ? (
+              {currentData && currentData.prevention_tips && currentData.prevention_tips.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {data.prevention_tips.map((tip, idx) => (
+                  {currentData.prevention_tips.map((tip, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                       <span style={{ color: '#059669', fontSize: '14px', lineHeight: '1' }}>•</span>
                       <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: '1.4' }}>{tip}</p>
@@ -540,7 +699,7 @@ export default function DiseaseDetectionPage() {
       <DiseaseAskMoreChat
         open={chatOpen}
         onClose={() => setChatOpen(false)}
-        analysis={data}
+        analysis={currentData || undefined}
       />
     </div>
   );
