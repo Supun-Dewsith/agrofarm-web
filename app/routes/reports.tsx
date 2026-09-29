@@ -46,7 +46,7 @@ export default function ReportsPage() {
   const [selectedFarmId, setSelectedFarmId] = useState<string>('ALL');
 
   // Date Range
-  const [datePreset, setDatePreset] = useState<'7d' | '30d' | 'month' | 'year' | 'custom'>('30d');
+  const [datePreset, setDatePreset] = useState<'7d' | '30d' | '90d' | 'year' | 'custom'>('30d');
   const [fromDate, setFromDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -138,7 +138,7 @@ export default function ReportsPage() {
   };
 
   // Preset Handler
-  const handlePresetChange = (preset: '7d' | '30d' | 'month' | 'year' | 'custom') => {
+  const handlePresetChange = (preset: '7d' | '30d' | '90d' | 'year' | 'custom') => {
     setDatePreset(preset);
     const now = new Date();
     const toStr = now.toISOString().slice(0, 10);
@@ -152,12 +152,14 @@ export default function ReportsPage() {
       const past = new Date();
       past.setDate(past.getDate() - 30);
       setFromDate(past.toISOString().slice(0, 10));
-    } else if (preset === 'month') {
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      setFromDate(firstDay.toISOString().slice(0, 10));
+    } else if (preset === '90d') {
+      const past = new Date();
+      past.setDate(past.getDate() - 90);
+      setFromDate(past.toISOString().slice(0, 10));
     } else if (preset === 'year') {
-      const firstDay = new Date(now.getFullYear(), 0, 1);
-      setFromDate(firstDay.toISOString().slice(0, 10));
+      const past = new Date();
+      past.setDate(past.getDate() - 365);
+      setFromDate(past.toISOString().slice(0, 10));
     }
   };
 
@@ -334,12 +336,18 @@ export default function ReportsPage() {
         d.plantName,
         d.diseaseName,
         d.isHealthy ? 'HEALTHY' : 'INFECTED',
-        `${d.confidence}%`,
+        formatConfidence(d.confidence),
         d.treatment || '',
         d.userName || '',
       ]);
       exportToCSV('agrofarm_disease_diagnostics_report', headers, rows);
     }
+  };
+
+  const formatConfidence = (val?: number | null) => {
+    if (val == null || isNaN(val)) return '0.0%';
+    const num = val <= 1.0 && val > 0 ? val * 100 : val;
+    return `${num.toFixed(1)}%`;
   };
 
   const formatLKR = (val: number | undefined | null) => {
@@ -382,7 +390,7 @@ export default function ReportsPage() {
 
           {/* Quick Date Presets */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600">
-            {(['7d', '30d', 'month', 'year'] as const).map((preset) => (
+            {(['7d', '30d', '90d', 'year'] as const).map((preset) => (
               <button
                 key={preset}
                 type="button"
@@ -392,7 +400,7 @@ export default function ReportsPage() {
                     : 'hover:text-slate-900'
                   }`}
               >
-                {preset === '7d' ? t('7D') : preset === '30d' ? t('30D') : preset === 'month' ? t('Month') : t('Year')}
+                {preset === '7d' ? t('7D') : preset === '30d' ? t('30D') : preset === '90d' ? t('90D') : t('1 Year')}
               </button>
             ))}
           </div>
@@ -691,7 +699,14 @@ export default function ReportsPage() {
             <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-xs">
               <p className="text-[11px] font-bold text-slate-500 uppercase">{t("Mean Confidence")}</p>
               <h3 className="text-xl font-bold text-blue-700 mt-1">
-                {diseaseData.length > 0 ? `${(diseaseData.reduce((acc, d) => acc + (d.confidence || 0), 0) / diseaseData.length).toFixed(1)}%` : '0%'}
+                {diseaseData.length > 0
+                  ? formatConfidence(
+                      diseaseData.reduce((acc, d) => {
+                        const val = d.confidence != null ? (d.confidence <= 1.0 && d.confidence > 0 ? d.confidence * 100 : d.confidence) : 0;
+                        return acc + val;
+                      }, 0) / diseaseData.length
+                    )
+                  : '0%'}
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">{t("Inference accuracy")}</p>
             </div>
@@ -1074,7 +1089,7 @@ export default function ReportsPage() {
                           {d.isHealthy ? t('HEALTHY') : t('INFECTED')}
                         </span>
                       </td>
-                      <td className="p-3 font-semibold text-blue-700">{d.confidence}%</td>
+                      <td className="p-3 font-semibold text-blue-700">{formatConfidence(d.confidence)}</td>
                       <td className="p-3 text-slate-500 max-w-sm truncate">{d.treatment || '-'}</td>
                       <td className="p-3 text-slate-600">{d.userName || '-'}</td>
                     </tr>
