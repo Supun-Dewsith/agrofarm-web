@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -12,6 +13,7 @@ import {
   Marker,
   Polygon,
   TileLayer,
+  Tooltip,
   useMap,
   useMapEvents,
 } from "react-leaflet";
@@ -20,6 +22,8 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import type { LatLngExpression } from "leaflet";
+import { fetchWithAuth, getAuthData } from "../utils/auth";
+import { farmPermissions } from "../utils/farm-permissions";
 
 /* =========================================================
    TYPES
@@ -28,6 +32,92 @@ import type { LatLngExpression } from "leaflet";
 interface MapPoint {
   latitude: number;
   longitude: number;
+}
+
+interface AddressMatch {
+  label: string;
+  latitude: number;
+  longitude: number;
+}
+
+function moveBoundaryPoint(points: MapPoint[], index: number, offset: number): MapPoint[] {
+  const target = index + offset;
+  if (index < 0 || index >= points.length || target < 0 || target >= points.length) return points;
+  const next = [...points];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+}
+
+function arrangeBoundaryPoints(points: MapPoint[]): MapPoint[] {
+  if (points.length < 3) return [...points];
+  const center = points.reduce(
+    (sum, point) => ({ latitude: sum.latitude + point.latitude / points.length, longitude: sum.longitude + point.longitude / points.length }),
+    { latitude: 0, longitude: 0 }
+  );
+  return [...points].sort((a, b) =>
+    Math.atan2(a.latitude - center.latitude, a.longitude - center.longitude)
+    - Math.atan2(b.latitude - center.latitude, b.longitude - center.longitude)
+  );
+}
+
+function boundaryIsSimple(points: MapPoint[]): boolean {
+  if (points.length < 3) return false;
+  const distinct = new Set(points.map(p => `${p.latitude},${p.longitude}`));
+  if (distinct.size !== points.length) return false;
+  const origin = points[0];
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i], b = points[(i + 1) % points.length];
+    area += (a.longitude - origin.longitude) * (b.latitude - origin.latitude)
+      - (b.longitude - origin.longitude) * (a.latitude - origin.latitude);
+    for (let j = i + 1; j < points.length; j++) {
+      if (j === i + 1 || (i === 0 && j === points.length - 1)) continue;
+      if (segmentsIntersect(a, b, points[j], points[(j + 1) % points.length])) return false;
+    }
+  }
+  return Math.abs(area) > 1e-16;
+}
+
+function PointSequence({ points, onChange }: {
+  points: MapPoint[];
+  onChange: (points: MapPoint[]) => void;
+}) {
+  if (points.length === 0) return null;
+  return (
+    <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4">
+      <p className="font-bold text-slate-900">Boundary point order</p>
+      <p className="mt-1 text-sm text-slate-700">
+        Points connect in this order. Use the arrows to correct the order after selecting points.
+        With 3 or more points, the last point connects back to point 1.
+      </p>
+      {points.length >= 3 && !boundaryIsSimple(points) && (
+        <p role="alert" className="mt-2 font-semibold text-red-700">Boundary lines overlap or the shape has no area. Adjust the point order before saving.</p>
+      )}
+      <button
+        type="button"
+        onClick={() => onChange(arrangeBoundaryPoints(points))}
+        disabled={points.length < 3}
+        className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        ↻ Auto arrange points
+      </button>
+      <ol className="mt-3 max-h-60 space-y-2 overflow-y-auto">
+        {points.map((point, index) => (
+          <li key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-100 p-2 text-sm text-slate-900">
+            <span><strong>{index + 1}.</strong> {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)}</span>
+            <span className="flex gap-2">
+              <button type="button" aria-label={`Move point ${index + 1} earlier`}
+                disabled={index === 0} onClick={() => onChange(moveBoundaryPoint(points, index, -1))}
+                className="rounded border border-slate-400 bg-white px-3 py-1 font-bold disabled:opacity-30">↑</button>
+              <button type="button" aria-label={`Move point ${index + 1} later`}
+                disabled={index === points.length - 1} onClick={() => onChange(moveBoundaryPoint(points, index, 1))}
+                className="rounded border border-slate-400 bg-white px-3 py-1 font-bold disabled:opacity-30">↓</button>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 }
 
 interface Farm {
@@ -72,11 +162,8 @@ interface FieldForm {
    API
 ========================================================= */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-const FARM_API = `${API_BASE_URL}/api/v1/farms`;
-
-const FIELD_API = `${API_BASE_URL}/api/v1/fields`;
+const FARM_API = "/api/v1/farms";
+const FIELD_API = "/api/v1/fields";
 
 /* =========================================================
    DEFAULT MAP
@@ -112,40 +199,6 @@ const markerIcon = new L.Icon({
 /* =========================================================
    AUTH
 ========================================================= */
-
-function getAuthHeaders(): HeadersInit {
-  const tokenData =
-    localStorage.getItem("token_data");
-
-  if (!tokenData) {
-    return {
-      "Content-Type": "application/json",
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(tokenData);
-
-    const token =
-      parsed?.accessToken ||
-      parsed?.access_token ||
-      parsed?.token ||
-      parsed?.jwt;
-
-    if (token) {
-      return {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
-    }
-  } catch {
-    console.warn("Invalid token_data");
-  }
-
-  return {
-    "Content-Type": "application/json",
-  };
-}
 
 /* =========================================================
    BOUNDARY HELPERS
@@ -664,6 +717,9 @@ function isPolygonInsidePolygon(
 ========================================================= */
 
 export default function FarmManagement() {
+  const { canManageFarms, canCreateFields, canManageFields } =
+    farmPermissions(getAuthData()?.role);
+
   /* =======================================================
      DATA
   ======================================================= */
@@ -713,6 +769,67 @@ export default function FarmManagement() {
       farmName: "",
       farmAddress: "",
     });
+
+  const [addressMatches, setAddressMatches] = useState<AddressMatch[]>([]);
+  const [addressSearching, setAddressSearching] = useState(false);
+  const [addressMessage, setAddressMessage] = useState("");
+  const addressAbort = useRef<AbortController | null>(null);
+  const [farmMapZoom, setFarmMapZoom] = useState(13);
+
+  useEffect(() => {
+    addressAbort.current?.abort();
+    addressAbort.current = null;
+    setAddressMatches([]);
+    setAddressMessage("");
+    setAddressSearching(false);
+    return () => addressAbort.current?.abort();
+  }, [farmForm.farmAddress, showFarmModal]);
+
+  const chooseAddress = (match: AddressMatch) => {
+    setFarmMapCenter([match.latitude, match.longitude]);
+    setFarmMapZoom(16);
+    setAddressMessage(`Map moved to ${match.label}. Check the location before drawing the boundary.`);
+    setAddressMatches([]);
+  };
+
+  const findFarmAddress = async () => {
+    const query = farmForm.farmAddress.trim();
+    if (!canManageFarms || addressAbort.current || query.length < 3) return;
+    const controller = new AbortController();
+    addressAbort.current = controller;
+    setAddressSearching(true);
+    setAddressMatches([]);
+    setAddressMessage("");
+    try {
+      const response = await fetchWithAuth(`/api/v1/farm-location-search?q=${encodeURIComponent(query)}`, {
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 429
+          ? "Please wait a moment before searching again."
+          : "Address search is unavailable. Try again or select the location manually on the map.");
+      }
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) throw new Error("Invalid address search response.");
+      const matches = data.filter((item): item is AddressMatch =>
+        item && typeof item.label === "string" && typeof item.latitude === "number"
+        && typeof item.longitude === "number" && Number.isFinite(item.latitude)
+        && Number.isFinite(item.longitude) && Math.abs(item.latitude) <= 90 && Math.abs(item.longitude) <= 180);
+      if (controller.signal.aborted) return;
+      if (matches.length === 1) chooseAddress(matches[0]);
+      else if (matches.length > 1) {
+        setAddressMatches(matches);
+        setAddressMessage("Choose the matching location below.");
+      } else setAddressMessage("No matching location found. Try the nearest town or select the location manually.");
+    } catch (error) {
+      if (!controller.signal.aborted) setAddressMessage(error instanceof Error ? error.message : "Address search failed.");
+    } finally {
+      if (addressAbort.current === controller) {
+        addressAbort.current = null;
+        setAddressSearching(false);
+      }
+    }
+  };
 
   const [farmPoints, setFarmPoints] =
     useState<MapPoint[]>([]);
@@ -791,10 +908,9 @@ export default function FarmManagement() {
       setError("");
 
       const response =
-        await fetch(FARM_API, {
+        await fetchWithAuth(FARM_API, {
           method: "GET",
-          headers:
-            getAuthHeaders(),
+          
         });
 
       if (!response.ok) {
@@ -830,10 +946,9 @@ export default function FarmManagement() {
       setError("");
 
       const response =
-        await fetch(FIELD_API, {
+        await fetchWithAuth(FIELD_API, {
           method: "GET",
-          headers:
-            getAuthHeaders(),
+          
         });
 
       if (!response.ok) {
@@ -976,6 +1091,8 @@ export default function FarmManagement() {
   ======================================================= */
 
   const openCreateFarm = () => {
+    if (!canManageFarms) return;
+    setFarmMapZoom(13);
     setEditingFarmId(null);
 
     setFarmForm({
@@ -1003,6 +1120,8 @@ export default function FarmManagement() {
   const openEditFarm = (
     farm: Farm
   ) => {
+    if (!canManageFarms) return;
+    setFarmMapZoom(13);
     setEditingFarmId(
       farm.id
     );
@@ -1152,6 +1271,11 @@ export default function FarmManagement() {
     e: FormEvent
   ) => {
     e.preventDefault();
+      if (!canManageFarms) return;
+      if (!boundaryIsSimple(farmPoints)) {
+        alert("Select at least 3 distinct boundary points in perimeter order without crossing lines.");
+        return;
+      }
 
     if (
       !farmForm.farmName.trim() ||
@@ -1212,10 +1336,9 @@ export default function FarmManagement() {
           : "PUT";
 
       const response =
-        await fetch(url, {
+        await fetchWithAuth(url, {
           method,
-          headers:
-            getAuthHeaders(),
+          
           body: JSON.stringify(
             payload
           ),
@@ -1276,6 +1399,7 @@ export default function FarmManagement() {
     async (
       farm: Farm
     ) => {
+    if (!canManageFarms) return;
       const hasFields =
         fields.some(
           (field) =>
@@ -1300,12 +1424,11 @@ export default function FarmManagement() {
 
       try {
         const response =
-          await fetch(
+          await fetchWithAuth(
             `${FARM_API}/${farm.id}`,
             {
               method: "DELETE",
-              headers:
-                getAuthHeaders(),
+              
             }
           );
 
@@ -1365,6 +1488,7 @@ export default function FarmManagement() {
   const openCreateField = (
     farmId?: number
   ) => {
+    if (!canCreateFields) return;
     const id =
       farmId ??
       selectedFarmId;
@@ -1442,6 +1566,7 @@ export default function FarmManagement() {
   const openEditField = (
     field: Field
   ) => {
+    if (!canManageFields) return;
     const fieldBoundary =
       boundaryToPoints(
         field.boundary
@@ -1652,6 +1777,11 @@ export default function FarmManagement() {
       e: FormEvent
     ) => {
       e.preventDefault();
+      if (editingFieldId === null ? !canCreateFields : !canManageFields) return;
+      if (!boundaryIsSimple(fieldPoints)) {
+        alert("Select at least 3 distinct boundary points in perimeter order without crossing lines.");
+        return;
+      }
 
       if (
         !fieldForm.farmId ||
@@ -1758,10 +1888,9 @@ export default function FarmManagement() {
             : "PUT";
 
         const response =
-          await fetch(url, {
+          await fetchWithAuth(url, {
             method,
-            headers:
-              getAuthHeaders(),
+            
             body: JSON.stringify(
               payload
             ),
@@ -1824,6 +1953,7 @@ export default function FarmManagement() {
     async (
       field: Field
     ) => {
+    if (!canManageFields) return;
       if (
         !window.confirm(
           `Are you sure you want to delete "${field.fieldName}"?`
@@ -1834,12 +1964,11 @@ export default function FarmManagement() {
 
       try {
         const response =
-          await fetch(
+          await fetchWithAuth(
             `${FIELD_API}/${field.id}`,
             {
               method: "DELETE",
-              headers:
-                getAuthHeaders(),
+              
             }
           );
 
@@ -1991,22 +2120,22 @@ export default function FarmManagement() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-            Manage farms and fields with real map boundaries
+            {canManageFarms ? "Manage all farms and fields with real map boundaries" : canCreateFields ? "View your assigned farms and manage their fields" : "View your assigned farms and their fields"}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2.5">
 
-          <button
+          {canManageFarms && (<button
             onClick={
               openCreateFarm
             }
             className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl hover:shadow-emerald-600/25 focus:outline-none focus:ring-4 focus:ring-emerald-100"
           >
             + Register Farm
-          </button>
+          </button>)}
 
-          <button
+          {canCreateFields && (<button
             onClick={() =>
               openCreateField()
             }
@@ -2016,7 +2145,7 @@ export default function FarmManagement() {
             className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
           >
             + Register Field
-          </button>
+          </button>)}
 
         </div>
       </div>
@@ -2150,7 +2279,7 @@ export default function FarmManagement() {
             0 ? (
             <EmptyState
               title="No farms found"
-              description="Register your first farm."
+              description={canManageFarms ? "Register your first farm." : "No farms are assigned to your account. Contact an administrator."}
             />
           ) : (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -2268,7 +2397,7 @@ export default function FarmManagement() {
 
                         {/* EDIT */}
 
-                        <button
+                        {canManageFarms && (<button
                           onClick={() =>
                             openEditFarm(
                               farm
@@ -2277,7 +2406,7 @@ export default function FarmManagement() {
                           className="mt-2 w-full rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100"
                         >
                           ✏️ Edit Farm Boundary
-                        </button>
+                        </button>)}
 
                         {/* VIEW FIELDS */}
 
@@ -2294,7 +2423,7 @@ export default function FarmManagement() {
 
                         {/* ADD FIELD */}
 
-                        <button
+                        {canCreateFields && (<button
                           onClick={() =>
                             openCreateField(
                               farm.id
@@ -2307,13 +2436,13 @@ export default function FarmManagement() {
                           className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           + Add Field
-                        </button>
+                        </button>)}
 
                         {/* ACTIONS */}
 
                         <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
 
-                          <button
+                          {canManageFarms && (<button
                             onClick={() =>
                               openEditFarm(
                                 farm
@@ -2322,9 +2451,9 @@ export default function FarmManagement() {
                             className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                           >
                             ✏️ Edit
-                          </button>
+                          </button>)}
 
-                          <button
+                          {canManageFarms && (<button
                             onClick={() =>
                               handleDeleteFarm(
                                 farm
@@ -2333,7 +2462,7 @@ export default function FarmManagement() {
                             className="flex-1 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-100"
                           >
                             🗑️ Delete
-                          </button>
+                          </button>)}
 
                         </div>
 
@@ -2379,7 +2508,7 @@ export default function FarmManagement() {
 
               <div className="inline-flex w-fit rounded-xl bg-slate-100 p-1">
 
-                <button
+                {canCreateFields && (<button
                   onClick={() =>
                     openCreateField(
                       selectedFarmId
@@ -2388,7 +2517,7 @@ export default function FarmManagement() {
                   className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700"
                 >
                   + Add Field
-                </button>
+                </button>)}
 
                 <button
                   onClick={() => {
@@ -2564,7 +2693,7 @@ export default function FarmManagement() {
                                   🗺️
                                 </button>
 
-                                <button
+                                {canManageFields && (<button
                                   onClick={() =>
                                     openEditField(
                                       field
@@ -2574,9 +2703,9 @@ export default function FarmManagement() {
                                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 transition hover:bg-slate-50"
                                 >
                                   ✏️
-                                </button>
+                                </button>)}
 
-                                <button
+                                {canManageFields && (<button
                                   onClick={() =>
                                     handleDeleteField(
                                       field
@@ -2586,7 +2715,7 @@ export default function FarmManagement() {
                                   className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-red-600 transition hover:bg-red-100"
                                 >
                                   🗑️
-                                </button>
+                                </button>)}
 
                               </div>
 
@@ -2612,7 +2741,7 @@ export default function FarmManagement() {
           FARM CREATE / EDIT MODAL
       =================================================== */}
 
-      {showFarmModal && (
+      {showFarmModal && canManageFarms && (
         <Modal
           title={
             editingFarmId ===
@@ -2678,6 +2807,26 @@ export default function FarmManagement() {
 
             </div>
 
+            <div className="rounded-xl border border-slate-300 bg-slate-50 p-4">
+              <button type="button" onClick={findFarmAddress}
+                disabled={addressSearching || farmForm.farmAddress.trim().length < 3}
+                className="rounded-xl bg-emerald-700 px-4 py-2 font-bold text-white disabled:opacity-40">
+                {addressSearching ? "Finding address…" : "Find address on map"}
+              </button>
+              <p className="mt-2 text-sm text-slate-700">Search a Sri Lankan farm address or nearby town. Search uses OpenStreetMap.</p>
+              <p role="status" aria-live="polite" className="mt-2 text-sm font-semibold text-slate-900">{addressMessage}</p>
+              {addressMatches.length > 0 && <ul className="mt-3 space-y-2">
+                {addressMatches.map((match, index) => <li key={`${match.latitude}-${match.longitude}-${index}`}>
+                  <button type="button" onClick={() => chooseAddress(match)}
+                    className="w-full rounded-lg border border-slate-300 bg-white p-3 text-left text-sm text-slate-900 hover:bg-emerald-50">
+                    {match.label}
+                  </button>
+                </li>)}
+              </ul>}
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer"
+                className="mt-2 inline-block text-xs text-slate-700 underline">© OpenStreetMap contributors</a>
+            </div>
+
             {/* FARM MAP */}
 
             <div>
@@ -2706,7 +2855,7 @@ export default function FarmManagement() {
                   center={
                     farmMapCenter
                   }
-                  zoom={13}
+                  zoom={farmMapZoom}
                   scrollWheelZoom
                   className="h-[430px] w-full sm:h-[500px]"
                 >
@@ -2720,7 +2869,7 @@ export default function FarmManagement() {
                     center={
                       farmMapCenter
                     }
-                    zoom={13}
+                    zoom={farmMapZoom}
                   />
 
                   {farmPoints.length >=
@@ -2750,8 +2899,11 @@ export default function FarmManagement() {
                         )}
                         icon={
                           markerIcon
-                        }
-                      />
+                        }>
+                        <Tooltip permanent direction="top" offset={[0, -28]} opacity={1}>
+                          <span style={{fontWeight: 800, color: "#0f172a"}}>{index + 1}</span>
+                        </Tooltip>
+                      </Marker>
                     )
                   )}
 
@@ -2823,6 +2975,8 @@ export default function FarmManagement() {
                 </div>
 
               </div>
+
+              <PointSequence points={farmPoints} onChange={setFarmPoints} />
 
               {/* FARM LOCATION */}
 
@@ -2946,7 +3100,7 @@ export default function FarmManagement() {
           FIELD CREATE / EDIT MODAL
       =================================================== */}
 
-      {showFieldModal && (
+      {showFieldModal && (editingFieldId === null ? canCreateFields : canManageFields) && (
         <Modal
           title={
             editingFieldId ===
@@ -3347,8 +3501,11 @@ export default function FarmManagement() {
                         )}
                         icon={
                           markerIcon
-                        }
-                      />
+                        }>
+                        <Tooltip permanent direction="top" offset={[0, -28]} opacity={1}>
+                          <span style={{fontWeight: 800, color: "#0f172a"}}>{index + 1}</span>
+                        </Tooltip>
+                      </Marker>
                     )
                   )}
 
@@ -3408,6 +3565,8 @@ export default function FarmManagement() {
                 </div>
 
               </div>
+
+              <PointSequence points={fieldPoints} onChange={setFieldPoints} />
 
               {/* FIELD LOCATION */}
 
@@ -3660,8 +3819,9 @@ export default function FarmManagement() {
                             : "#2563eb",
                         fillOpacity:
                           1,
-                      }}
-                    />
+                      }}>
+                      <Tooltip permanent direction="top" opacity={1}>{index + 1}</Tooltip>
+                    </CircleMarker>
                   )
                 )}
 
