@@ -6,6 +6,7 @@ import {
   LogOut
 } from "lucide-react";
 import NotificationBell from "./components/NotificationBell";
+import LanguageSwitcher from "./components/LanguageSwitcher";
 import { Label } from "recharts";
 import { useTranslation } from 'react-i18next';
 
@@ -24,14 +25,21 @@ export default function DashboardLayout() {
   const currentPath = location.pathname.split("/").pop();
 
   const getPageTitle = () => {
-    if (!currentPath || currentPath === "home") {
-      return t("Dashboard Overview");
+    if (!currentPath || currentPath === "home" || location.pathname === "/home/dashboard") {
+      return t("Dashboard");
     }
 
-    return currentPath
+    const currentItem = menuItems.find(item => item.path === location.pathname);
+    if (currentItem) {
+      return t(currentItem.label);
+    }
+
+    const formattedTitle = currentPath
       .split("-")
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+
+    return t(formattedTitle);
   };
 
   const userRole = user?.role?.toUpperCase();
@@ -96,13 +104,13 @@ export default function DashboardLayout() {
           <h2 className="text-xl sm:text-2xl font-semibold tracking-wide text-emerald-900 uppercase">
             {getPageTitle()}
           </h2>
-          <div className="flex items-center">
-            {/* Notification Bell */}
-              <NotificationBell />
-            {/* User Profile Card Group */}
-             <div className="flex items-center gap-3 pl-4 border-l border-slate-200/80"></div> 
+          <div className="flex items-center gap-4">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
 
- 
+            {/* Notification Bell */}
+            <NotificationBell />
+
             {/* User Profile Card Group */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200/80">
               {user?.imageUrl ? (

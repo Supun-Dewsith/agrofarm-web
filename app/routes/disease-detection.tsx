@@ -150,7 +150,7 @@ export default function DiseaseDetectionPage() {
   const confidenceScore = currentData ? Math.round(currentData.overall_confidence * 100) : 0;
 
   return (
-    <div style={{ margin: '10px auto', padding: '16px 24px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ margin: '10px auto', padding: '16px 56px', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
       {/* Keyframe animation for scanning laser */}
       <style>{`

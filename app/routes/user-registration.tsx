@@ -445,7 +445,7 @@ export default function UserRegistration() {
   };
 
   return (
-    <div style={{ margin: "10px auto", padding: "16px 24px", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={{ margin: "10px auto", padding: "16px 56px", fontFamily: "Inter, system-ui, sans-serif" }}>
 
       {statusMessage && (
         <div style={{
@@ -927,8 +927,8 @@ export default function UserRegistration() {
                     isRegistrationDisabled
                       ? t("Can Register Users permission is disabled for Farmers")
                       : isDefault
-                      ? t("Default permission required for system access")
-                      : ""
+                        ? t("Default permission required for system access")
+                        : ""
                   }
                   style={{
                     display: "flex",
