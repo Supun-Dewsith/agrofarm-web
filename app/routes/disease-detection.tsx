@@ -150,8 +150,8 @@ export default function DiseaseDetectionPage() {
   const confidenceScore = currentData ? Math.round(currentData.overall_confidence * 100) : 0;
 
   return (
-    <div style={{ margin: '10px auto', padding: '0 24px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      
+    <div style={{ margin: '10px auto', padding: '16px 24px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+
       {/* Keyframe animation for scanning laser */}
       <style>{`
         @keyframes scanLine {
@@ -177,7 +177,7 @@ export default function DiseaseDetectionPage() {
 
         {/* ================= LEFT PANE: SAMPLE MEDIA & RECENT INSPECTIONS ================= */}
         <div style={{ width: '300px', flexShrink: 0 }}>
-          
+
           {/* Media Block */}
           <div>
             <h3 style={sectionHeaderStyle}>{t('Sample Media')}</h3>
@@ -211,9 +211,9 @@ export default function DiseaseDetectionPage() {
                       <ImageBoundingBox imageUrl={selectedImage} boxes={currentData.detected_spots || []} />
                     </div>
                   ) : (
-                    <img 
-                      src={selectedImage} 
-                      alt={t('Sample Preview')} 
+                    <img
+                      src={selectedImage}
+                      alt={t('Sample Preview')}
                       style={{
                         maxWidth: '100%',
                         maxHeight: '320px',
@@ -221,7 +221,7 @@ export default function DiseaseDetectionPage() {
                         height: 'auto',
                         objectFit: 'contain',
                         display: 'block'
-                      }} 
+                      }}
                     />
                   )}
 
@@ -492,7 +492,7 @@ export default function DiseaseDetectionPage() {
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
-            
+
             {/* Plant Classification Card */}
             <div style={{
               padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
@@ -565,7 +565,7 @@ export default function DiseaseDetectionPage() {
                   {currentData ? `${confidenceScore}%` : '0%'}
                 </span>
               </div>
-              
+
               <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
                 <div style={{
                   width: `${confidenceScore}%`, height: '100%',
@@ -642,7 +642,7 @@ export default function DiseaseDetectionPage() {
           {/* Section 4: Treatment & Prevention Directives */}
           <h3 style={sectionHeaderStyle}>{t('Treatment & Protocol Directives')}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-            
+
             {/* Remedial Measures Card */}
             <div style={{
               padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', minHeight: '180px'
