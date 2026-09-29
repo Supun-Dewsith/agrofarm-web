@@ -3,6 +3,7 @@ import { useLoaderData } from "react-router";
 import { fetchWithAuth, getAuthData } from "../utils/auth";
 import { useState } from "react";
 import { useRouteError, isRouteErrorResponse } from "react-router";
+import { useTranslation } from "react-i18next";
 import FarmWeatherSlideshow, { getWeatherCondition } from "../components/dashboard/FarmWeatherSlideshow";
 import type { FarmWeatherItem } from "../components/dashboard/FarmWeatherSlideshow";
 import {
@@ -250,6 +251,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
 export default function DashboardPage() {
   const { username, stats, farmsWeather, cropHealth, financeData, harvestSummary, recentActivities } = useLoaderData<typeof clientLoader>();
   const [activeCropIndex, setActiveCropIndex] = useState(0);
+  const { t } = useTranslation();
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto text-slate-800">
@@ -264,7 +266,7 @@ export default function DashboardPage() {
           >
             <div className="flex justify-between items-start gap-2">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-                {stat.title}
+                {t(stat.title)}
               </span>
               <span
                 className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${stat.isPositive
@@ -289,12 +291,12 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[360px]">
           <div className="mb-6 flex justify-between items-center">
             <div>
-              <h3 className="font-bold text-slate-700">Revenue & Expenses</h3>
-              <p className="text-xs text-slate-400">Monthly financial performance breakdown</p>
+              <h3 className="font-bold text-slate-700">{t("Revenue & Expenses")}</h3>
+              <p className="text-xs text-slate-400">{t("Monthly financial performance breakdown")}</p>
             </div>
             <div className="flex gap-4 text-xs font-medium">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-red-500 rounded-sm" /> Revenue</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-slate-800 rounded-sm" /> Expense</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-red-500 rounded-sm" /> {t("Revenue")}</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-slate-800 rounded-sm" /> {t("Expense")}</span>
             </div>
           </div>
 
@@ -337,7 +339,7 @@ export default function DashboardPage() {
 
         {/* Crop Health Status */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-          <h3 className="font-bold text-slate-700 mb-2">Crop Health Status</h3>
+          <h3 className="font-bold text-slate-700 mb-2">{t("Crop Health Status")}</h3>
 
           <div className="flex-1 w-full min-h-[220px] -ml-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -425,7 +427,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                   <span className={`font-medium ${activeCropIndex === idx ? 'text-slate-900' : ''}`}>
-                    {item.name}
+                    {t(item.name)}
                   </span>
                 </div>
                 <span className={`font-semibold ${activeCropIndex === idx ? 'text-slate-900' : 'text-slate-800'}`}>
@@ -439,8 +441,8 @@ export default function DashboardPage() {
         {/* Interactive Harvest Summary Bar Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[320px]">
           <div className="mb-4">
-            <h3 className="font-bold text-slate-700">Harvest Summary</h3>
-            <p className="text-xs text-slate-400">Actual Yield vs Target Yield metrics (kg)</p>
+            <h3 className="font-bold text-slate-700">{t("Harvest Summary")}</h3>
+            <p className="text-xs text-slate-400">{t("Actual Yield vs Target Yield metrics (kg)")}</p>
           </div>
 
           <div className="flex-1 w-full min-h-[220px]">
@@ -454,8 +456,8 @@ export default function DashboardPage() {
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Legend iconType="square" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                <Bar dataKey="actual" name="Actual Yield" fill="#047857" radius={[4, 4, 0, 0]} barSize={24} />
-                <Bar dataKey="target" name="Target Yield" fill="#6ee7b7" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="actual" name={t("Actual Yield")} fill="#047857" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="target" name={t("Target Yield")} fill="#6ee7b7" radius={[4, 4, 0, 0]} barSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -464,7 +466,7 @@ export default function DashboardPage() {
 
       {/* Recent Activities */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h3 className="font-bold text-slate-700 mb-4">Recent Activities</h3>
+        <h3 className="font-bold text-slate-700 mb-4">{t("Recent Activities")}</h3>
         <div className="divide-y divide-slate-100">
           {recentActivities.map((act) => (
             <div key={act.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
@@ -472,8 +474,8 @@ export default function DashboardPage() {
                 <span className={`w-3 h-3 rounded-full flex-shrink-0 ring-4 ${act.type === 'disease' ? 'bg-rose-500 ring-rose-100' : 'bg-blue-500 ring-blue-100'
                   }`} />
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-800">{act.title}</h4>
-                  <p className="text-xs text-slate-400">{act.description}</p>
+                  <h4 className="text-sm font-semibold text-slate-800">{t(act.title)}</h4>
+                  <p className="text-xs text-slate-400">{t(act.description)}</p>
                 </div>
               </div>
               <span className="text-xs text-slate-400 whitespace-nowrap">{act.time}</span>
@@ -487,9 +489,10 @@ export default function DashboardPage() {
 }
 
 export function ErrorBoundary() {
+  const { t } = useTranslation();
   const error = useRouteError();
 
-  let errorMessage = "An unexpected error occurred.";
+  let errorMessage = t("An unexpected error occurred.");
 
   if (isRouteErrorResponse(error)) {
     errorMessage = error.data || error.statusText;
@@ -502,13 +505,13 @@ export function ErrorBoundary() {
       <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-xl">
         !
       </div>
-      <h2 className="text-xl font-bold text-slate-800 mb-2">Dashboard Error</h2>
+      <h2 className="text-xl font-bold text-slate-800 mb-2">{t("Dashboard Error")}</h2>
       <p className="text-sm text-slate-600 mb-6">{errorMessage}</p>
       <button
         onClick={() => window.location.reload()}
         className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
       >
-        Retry
+        {t("Retry")}
       </button>
     </div>
   );
