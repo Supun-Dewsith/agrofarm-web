@@ -175,6 +175,34 @@ export async function createFinancialTransaction(
   return res.json();
 }
 
+export interface ReportAiChatRequest {
+  message: string;
+  activeTab: string;
+  farmId?: number;
+  farmName?: string;
+  from?: string;
+  to?: string;
+  language?: string;
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
+export interface ReportAiChatResponse {
+  answer: string;
+}
+
+export async function askReportAi(payload: ReportAiChatRequest): Promise<ReportAiChatResponse> {
+  const res = await fetchWithAuth('/api/reports/ai-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || `AI assistant request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 /**
  * Universal CSV Export with UTF-8 BOM for proper Excel compatibility.
  */

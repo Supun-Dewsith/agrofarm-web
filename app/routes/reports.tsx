@@ -3,8 +3,9 @@ import {
   Download, RefreshCw, Filter, Calendar, Search,
   TrendingUp, TrendingDown, DollarSign, Sprout,
   Users, ClipboardList, ShieldAlert, CheckCircle2,
-  FileSpreadsheet, ArrowRight, Plus, X
+  FileSpreadsheet, ArrowRight, Plus, X, Sparkles
 } from 'lucide-react';
+import { ReportAiDrawer } from '~/components/ReportAiDrawer';
 import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
@@ -67,8 +68,9 @@ export default function ReportsPage() {
   const [taskData, setTaskData] = useState<TaskReportItem[]>([]);
   const [diseaseData, setDiseaseData] = useState<DiseaseReportItem[]>([]);
 
-  // Modal states for inserting financial record
+  // Modal & Drawer states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [recordType, setRecordType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [formFarmId, setFormFarmId] = useState<number | ''>('');
   const [formCropId, setFormCropId] = useState<number | ''>('');
@@ -476,6 +478,15 @@ export default function ReportsPage() {
           >
             <Download size={13} className="text-[#059669]" />
             {t("Download CSV")}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAiDrawerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-800 rounded-md text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+          >
+            <Sparkles size={13} className="text-emerald-600" />
+            {t("Ask AI")}
           </button>
         </div>
       </div>
@@ -1286,6 +1297,18 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
+
+      {/* AI CHATBOT ASSISTANT DRAWER */}
+      <ReportAiDrawer
+        isOpen={isAiDrawerOpen}
+        onClose={() => setIsAiDrawerOpen(false)}
+        activeTab={activeTab}
+        activeTabLabel={tabsConfig.find((t) => t.id === activeTab)?.label || activeTab}
+        farmId={selectedFarmId !== 'ALL' ? Number(selectedFarmId) : undefined}
+        farmName={selectedFarmId !== 'ALL' ? farms.find((f) => String(f.farmIDs) === selectedFarmId)?.farmNames : undefined}
+        fromDate={fromDate}
+        toDate={toDate}
+      />
     </div>
   );
 }
