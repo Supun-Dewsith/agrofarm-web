@@ -5,6 +5,7 @@ import type { Route } from "../auth/+types/login";
 import { loginRequest, setAuthData } from "../utils/auth";
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n'; 
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
@@ -34,6 +35,10 @@ export default function Login() {
     <div className="min-h-screen flex font-sans bg-slate-50/50 text-slate-950 antialiased">
       {/* LEFT FORM SIDE */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 bg-white z-10 relative">
+        <div className="absolute top-6 right-6">
+          <LanguageSwitcher />
+        </div>
+
         <div className="w-full max-w-[440px] flex flex-col items-center">
 
           {/* Large Circular Brand Logo */}

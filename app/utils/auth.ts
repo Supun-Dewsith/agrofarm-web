@@ -82,6 +82,41 @@ export const registerUserByAdmin = async (
   }
 };
 
+export const updateUserByAdmin = async (
+  userId: string | number,
+  userData: RegisterUserPayload | FormData,
+  file?: File | null
+): Promise<void> => {
+  let body: BodyInit;
+
+  if (userData instanceof FormData) {
+    body = userData;
+  } else {
+    const formData = new FormData();
+    formData.append(
+      "user",
+      new Blob([JSON.stringify(userData)], { type: "application/json" })
+    );
+
+    if (file) {
+      formData.append("file", file);
+    }
+    body = formData;
+  }
+
+  const response = await fetchWithAuth(`/api/users/${userId}`, {
+    method: "PUT",
+    body,
+  });
+
+  if (!response.ok) {
+    const errorData = (await response.json().catch(() => ({}))) as {
+      message?: string;
+    };
+    throw new Error(errorData.message || "Failed to update user");
+  }
+};
+
 export const refreshTokens = async (): Promise<AuthResponse> => {
   const currentData = getAuthData();
   if (!currentData?.refreshToken) throw new Error("No refresh token available");
