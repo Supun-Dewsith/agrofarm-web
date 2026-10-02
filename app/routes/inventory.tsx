@@ -37,6 +37,10 @@ interface InventoryItem {
   lastRestocked: string;
   status: string;
   farmId: string;
+
+  quantityValue: number;
+  unit: string;
+  alertLimit: number;
 }
 
 interface NewInventoryItem {
@@ -48,6 +52,16 @@ interface NewInventoryItem {
   farmIDs: number;
 }
 
+interface InventoryRequest {
+  id: number;
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  alertLimit: number;
+  farmIds: number;
+}
+
 interface InventoryResponse {
   id: number;
   name: string;
@@ -55,8 +69,6 @@ interface InventoryResponse {
   quantity: number;
   unit: string;
   alertLimit: number;
-
-  // Your backend may return either farmIds or farmIDs.
   farmIds?: number;
   farmIDs?: number;
 }
@@ -69,21 +81,50 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [lowStockAlerts, setLowStockAlerts] = useState<LowStockItem[]>([]);
+  const [lowStockAlerts, setLowStockAlerts] =
+    useState<LowStockItem[]>([]);
 
   const [error, setError] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [successMessage, setSuccessMessage] =
+    useState<string>('');
 
-  const [showModal, setShowModal] = useState<boolean>(false);
+  const [showModal, setShowModal] =
+    useState<boolean>(false);
 
-  const [formData, setFormData] = useState<NewInventoryItem>({
-    name: '',
-    category: 'Fertilizer',
-    quantity: 0,
-    unit: 'kg',
-    alertLimit: 0,
-    farmIDs: 0
-  });
+  /* ============================================================
+     ADD INVENTORY STATE
+     ============================================================ */
+
+  const [formData, setFormData] =
+    useState<NewInventoryItem>({
+      name: '',
+      category: 'Fertilizer',
+      quantity: 0,
+      unit: 'kg',
+      alertLimit: 0,
+      farmIDs: 0
+    });
+
+  /* ============================================================
+     UPDATE INVENTORY STATE
+     ============================================================ */
+
+  const [showUpdateModal, setShowUpdateModal] =
+    useState<boolean>(false);
+
+  const [updateFormData, setUpdateFormData] =
+    useState<InventoryRequest>({
+      id: 0,
+      name: '',
+      category: 'Fertilizer',
+      quantity: 0,
+      unit: 'kg',
+      alertLimit: 0,
+      farmIds: 0
+    });
+
+  const [selectedInventoryItem, setSelectedInventoryItem] =
+    useState<InventoryItem | null>(null);
 
   const categories = [
     'All',
@@ -118,79 +159,132 @@ const Inventory = () => {
 
   const fetchFarms = async () => {
     try {
-      const response = await fetchWithAuth('/api/crops/farms');
+      const response =
+        await fetchWithAuth('/api/crops/farms');
 
       if (!response.ok) {
         throw new Error('Failed to fetch farms');
       }
 
-      const data = (await response.json()) as Farms[];
+      const data =
+        (await response.json()) as Farms[];
 
-      console.log('Farms API response:', data);
+      console.log(
+        'Farms API response:',
+        data
+      );
 
       setFarms(data);
 
     } catch (err) {
-      console.error('Error fetching farms:', err);
-      setError('Failed to load farms.');
+      console.error(
+        'Error fetching farms:',
+        err
+      );
+
+      setError(
+        'Failed to load farms.'
+      );
     }
   };
 
   const fetchInventory = async () => {
     try {
-      const response = await fetchWithAuth('/api/inventory/all');
+      const response =
+        await fetchWithAuth(
+          '/api/inventory/all'
+        );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch inventory');
+        throw new Error(
+          'Failed to fetch inventory'
+        );
       }
 
-      const data = (await response.json()) as InventoryResponse[];
+      const data =
+        (await response.json()) as InventoryResponse[];
 
-      console.log('Inventory API response:', data);
+      console.log(
+        'Inventory API response:',
+        data
+      );
 
-      const formattedInventory: InventoryItem[] = data.map((item) => {
+      const formattedInventory: InventoryItem[] =
+        data.map((item) => {
 
-        // Support both possible backend property names.
-        const farmId =
-          item.farmIds ??
-          item.farmIDs;
+          const farmId =
+            item.farmIds ??
+            item.farmIDs;
 
-        return {
-          id: String(item.id),
-          name: item.name,
-          category: item.category,
-          categoryBg: getCategoryBackground(item.category),
-          quantity: `${item.quantity} ${item.unit}`,
-          lastRestocked: new Date().toISOString().split('T')[0],
-          status:
-            item.quantity <= item.alertLimit
-              ? 'Low Stock'
-              : 'In Stock',
+          return {
+            id: String(item.id),
 
-          farmId: farmId !== undefined
-            ? String(farmId)
-            : ''
-        };
-      });
+            name: item.name,
+
+            category: item.category,
+
+            categoryBg:
+              getCategoryBackground(
+                item.category
+              ),
+
+            quantity:
+              `${item.quantity} ${item.unit}`,
+
+            lastRestocked:
+              new Date()
+                .toISOString()
+                .split('T')[0],
+
+            status:
+              item.quantity <=
+              item.alertLimit
+                ? 'Low Stock'
+                : 'In Stock',
+
+            farmId:
+              farmId !== undefined
+                ? String(farmId)
+                : '',
+
+            quantityValue:
+              item.quantity,
+
+            unit:
+              item.unit,
+
+            alertLimit:
+              item.alertLimit
+          };
+        });
 
       console.log(
         'Formatted inventory:',
         formattedInventory
       );
 
-      setInventory(formattedInventory);
+      setInventory(
+        formattedInventory
+      );
 
     } catch (err) {
-      console.error('Error fetching inventory:', err);
-      setError('Failed to load inventory.');
+      console.error(
+        'Error fetching inventory:',
+        err
+      );
+
+      setError(
+        'Failed to load inventory.'
+      );
     }
   };
 
   const fetchLowStockAlerts = async () => {
     try {
-      const response = await fetchWithAuth(
-        '/api/inventory/lowstock'
-      );
+      const response =
+        await fetchWithAuth(
+          '/api/inventory/lowstock'
+        );
 
       if (!response.ok) {
         throw new Error(
@@ -206,13 +300,16 @@ const Inventory = () => {
         data
       );
 
-      const formattedData = data.map((item) => ({
-        ...item,
-        id: String(item.id),
-        farmId: String(item.farmId)
-      }));
+      const formattedData =
+        data.map((item) => ({
+          ...item,
+          id: String(item.id),
+          farmId: String(item.farmId)
+        }));
 
-      setLowStockAlerts(formattedData);
+      setLowStockAlerts(
+        formattedData
+      );
 
     } catch (err) {
       console.error(
@@ -232,50 +329,40 @@ const Inventory = () => {
     fetchLowStockAlerts();
   }, []);
 
-  /*
-   * MAIN INVENTORY FILTER
-   *
-   * This does NOT filter by stock status.
-   *
-   * Therefore both:
-   * - In Stock
-   * - Low Stock
-   *
-   * will appear in the main inventory table.
-   *
-   * The farm ID is converted to String on both sides
-   * so "1" and 1 will not cause a filtering problem.
-   */
-  const filteredInventory = inventory.filter((item) => {
+  /* ============================================================
+     MAIN INVENTORY FILTER
+     ============================================================ */
 
-    const matchesFarm =
-      selectedFarm === 'all' ||
-      String(item.farmId) === String(selectedFarm);
+  const filteredInventory =
+    inventory.filter((item) => {
 
-    const matchesCategory =
-      activeTab === 'All' ||
-      item.category === activeTab;
+      const matchesFarm =
+        selectedFarm === 'all' ||
+        String(item.farmId) ===
+          String(selectedFarm);
 
-    const matchesSearch =
-      item.name
-        .toLowerCase()
-        .includes(
-          searchQuery.toLowerCase()
-        );
+      const matchesCategory =
+        activeTab === 'All' ||
+        item.category === activeTab;
 
-    return (
-      matchesFarm &&
-      matchesCategory &&
-      matchesSearch
-    );
-  });
+      const matchesSearch =
+        item.name
+          .toLowerCase()
+          .includes(
+            searchQuery.toLowerCase()
+          );
 
-  /*
-   * LOW STOCK FILTER
-   *
-   * This is completely separate from the
-   * main inventory filter.
-   */
+      return (
+        matchesFarm &&
+        matchesCategory &&
+        matchesSearch
+      );
+    });
+
+  /* ============================================================
+     LOW STOCK FILTER
+     ============================================================ */
+
   const filteredLowStockAlerts =
     lowStockAlerts.filter((item) => {
 
@@ -296,6 +383,10 @@ const Inventory = () => {
         matchesSearch
       );
     });
+
+  /* ============================================================
+     ADD INVENTORY
+     ============================================================ */
 
   const resetInventoryForm = () => {
     setFormData({
@@ -362,16 +453,19 @@ const Inventory = () => {
         payload
       );
 
-      const response = await fetchWithAuth(
-        '/api/inventory/new',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        }
-      );
+      const response =
+        await fetchWithAuth(
+          '/api/inventory/new',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+            body:
+              JSON.stringify(payload)
+          }
+        );
 
       if (!response.ok) {
         const errorText =
@@ -412,6 +506,171 @@ const Inventory = () => {
     }
   };
 
+  /* ============================================================
+     UPDATE INVENTORY
+     ============================================================ */
+
+  const openUpdateModal = (
+    item: InventoryItem
+  ) => {
+
+    setSelectedInventoryItem(item);
+
+    setUpdateFormData({
+      id: Number(item.id),
+      name: item.name,
+      category: item.category,
+      quantity: item.quantityValue,
+      unit: item.unit,
+      alertLimit: item.alertLimit,
+      farmIds: Number(item.farmId)
+    });
+
+    setError('');
+    setSuccessMessage('');
+
+    setShowUpdateModal(true);
+  };
+
+  const resetUpdateForm = () => {
+
+    setUpdateFormData({
+      id: 0,
+      name: '',
+      category: 'Fertilizer',
+      quantity: 0,
+      unit: 'kg',
+      alertLimit: 0,
+      farmIds: 0
+    });
+
+    setSelectedInventoryItem(null);
+  };
+
+  const handleUpdateInventory = async (
+    e: React.FormEvent
+  ) => {
+
+    e.preventDefault();
+
+    setError('');
+    setSuccessMessage('');
+
+    if (!selectedInventoryItem) {
+      setError(
+        'No inventory item selected.'
+      );
+      return;
+    }
+
+    if (!updateFormData.name.trim()) {
+      setError(
+        'Please enter an inventory name.'
+      );
+      return;
+    }
+
+    if (updateFormData.quantity < 0) {
+      setError(
+        'Quantity cannot be negative.'
+      );
+      return;
+    }
+
+    if (updateFormData.alertLimit < 0) {
+      setError(
+        'Alert limit cannot be negative.'
+      );
+      return;
+    }
+
+    if (!updateFormData.farmIds) {
+      setError(
+        'Please select a farm.'
+      );
+      return;
+    }
+
+    try {
+
+      const payload: InventoryRequest = {
+        id: Number(
+          selectedInventoryItem.id
+        ),
+        name: updateFormData.name,
+        category:
+          updateFormData.category,
+        quantity:
+          updateFormData.quantity,
+        unit:
+          updateFormData.unit,
+        alertLimit:
+          updateFormData.alertLimit,
+        farmIds:
+          updateFormData.farmIds
+      };
+
+      console.log(
+        'Updating inventory:',
+        payload
+      );
+
+      const response =
+        await fetchWithAuth(
+          '/api/inventory/update',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+            body:
+              JSON.stringify(payload)
+          }
+        );
+
+      if (!response.ok) {
+
+        const errorText =
+          await response.text();
+
+        console.error(
+          'Update inventory error:',
+          errorText
+        );
+
+        throw new Error(
+          errorText ||
+          'Failed to update inventory'
+        );
+      }
+
+      setSuccessMessage(
+        'Inventory item updated successfully.'
+      );
+
+      setShowUpdateModal(false);
+
+      resetUpdateForm();
+
+      await fetchInventory();
+      await fetchLowStockAlerts();
+
+    } catch (err) {
+
+      console.error(
+        'Error updating inventory:',
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to update inventory item.'
+      );
+    }
+  };
+
   const totalItems =
     filteredInventory.length;
 
@@ -435,6 +694,7 @@ const Inventory = () => {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
         <div>
+
           <h1 className="text-2xl font-bold text-gray-900">
             Inventory Management
           </h1>
@@ -442,6 +702,7 @@ const Inventory = () => {
           <p className="mt-1 text-sm text-gray-500">
             Manage farm inventory, stock levels and supplies.
           </p>
+
         </div>
 
         <button
@@ -789,9 +1050,28 @@ const Inventory = () => {
                       <td className="px-5 py-4">
 
                         <button
+                          onClick={() => {
+
+                            const inventoryItem =
+                              inventory.find(
+                                (inventoryItem) =>
+                                  inventoryItem.id ===
+                                  item.id
+                              );
+
+                            if (inventoryItem) {
+                              openUpdateModal(
+                                inventoryItem
+                              );
+                            } else {
+                              setError(
+                                'Unable to find this inventory item.'
+                              );
+                            }
+                          }}
                           className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-600 transition hover:bg-green-50"
                         >
-                          Reorder
+                          Update
                         </button>
 
                       </td>
@@ -900,6 +1180,10 @@ const Inventory = () => {
                     Farm
                   </th>
 
+                  <th className="px-5 py-3 font-medium">
+                    Action
+                  </th>
+
                 </tr>
 
               </thead>
@@ -992,6 +1276,19 @@ const Inventory = () => {
 
                         </td>
 
+                        <td className="px-5 py-4">
+
+                          <button
+                            onClick={() =>
+                              openUpdateModal(item)
+                            }
+                            className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-600 transition hover:bg-green-50"
+                          >
+                            Update
+                          </button>
+
+                        </td>
+
                       </tr>
 
                     );
@@ -1008,14 +1305,16 @@ const Inventory = () => {
 
       </div>
 
-      {/* Add Inventory Modal */}
+      {/* ========================================================
+          ADD INVENTORY MODAL
+          ======================================================== */}
+
       {showModal && (
 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
 
           <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
 
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
 
               <div>
@@ -1042,13 +1341,11 @@ const Inventory = () => {
 
             </div>
 
-            {/* Form */}
             <form
               onSubmit={handleAddInventory}
               className="space-y-5 p-6"
             >
 
-              {/* Name */}
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -1070,7 +1367,6 @@ const Inventory = () => {
 
               </div>
 
-              {/* Category */}
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -1113,7 +1409,6 @@ const Inventory = () => {
 
               </div>
 
-              {/* Farm */}
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -1153,7 +1448,6 @@ const Inventory = () => {
 
               </div>
 
-              {/* Quantity + Unit */}
               <div className="grid grid-cols-2 gap-4">
 
                 <div>
@@ -1223,7 +1517,6 @@ const Inventory = () => {
 
               </div>
 
-              {/* Alert Limit */}
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -1253,7 +1546,6 @@ const Inventory = () => {
 
               </div>
 
-              {/* Buttons */}
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
 
                 <button
@@ -1273,6 +1565,288 @@ const Inventory = () => {
                 >
                   <Check size={17} />
                   Add Inventory
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ========================================================
+          UPDATE INVENTORY MODAL
+          ======================================================== */}
+
+      {showUpdateModal && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+
+              <div>
+
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Update Inventory Item
+                </h2>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Update the selected farm inventory item.
+                </p>
+
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowUpdateModal(false);
+                  resetUpdateForm();
+                }}
+                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+
+            </div>
+
+            <form
+              onSubmit={handleUpdateInventory}
+              className="space-y-5 p-6"
+            >
+
+              <div>
+
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Inventory Name
+                </label>
+
+                <input
+                  type="text"
+                  value={updateFormData.name}
+                  onChange={(e) =>
+                    setUpdateFormData({
+                      ...updateFormData,
+                      name: e.target.value
+                    })
+                  }
+                  placeholder="e.g. Urea Fertilizer"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                />
+
+              </div>
+
+              <div>
+
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Category
+                </label>
+
+                <select
+                  value={
+                    updateFormData.category
+                  }
+                  onChange={(e) =>
+                    setUpdateFormData({
+                      ...updateFormData,
+                      category:
+                        e.target.value
+                    })
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                >
+
+                  <option value="Fertilizer">
+                    Fertilizer
+                  </option>
+
+                  <option value="Pesticide & Crop Protection">
+                    Pesticide & Crop Protection
+                  </option>
+
+                  <option value="Equipment">
+                    Equipment
+                  </option>
+
+                  <option value="Machinery">
+                    Machinery
+                  </option>
+
+                  <option value="Seeds">
+                    Seeds
+                  </option>
+
+                </select>
+
+              </div>
+
+              <div>
+
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Farm
+                </label>
+
+                <select
+                  value={
+                    updateFormData.farmIds
+                  }
+                  onChange={(e) =>
+                    setUpdateFormData({
+                      ...updateFormData,
+                      farmIds:
+                        Number(
+                          e.target.value
+                        )
+                    })
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                >
+
+                  <option value={0}>
+                    Select Farm
+                  </option>
+
+                  {farms.map((farm) => (
+
+                    <option
+                      key={farm.farmIDs}
+                      value={farm.farmIDs}
+                    >
+                      {farm.farmNames}
+                    </option>
+
+                  ))}
+
+                </select>
+
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+
+                <div>
+
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Quantity
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      updateFormData.quantity
+                    }
+                    onChange={(e) =>
+                      setUpdateFormData({
+                        ...updateFormData,
+                        quantity:
+                          Number(
+                            e.target.value
+                          )
+                      })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  />
+
+                </div>
+
+                <div>
+
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Unit
+                  </label>
+
+                  <select
+                    value={
+                      updateFormData.unit
+                    }
+                    onChange={(e) =>
+                      setUpdateFormData({
+                        ...updateFormData,
+                        unit: e.target.value
+                      })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                  >
+
+                    <option value="kg">
+                      kg
+                    </option>
+
+                    <option value="g">
+                      g
+                    </option>
+
+                    <option value="L">
+                      L
+                    </option>
+
+                    <option value="ml">
+                      ml
+                    </option>
+
+                    <option value="units">
+                      units
+                    </option>
+
+                  </select>
+
+                </div>
+
+              </div>
+
+              <div>
+
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Alert Limit
+                </label>
+
+                <input
+                  type="number"
+                  min="0"
+                  value={
+                    updateFormData.alertLimit
+                  }
+                  onChange={(e) =>
+                    setUpdateFormData({
+                      ...updateFormData,
+                      alertLimit:
+                        Number(
+                          e.target.value
+                        )
+                    })
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                />
+
+                <p className="mt-1 text-xs text-gray-500">
+                  A low-stock alert will appear when
+                  quantity reaches this value.
+                </p>
+
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUpdateModal(false);
+                    resetUpdateForm();
+                  }}
+                  className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
+                >
+                  <Check size={17} />
+                  Update Inventory
                 </button>
 
               </div>
