@@ -156,7 +156,15 @@ export default function DiseaseDetectionPage() {
     : 0;
 
   return (
-    <div style={{ margin: '10px auto', padding: '16px 56px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div
+      style={{
+        margin: "0",
+        padding: "20px 24px 48px",
+        fontFamily: "Inter, system-ui, sans-serif",
+        boxSizing: "border-box",
+        width: "100%",
+      }}
+    >
 
       {/* Keyframe animation for scanning laser */}
       <style>{`
@@ -179,10 +187,13 @@ export default function DiseaseDetectionPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '60px', alignItems: 'flex-start' }}>
+      <div
+        className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start"
+        style={{ width: "100%" }}
+      >
 
         {/* ================= LEFT PANE: SAMPLE MEDIA & RECENT INSPECTIONS ================= */}
-        <div style={{ width: '300px', flexShrink: 0 }}>
+        <div className="w-full lg:w-[280px] shrink-0">
 
           {/* Media Block */}
           <div>
@@ -465,10 +476,14 @@ export default function DiseaseDetectionPage() {
 
         </div>
 
-        <div style={{ width: '1px', backgroundColor: '#e2e8f0', alignSelf: 'stretch' }} />
+        {/* CENTER DIVIDER LINE (Visible on desktop) */}
+        <div
+          className="hidden lg:block"
+          style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }}
+        />
 
         {/* ================= RIGHT PANE: DIAGNOSTIC DETAILS & PROTOCOLS ================= */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0, width: "100%" }}>
 
           {/* Section 1: Real Diagnostic Metric Cards */}
           <div style={{

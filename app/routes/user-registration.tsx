@@ -445,7 +445,15 @@ export default function UserRegistration() {
   };
 
   return (
-    <div style={{ margin: "10px auto", padding: "16px 56px", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div
+      style={{
+        margin: "0",
+        padding: "20px 24px 48px",
+        fontFamily: "Inter, system-ui, sans-serif",
+        boxSizing: "border-box",
+        width: "100%",
+      }}
+    >
 
       {statusMessage && (
         <div style={{
@@ -458,10 +466,14 @@ export default function UserRegistration() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", gap: "60px", alignItems: "flex-start" }}>
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start"
+        style={{ width: "100%" }}
+      >
 
         {/* LEFT PANE (Media & Available Staff) */}
-        <div style={{ width: "320px", flexShrink: 0 }}>
+        <div className="w-full lg:w-[280px] shrink-0">
 
           {/* Media Block */}
           <div>
@@ -687,11 +699,14 @@ export default function UserRegistration() {
           </div>
         </div>
 
-        {/* CENTER DIVIDER LINE */}
-        <div style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }} />
+        {/* CENTER DIVIDER LINE (Visible on desktop) */}
+        <div
+          className="hidden lg:block"
+          style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }}
+        />
 
         {/* RIGHT PANE (Data Entry / Editing) */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0, width: "100%" }}>
 
           {/* Edit Mode Notice Banner */}
           {editingUser && (
