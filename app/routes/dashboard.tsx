@@ -1,7 +1,5 @@
-import type { ClientLoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
 import { fetchWithAuth, getAuthData } from "../utils/auth";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouteError, isRouteErrorResponse } from "react-router";
 import { useTranslation } from "react-i18next";
 import FarmWeatherSlideshow, { getWeatherCondition } from "../components/dashboard/FarmWeatherSlideshow";
@@ -55,7 +53,17 @@ export interface ActivityItem {
   time: string;
 }
 
-export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
+export interface DashboardData {
+  username: string;
+  stats: StatCardProp[];
+  farmsWeather: FarmWeatherItem[];
+  cropHealth: CropHealth[];
+  financeData: FinanceData[];
+  harvestSummary: HarvestSummary[];
+  recentActivities: ActivityItem[];
+}
+
+export async function fetchDashboardData(): Promise<DashboardData> {
   const authData = getAuthData();
 
   const [
@@ -247,11 +255,180 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
   };
 }
 
+export function DashboardSkeleton() {
+  return (
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto text-slate-800 animate-pulse">
+      {/* Stats Row */}
+      <div className="flex gap-4 overflow-x-auto pb-2 pt-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-[220px] h-[104px] flex-shrink-0"
+          >
+            <div className="flex justify-between items-start gap-2">
+              <div className="h-3.5 w-24 bg-slate-200 rounded" />
+              <div className="h-5 w-12 bg-slate-200 rounded-full" />
+            </div>
+            <div className="mt-4 flex items-baseline justify-between">
+              <div className="h-7 w-20 bg-slate-200 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Analytics Row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Revenue & Expenses Chart Skeleton */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[360px]">
+          <div className="mb-6 flex justify-between items-center">
+            <div className="space-y-2">
+              <div className="h-4 w-36 bg-slate-200 rounded" />
+              <div className="h-3 w-56 bg-slate-100 rounded" />
+            </div>
+            <div className="flex gap-4">
+              <div className="h-4 w-16 bg-slate-100 rounded" />
+              <div className="h-4 w-16 bg-slate-100 rounded" />
+            </div>
+          </div>
+          <div className="flex-1 w-full min-h-[250px] bg-slate-50/70 rounded-xl flex items-end p-4 gap-4">
+            <div className="h-[40%] flex-1 bg-slate-200/80 rounded" />
+            <div className="h-[65%] flex-1 bg-slate-200/80 rounded" />
+            <div className="h-[55%] flex-1 bg-slate-200/80 rounded" />
+            <div className="h-[80%] flex-1 bg-slate-200/80 rounded" />
+            <div className="h-[60%] flex-1 bg-slate-200/80 rounded" />
+            <div className="h-[75%] flex-1 bg-slate-200/80 rounded" />
+          </div>
+        </div>
+
+        {/* Farm Weather Widget Skeleton */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between min-h-[360px]">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <div className="h-4 w-28 bg-slate-200 rounded" />
+              <div className="h-3 w-36 bg-slate-100 rounded" />
+            </div>
+            <div className="h-8 w-8 bg-slate-100 rounded-full" />
+          </div>
+          <div className="my-6 flex items-center justify-between">
+            <div className="h-12 w-24 bg-slate-200 rounded" />
+            <div className="h-14 w-14 bg-slate-100 rounded-full" />
+          </div>
+          <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100">
+            {[1, 2, 3].map((j) => (
+              <div key={j} className="h-10 bg-slate-100 rounded" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Crop Health Skeleton */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[320px]">
+          <div className="h-4 w-32 bg-slate-200 rounded mb-4" />
+          <div className="flex-1 flex items-center justify-center py-4">
+            <div className="w-36 h-36 rounded-full border-8 border-slate-200 border-t-slate-300" />
+          </div>
+          <div className="space-y-2.5 mt-2">
+            {[1, 2, 3].map((k) => (
+              <div key={k} className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                  <div className="h-3 w-20 bg-slate-100 rounded" />
+                </div>
+                <div className="h-3 w-8 bg-slate-200 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Harvest Summary Bar Chart Skeleton */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[320px]">
+          <div className="mb-4 space-y-2">
+            <div className="h-4 w-32 bg-slate-200 rounded" />
+            <div className="h-3 w-48 bg-slate-100 rounded" />
+          </div>
+          <div className="flex-1 w-full min-h-[220px] bg-slate-50/70 rounded-xl flex items-end p-4 gap-6">
+            {[1, 2, 3, 4, 5].map((m) => (
+              <div key={m} className="flex-1 flex gap-2 items-end h-full">
+                <div className="w-1/2 bg-slate-200/90 rounded-t" style={{ height: `${30 + m * 12}%` }} />
+                <div className="w-1/2 bg-slate-100 rounded-t" style={{ height: `${25 + m * 10}%` }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activities Skeleton */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div className="h-4 w-32 bg-slate-200 rounded mb-4" />
+        <div className="divide-y divide-slate-100">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
+              <div className="flex items-center gap-3.5">
+                <div className="w-3.5 h-3.5 rounded-full bg-slate-200 shrink-0" />
+                <div className="space-y-1.5">
+                  <div className="h-3.5 w-40 bg-slate-200 rounded" />
+                  <div className="h-3 w-64 bg-slate-100 rounded" />
+                </div>
+              </div>
+              <div className="h-3 w-16 bg-slate-100 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Component ---
 export default function DashboardPage() {
-  const { username, stats, farmsWeather, cropHealth, financeData, harvestSummary, recentActivities } = useLoaderData<typeof clientLoader>();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeCropIndex, setActiveCropIndex] = useState(0);
   const { t } = useTranslation();
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchDashboardData();
+      setData(res);
+    } catch (err: any) {
+      setError(err?.message || "Failed to fetch dashboard metrics");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (error || !data) {
+    return (
+      <div className="p-6 max-w-[600px] mx-auto mt-12 bg-white rounded-2xl shadow-sm border border-slate-100 text-center">
+        <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-xl">
+          !
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 mb-2">{t("Dashboard Error")}</h2>
+        <p className="text-sm text-slate-600 mb-6">{error || t("Failed to load dashboard data.")}</p>
+        <button
+          onClick={loadData}
+          className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          {t("Retry")}
+        </button>
+      </div>
+    );
+  }
+
+  const { stats, farmsWeather, cropHealth, financeData, harvestSummary, recentActivities } = data;
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto text-slate-800">

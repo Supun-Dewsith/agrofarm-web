@@ -357,6 +357,27 @@ export default function ReportsPage() {
     return `LKR ${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
+  const TableSkeletonRows = ({ columns, rows = 5 }: { columns: number; rows?: number }) => {
+    const widths = ['w-24', 'w-32', 'w-16', 'w-28', 'w-36', 'w-20', 'w-28', 'w-24'];
+    return (
+      <>
+        {Array.from({ length: rows }).map((_, rIdx) => (
+          <tr key={rIdx} className="animate-pulse border-b border-slate-100">
+            {Array.from({ length: columns }).map((_, cIdx) => (
+              <td key={cIdx} className="p-3">
+                <div
+                  className={`h-4 bg-slate-200/80 rounded ${
+                    widths[(rIdx + cIdx) % widths.length]
+                  }`}
+                />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </>
+    );
+  };
+
   const tabsConfig = [
     { id: 'financial' as ReportTab, label: t('Financial Ledger'), icon: DollarSign },
     { id: 'crops' as ReportTab, label: t('Crop Cultivation'), icon: Sprout },
@@ -854,7 +875,9 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredFinancial.length === 0 ? (
+                {loading ? (
+                  <TableSkeletonRows columns={6} />
+                ) : filteredFinancial.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-6 text-center text-slate-400">
                       {t("No financial records match the current filter")}
@@ -904,7 +927,9 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredCrops.length === 0 ? (
+                {loading ? (
+                  <TableSkeletonRows columns={7} />
+                ) : filteredCrops.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-6 text-center text-slate-400">
                       {t("No crop records found")}
@@ -964,7 +989,9 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredAttendance.length === 0 ? (
+                {loading ? (
+                  <TableSkeletonRows columns={8} />
+                ) : filteredAttendance.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-6 text-center text-slate-400">
                       {t("No attendance records match the selected date or farm")}
@@ -1012,7 +1039,9 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredTasks.length === 0 ? (
+                {loading ? (
+                  <TableSkeletonRows columns={6} />
+                ) : filteredTasks.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-6 text-center text-slate-400">
                       {t("No tasks found")}
@@ -1076,7 +1105,9 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredDisease.length === 0 ? (
+                {loading ? (
+                  <TableSkeletonRows columns={7} />
+                ) : filteredDisease.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-6 text-center text-slate-400">
                       {t("No disease scans recorded")}

@@ -352,8 +352,30 @@ export default function DiseaseDetectionPage() {
               maxHeight: '450px', overflowY: 'auto', paddingRight: '6px'
             }}>
               {isLoadingHistory ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
-                  {t('Loading inspections...')}
+                <div className="space-y-3 animate-pulse">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        backgroundColor: '#ffffff',
+                      }}
+                    >
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#e2e8f0', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ width: '70px', height: '12px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
+                          <div style={{ width: '45px', height: '14px', backgroundColor: '#f1f5f9', borderRadius: '10px' }} />
+                        </div>
+                        <div style={{ width: '100px', height: '10px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : recentInspections.length === 0 ? (
                 <div style={{
@@ -512,7 +534,97 @@ export default function DiseaseDetectionPage() {
               {t('Ask more')}
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
+
+          {isSubmitting ? (
+            <div className="space-y-8 animate-pulse">
+              {/* Metrics Grid Skeleton */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '18px 20px',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ width: '120px', height: '12px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
+                    <div style={{ width: '160px', height: '20px', backgroundColor: '#cbd5e1', borderRadius: '4px' }} />
+                    <div style={{ width: '200px', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Pathological Overview Skeleton */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ width: '180px', height: '16px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
+                <div
+                  style={{
+                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ width: '92%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                  <div style={{ width: '84%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                  <div style={{ width: '65%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                </div>
+              </div>
+
+              {/* Diagnostic Bio-Indicators Checklist Skeleton */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ width: '160px', height: '16px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                  {[1, 2, 3, 4, 5, 6].map((j) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#e2e8f0' }} />
+                      <div style={{ width: '130px', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Treatment Protocols Skeleton */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ width: '190px', height: '16px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                  {[1, 2].map((k) => (
+                    <div
+                      key={k}
+                      style={{
+                        padding: '18px 20px',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        backgroundColor: '#ffffff',
+                        minHeight: '160px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ width: '140px', height: '14px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
+                        <div style={{ width: '60px', height: '16px', backgroundColor: '#f1f5f9', borderRadius: '10px' }} />
+                      </div>
+                      <div style={{ width: '85%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                      <div style={{ width: '70%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                      <div style={{ width: '90%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
 
             {/* Plant Classification Card */}
             <div style={{
@@ -713,6 +825,8 @@ export default function DiseaseDetectionPage() {
             </div>
 
           </div>
+          </>
+          )}
 
         </div>
 
