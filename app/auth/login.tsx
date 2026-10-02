@@ -12,6 +12,11 @@ import {
   Sparkles,
   Activity,
   RefreshCw,
+  KeyRound,
+  X,
+  CheckCircle2,
+  Send,
+  ShieldAlert,
 } from "lucide-react";
 import type { Route } from "../auth/+types/login";
 import { loginRequest, setAuthData } from "../utils/auth";
@@ -91,6 +96,51 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const isSubmitting = navigation.state === "submitting";
   const { t } = useTranslation();
+
+  // Forgot Password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [resetUsername, setResetUsername] = useState("");
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [isSubmittingReset, setIsSubmittingReset] = useState(false);
+
+  const handleCloseModal = () => {
+    setShowForgotModal(false);
+    setRequestSubmitted(false);
+    setResetUsername("");
+    setIsSubmittingReset(false);
+  };
+
+  const handleRequestReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetUsername.trim() || isSubmittingReset) return;
+
+    setIsSubmittingReset(true);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+      await fetch(`${baseUrl}/api/auth/request-reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usernameOrEmail: resetUsername.trim() }),
+      });
+      setRequestSubmitted(true);
+    } catch {
+      // Transition to submitted screen regardless so UX is resilient
+      setRequestSubmitted(true);
+    } finally {
+      setIsSubmittingReset(false);
+    }
+  };
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showForgotModal) {
+        handleCloseModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showForgotModal]);
 
   // Load remembered username on mount
   useEffect(() => {
@@ -264,12 +314,16 @@ export default function Login() {
                 />
                 <span>{t("Remember me")}</span>
               </label>
-              <a
-                href="#"
-                className="text-emerald-800 hover:text-emerald-950 font-semibold hover:underline transition-colors"
+              <button
+                type="button"
+                onClick={() => {
+                  setResetUsername(username);
+                  setShowForgotModal(true);
+                }}
+                className="text-emerald-800 hover:text-emerald-950 font-semibold hover:underline transition-colors cursor-pointer"
               >
                 {t("Forgot Password?")}
-              </a>
+              </button>
             </div>
 
             <button
@@ -406,6 +460,130 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* FORGOT PASSWORD ASSISTANCE MODAL */}
+      {showForgotModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseModal();
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm"
+        >
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl max-w-md w-full p-6 sm:p-7 relative overflow-hidden text-slate-900">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={handleCloseModal}
+              aria-label="Close modal"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Header Lockup */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-11 w-11 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
+                <KeyRound className="h-5 w-5 text-emerald-700" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold tracking-tight text-slate-900 leading-tight">
+                  Access Recovery
+                </h3>
+                <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider">
+                  AgriSense Security
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+              Account credentials within the AgriSense network are centrally regulated to safeguard operational telemetry and sensitive crop logs.
+            </p>
+
+            {!requestSubmitted ? (
+              <div className="space-y-4">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
+                  <div className="flex items-center gap-2 text-slate-700 font-semibold">
+                    <ShieldAlert className="h-4 w-4 text-emerald-700 shrink-0" />
+                    <span>Admin Verification Required</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-normal pl-6">
+                    Farm Supervisors can reset passwords on-demand via the User Management portal.
+                  </p>
+                </div>
+
+                <form onSubmit={handleRequestReset} className="space-y-3">
+                  <div>
+                    <label
+                      htmlFor="reset-user"
+                      className="text-xs font-semibold text-slate-700 tracking-wide block mb-1.5"
+                    >
+                      Username or Registered Email
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                      <input
+                        id="reset-user"
+                        type="text"
+                        required
+                        value={resetUsername}
+                        onChange={(e) => setResetUsername(e.target.value)}
+                        placeholder="e.g. admin@agrismart.com"
+                        className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 rounded-xl text-sm text-slate-900 outline-none transition-all font-medium placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReset}
+                    className="w-full bg-[#1b4332] hover:bg-[#143427] active:scale-[0.99] text-white py-2.5 px-4 rounded-xl text-sm font-semibold tracking-wide shadow-sm hover:shadow transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                  >
+                    {isSubmittingReset ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-300" />
+                        <span>Sending Request...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        <span>Submit Reset Request</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <span>Farm Helpdesk:</span>
+                  <span className="font-semibold text-slate-800">admin@agrismart.com</span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl text-center space-y-3">
+                <div className="h-10 w-10 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Request Dispatched</h4>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    A credential recovery alert for{" "}
+                    <span className="font-semibold text-emerald-900">{resetUsername}</span> has been
+                    routed to the farm administrator. Temporary credentials will be provided shortly.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="w-full bg-[#1b4332] hover:bg-[#143427] text-white py-2 px-4 rounded-xl text-xs font-semibold tracking-wide shadow-sm transition-colors mt-2 cursor-pointer"
+                >
+                  Return to Login
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

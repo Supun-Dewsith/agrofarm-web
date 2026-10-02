@@ -9,6 +9,7 @@ import {
   CheckCheck,
   ClipboardCheck,
   Clock3,
+  KeyRound,
   X,
 } from "lucide-react";
 
@@ -515,8 +516,14 @@ export default function NotificationBell() {
                       "ATTENDANCE"
                     );
 
+                  const isPasswordReset =
+                    notification.type === "PASSWORD_RESET" ||
+                    notification.referenceType === "USER_RESET";
+
                   const NotificationIcon =
-                    isAttendance
+                    isPasswordReset
+                      ? KeyRound
+                      : isAttendance
                       ? Clock3
                       : ClipboardCheck;
 
@@ -549,7 +556,12 @@ export default function NotificationBell() {
                           shrink-0 place-items-center
                           rounded-xl
                           ${
-                            isAttendance
+                            isPasswordReset
+                              ? `
+                                bg-rose-50
+                                text-rose-700
+                              `
+                              : isAttendance
                               ? `
                                 bg-blue-50
                                 text-blue-700
