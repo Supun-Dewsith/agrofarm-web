@@ -62,10 +62,20 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const username = String(formData.get("username") || "");
   const password = String(formData.get("password") || "");
+  const remember = formData.get("remember") === "on";
 
   try {
     const data = await loginRequest(username, password);
     setAuthData(data);
+
+    if (typeof localStorage !== "undefined") {
+      if (remember) {
+        localStorage.setItem("remember_username", username);
+      } else {
+        localStorage.removeItem("remember_username");
+      }
+    }
+
     return replace("/home/dashboard");
   } catch (err: any) {
     const message = i18n.t("Invalid credentials");
@@ -76,9 +86,24 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 export default function Login() {
   const actionData = useActionData() as { error?: string } | undefined;
   const navigation = useNavigation();
+  const [username, setUsername] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const isSubmitting = navigation.state === "submitting";
   const { t } = useTranslation();
+
+  // Load remembered username on mount
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("remember_username");
+      if (savedUser) {
+        setUsername(savedUser);
+        setRememberMe(true);
+      }
+    } catch {
+      // Ignore storage errors if disabled
+    }
+  }, []);
 
   // Dynamic AI insight typewriter effect
   const [insightIndex, setInsightIndex] = useState(0);
@@ -189,6 +214,8 @@ export default function Login() {
                   id="username"
                   type="text"
                   name="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all font-medium"
                   placeholder="admin@agrismart.com"
                   autoComplete="username"
@@ -230,6 +257,9 @@ export default function Login() {
               <label className="flex items-center text-slate-600 hover:text-slate-900 font-medium cursor-pointer select-none gap-2">
                 <input
                   type="checkbox"
+                  name="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600 accent-emerald-700 cursor-pointer"
                 />
                 <span>{t("Remember me")}</span>
