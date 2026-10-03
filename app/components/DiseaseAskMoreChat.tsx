@@ -369,7 +369,6 @@ export function DiseaseAskMoreChat({
                 style={{
                   maxWidth: isUser ? '85%' : '88%',
                   position: 'relative',
-                  group: 'msg',
                 }}
               >
                 <div
@@ -521,7 +520,7 @@ export function DiseaseAskMoreChat({
               gap: 8,
             }}
           >
-            <AlertCircle size={15} style={{ shrink: 0 }} />
+            <AlertCircle size={15} style={{ flexShrink: 0 }} />
             <span style={{ flex: 1 }}>{t(error)}</span>
           </div>
         )}
