@@ -335,7 +335,6 @@ export function ReportAiDrawer({
         {/* Drawer Header */}
         <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900">{t("Reports AI Assistant")}</h3>
