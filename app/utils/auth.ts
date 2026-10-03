@@ -17,7 +17,11 @@ export interface RegisterUserPayload {
   farmIds?: number[];
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = String(
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  ""
+).replace(/\/+$/, "");
 const API_URL = `${BASE_URL}/api/auth`;
 
 export const setAuthData = (data: AuthResponse) => {
