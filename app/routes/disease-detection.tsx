@@ -373,10 +373,10 @@ export default function DiseaseDetectionPage() {
 
   const confidenceScore = currentData
     ? Math.round(
-        currentData.overall_confidence <= 1.0 && currentData.overall_confidence > 0
-          ? currentData.overall_confidence * 100
-          : currentData.overall_confidence
-      )
+      currentData.overall_confidence <= 1.0 && currentData.overall_confidence > 0
+        ? currentData.overall_confidence * 100
+        : currentData.overall_confidence
+    )
     : 0;
 
   // Filtered IPM items
@@ -1534,75 +1534,6 @@ export default function DiseaseDetectionPage() {
               gap: '12px',
               alignItems: 'center'
             }}>
-              {/* Button 1: Create Remediation Task */}
-              <button
-                type="button"
-                onClick={openCreateTaskModal}
-                disabled={!currentData}
-                style={{
-                  padding: '11px 18px',
-                  backgroundColor: currentData ? '#059669' : '#e2e8f0',
-                  color: currentData ? '#ffffff' : '#94a3b8',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: currentData ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: currentData ? '0 2px 6px rgba(5,150,105,0.25)' : 'none'
-                }}
-              >
-                <Plus size={16} />
-                {t('Create Remediation Task')}
-              </button>
-
-              {/* Button 2: Deduct from Inventory */}
-              <button
-                type="button"
-                onClick={() => handleDeductInventory()}
-                disabled={!currentData}
-                style={{
-                  padding: '11px 18px',
-                  backgroundColor: '#ffffff',
-                  color: '#334155',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: currentData ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <PackageCheck size={16} />
-                {t('Deduct from Inventory')}
-              </button>
-
-              {/* Button 3: Log to Plot History */}
-              <button
-                type="button"
-                onClick={() => setIsPlotModalOpen(true)}
-                disabled={!currentData?.id}
-                style={{
-                  padding: '11px 18px',
-                  backgroundColor: '#ffffff',
-                  color: '#334155',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: currentData?.id ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <MapPin size={16} />
-                {t('Log to Plot History')}
-              </button>
 
               {/* Button 4: Print / Export PDF */}
               <button
