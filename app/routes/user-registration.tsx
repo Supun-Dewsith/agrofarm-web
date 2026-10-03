@@ -90,10 +90,10 @@ export default function UserRegistration() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [availableFarms, setAvailableFarms] = useState<FarmSummary[]>([]);
-  const [loadingFarms, setLoadingFarms] = useState(false);
+  const [loadingFarms, setLoadingFarms] = useState(true);
 
   const [users, setUsers] = useState<RegisteredUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
@@ -445,7 +445,15 @@ export default function UserRegistration() {
   };
 
   return (
-    <div style={{ margin: "10px auto", padding: "16px 56px", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div
+      style={{
+        margin: "0",
+        padding: "20px 24px 48px",
+        fontFamily: "Inter, system-ui, sans-serif",
+        boxSizing: "border-box",
+        width: "100%",
+      }}
+    >
 
       {statusMessage && (
         <div style={{
@@ -458,10 +466,14 @@ export default function UserRegistration() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", gap: "60px", alignItems: "flex-start" }}>
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start"
+        style={{ width: "100%" }}
+      >
 
         {/* LEFT PANE (Media & Available Staff) */}
-        <div style={{ width: "320px", flexShrink: 0 }}>
+        <div className="w-full lg:w-[280px] shrink-0">
 
           {/* Media Block */}
           <div>
@@ -576,7 +588,32 @@ export default function UserRegistration() {
             </div>
 
             {loadingUsers ? (
-              <p style={{ fontSize: "14px", color: "#64748b" }}>{t("Loading staff...")}</p>
+              <div className="space-y-2.5 animate-pulse">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "10px",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px",
+                      backgroundColor: "#ffffff",
+                    }}
+                  >
+                    <div style={{ width: "38px", height: "38px", borderRadius: "50%", backgroundColor: "#e2e8f0", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ width: "70px", height: "12px", backgroundColor: "#e2e8f0", borderRadius: "4px" }} />
+                        <div style={{ width: "50px", height: "14px", backgroundColor: "#f1f5f9", borderRadius: "10px" }} />
+                      </div>
+                      <div style={{ width: "110px", height: "10px", backgroundColor: "#f1f5f9", borderRadius: "4px" }} />
+                    </div>
+                    <div style={{ width: "42px", height: "24px", backgroundColor: "#f1f5f9", borderRadius: "4px", flexShrink: 0 }} />
+                  </div>
+                ))}
+              </div>
             ) : availableStaff.length === 0 ? (
               <div style={{ padding: "20px 16px", border: "1px dashed #cbd5e1", borderRadius: "8px", textAlign: "center", color: "#64748b", fontSize: "13px" }}>
                 {searchQuery ? t("No staff found matching query.") : t("No staff registered yet.")}
@@ -687,11 +724,14 @@ export default function UserRegistration() {
           </div>
         </div>
 
-        {/* CENTER DIVIDER LINE */}
-        <div style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }} />
+        {/* CENTER DIVIDER LINE (Visible on desktop) */}
+        <div
+          className="hidden lg:block"
+          style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }}
+        />
 
         {/* RIGHT PANE (Data Entry / Editing) */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0, width: "100%" }}>
 
           {/* Edit Mode Notice Banner */}
           {editingUser && (
@@ -992,7 +1032,33 @@ export default function UserRegistration() {
 
           <div>
             {loadingFarms ? (
-              <p style={{ fontSize: "14px", color: "#64748b" }}>{t("Loading your farms...")}</p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "16px",
+                }}
+                className="animate-pulse"
+              >
+                {[1, 2, 3].map((idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: "16px",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                      backgroundColor: "#ffffff",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <div style={{ width: "100px", height: "14px", backgroundColor: "#e2e8f0", borderRadius: "4px" }} />
+                      <div style={{ width: "16px", height: "16px", backgroundColor: "#f1f5f9", borderRadius: "4px" }} />
+                    </div>
+                    <div style={{ width: "150px", height: "12px", backgroundColor: "#f1f5f9", borderRadius: "4px", marginBottom: "14px" }} />
+                    <div style={{ width: "70px", height: "20px", backgroundColor: "#f1f5f9", borderRadius: "12px" }} />
+                  </div>
+                ))}
+              </div>
             ) : availableFarms.length === 0 ? (
               <div style={{ padding: "24px", border: "1px dashed #cbd5e1", borderRadius: "8px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
                 {t("No farms available for allocation. At least one farm is required to save staff.")}

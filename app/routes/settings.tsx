@@ -766,25 +766,111 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div style={{
-        padding: "48px 24px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "440px",
-        fontFamily: "Inter, system-ui, sans-serif"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "#64748b", fontSize: "14px", fontWeight: 600 }}>
-          <span style={{
-            width: "20px",
-            height: "20px",
-            border: "2px solid #a7f3d0",
-            borderTopColor: "#059669",
-            borderRadius: "50%",
-            display: "inline-block",
-            animation: "spin 0.8s linear infinite"
-          }} />
-          {t("Loading settings...")}
+      <div
+        style={{
+          margin: "0",
+          padding: "20px 24px 48px",
+          fontFamily: "Inter, system-ui, sans-serif",
+          boxSizing: "border-box",
+          width: "100%",
+        }}
+        className="animate-pulse"
+      >
+        <div
+          className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start"
+          style={{ width: "100%" }}
+        >
+          {/* Left Pane Skeleton */}
+          <div className="w-full lg:w-[280px] shrink-0">
+            <div className="flex justify-between items-center mb-3">
+              <div className="h-4 w-36 bg-slate-200 rounded" />
+              <div className="h-4 w-16 bg-slate-100 rounded-full" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="p-3 rounded-lg border border-slate-200 bg-white flex items-center gap-3"
+                >
+                  <div className="w-8 h-8 rounded-md bg-slate-100 shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-24 bg-slate-200 rounded" />
+                    <div className="h-2.5 w-36 bg-slate-100 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Active Session Skeleton */}
+            <div className="mt-6 p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="h-2.5 w-20 bg-slate-200 rounded" />
+                <div className="h-4 w-12 bg-slate-100 rounded" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-4 w-28 bg-slate-200 rounded" />
+                <div className="h-3 w-36 bg-slate-100 rounded" />
+              </div>
+              <div className="h-8 w-full bg-slate-100 rounded-md" />
+            </div>
+          </div>
+
+          {/* Center Divider Line */}
+          <div
+            className="hidden lg:block"
+            style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }}
+          />
+
+          {/* Right Pane Skeleton */}
+          <div style={{ flex: 1, minWidth: 0, width: "100%" }} className="space-y-6">
+            {/* Header */}
+            <div className="space-y-2 mb-5">
+              <div className="h-5 w-44 bg-slate-200 rounded" />
+              <div className="h-3.5 w-80 bg-slate-100 rounded" />
+            </div>
+
+            {/* Account Media Skeleton */}
+            <div className="p-5 rounded-lg border border-slate-200 bg-white space-y-4">
+              <div className="h-4 w-28 bg-slate-200 rounded" />
+              <div className="flex items-center gap-5">
+                <div className="w-20 h-20 rounded-xl bg-slate-200 shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-36 bg-slate-200 rounded" />
+                  <div className="h-3 w-48 bg-slate-100 rounded" />
+                  <div className="h-9 w-32 bg-slate-100 rounded-md" />
+                </div>
+              </div>
+            </div>
+
+            {/* Input Fields Grid Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {[1, 2, 3, 4].map((j) => (
+                <div key={j} className="space-y-2">
+                  <div className="h-3.5 w-24 bg-slate-200 rounded" />
+                  <div className="h-10 w-full bg-slate-100 rounded-md border border-slate-200/60" />
+                </div>
+              ))}
+            </div>
+
+            {/* Save Button Skeleton */}
+            <div className="flex justify-end">
+              <div className="h-11 w-36 bg-slate-200 rounded-md" />
+            </div>
+
+            {/* Account & Access Information Skeleton */}
+            <div className="p-5 rounded-lg border border-slate-200 bg-white space-y-4">
+              <div className="h-4 w-52 bg-slate-200 rounded" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((k) => (
+                  <div key={k} className="p-3.5 rounded-lg bg-slate-50 border border-slate-100 space-y-2">
+                    <div className="h-2.5 w-16 bg-slate-200 rounded" />
+                    <div className="h-4 w-24 bg-slate-200 rounded" />
+                    <div className="h-2.5 w-28 bg-slate-100 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
