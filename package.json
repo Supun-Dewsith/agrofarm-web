@@ -1,0 +1,49 @@
+{
+  "name": "agrofarm-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "typecheck": "wrangler types && react-router typegen && tsc -b",
+    "deploy": "npm run build && wrangler deploy",
+    "preview": "npm run build && vite preview",
+    "cf-typegen": "wrangler types",
+    "postinstall": "wrangler types",
+    "translate:scan": "i18next-parser"
+  },
+  "dependencies": {
+    "axios": "^1.19.0",
+    "google-translate-api-x": "^10.7.3",
+    "i18next": "^26.4.2",
+    "i18next-http-backend": "^4.0.2",
+    "isbot": "^5.1.36",
+    "jwt-decode": "^4.0.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.48.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.14",
+    "react-leaflet": "^5.0.0",
+    "react-router": "^8.3.1",
+    "recharts": "^3.10.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.43.0",
+    "@react-router/dev": "^8.3.1",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^22.20.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "i18next-parser": "^9.0.2",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3",
+    "vite-plugin-svgr": "^5.2.0",
+    "vite-tsconfig-paths": "^6.1.1",
+    "wrangler": "^4.107.0"
+  }
+}
