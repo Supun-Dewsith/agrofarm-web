@@ -21,6 +21,8 @@ i18n
     fallbackLng: 'en',
     supportedLngs: ['en', 'si', 'ta'],
     debug: false,
+    nsSeparator: false,
+    keySeparator: false,
     interpolation: {
       escapeValue: false,
     },

@@ -880,7 +880,7 @@ export default function Settings() {
   const roleBgColor = roleName === "ADMIN" ? "#f0fdf4" : roleName === "SUPERVISOR" ? "#eff6ff" : "#fefce8";
   const roleTextColor = roleName === "ADMIN" ? "#166534" : roleName === "SUPERVISOR" ? "#1e40af" : "#854d0e";
 
-  const displayAvatar = previewUrl || makeImageUrl(profile?.imageUrl);
+  const displayAvatar = previewUrl || makeImageUrl(profile?.imageUrl ?? null);
 
   return (
     <div

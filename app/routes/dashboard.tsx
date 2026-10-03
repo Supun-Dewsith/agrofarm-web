@@ -432,19 +432,19 @@ export async function fetchDashboardData(): Promise<DashboardData> {
 
 export function StatCardsSkeleton() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between animate-pulse h-[116px]"
+          className="bg-white p-3 sm:px-3.5 sm:py-3 rounded-xl shadow-xs border border-slate-100 flex items-center gap-3 animate-pulse h-[64px]"
         >
-          <div className="flex justify-between items-start gap-2">
-            <div className="h-3 w-20 bg-slate-200 rounded-md" />
-            <div className="w-8 h-8 rounded-xl bg-slate-100" />
-          </div>
-          <div className="mt-3 flex items-baseline justify-between gap-2">
-            <div className="h-6 w-16 bg-slate-200 rounded-md" />
-            <div className="h-4 w-12 bg-slate-100 rounded-full" />
+          <div className="w-9 h-9 rounded-xl bg-slate-100 shrink-0" />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="h-2.5 w-16 bg-slate-200 rounded" />
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-10 bg-slate-200 rounded" />
+              <div className="h-3.5 w-14 bg-slate-100 rounded-full" />
+            </div>
           </div>
         </div>
       ))}
@@ -744,22 +744,22 @@ export default function DashboardPage() {
   const getStatIcon = (type: string) => {
     switch (type) {
       case "farms":
-        return <Tractor className="w-5 h-5 text-emerald-600" />;
+        return <Tractor className="w-[18px] h-[18px] text-emerald-600" />;
       case "crops":
-        return <Sprout className="w-5 h-5 text-green-600" />;
+        return <Sprout className="w-[18px] h-[18px] text-green-600" />;
       case "tasks":
-        return <CheckSquare className="w-5 h-5 text-blue-600" />;
+        return <CheckSquare className="w-[18px] h-[18px] text-blue-600" />;
       case "alerts":
-        return <ShieldAlert className="w-5 h-5 text-rose-600" />;
+        return <ShieldAlert className="w-[18px] h-[18px] text-rose-600" />;
       case "harvest":
-        return <Package className="w-5 h-5 text-amber-600" />;
+        return <Package className="w-[18px] h-[18px] text-amber-600" />;
       case "revenue":
-        return <DollarSign className="w-5 h-5 text-emerald-700" />;
+        return <DollarSign className="w-[18px] h-[18px] text-emerald-700" />;
       case "inventory":
-        return <AlertTriangle className="w-5 h-5 text-orange-600" />;
+        return <AlertTriangle className="w-[18px] h-[18px] text-orange-600" />;
       case "workers":
       default:
-        return <Users className="w-5 h-5 text-indigo-600" />;
+        return <Users className="w-[18px] h-[18px] text-indigo-600" />;
     }
   };
 
@@ -862,102 +862,6 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-7 mx-auto text-slate-800">
-      {/* 1. Header Command Center Banner */}
-      <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                {userRole}
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                {t("AgroFarm Operations Center")}
-              </span>
-              {lastRefreshedAt && (
-                <span className="text-xs text-slate-400 hidden sm:inline">
-                  • {t("Synced at")} {lastRefreshedAt}
-                </span>
-              )}
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              {t("Welcome back")}, {username}
-            </h1>
-            <p className="text-sm text-slate-300 mt-1 max-w-2xl">
-              {t("Real-time crop lifecycle, market commodity rates, workforce availability, and field operations.")}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => loadData(true)}
-              disabled={isRefreshing}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-semibold rounded-xl backdrop-blur transition-all border border-white/10 cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-emerald-400" : ""}`} />
-              <span>{isRefreshing ? t("Refreshing...") : t("Refresh Live Data")}</span>
-            </button>
-
-            <Link
-              to="/home/cropInsert"
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-emerald-950/40"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{t("New Crop")}</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Quick Access Action Strip */}
-        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-6 pt-6 border-t border-white/10">
-          <Link
-            to="/home/cropInsert"
-            className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-slate-200 group"
-          >
-            <Sprout className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span className="truncate">{t("Add Crop")}</span>
-          </Link>
-          <Link
-            to="/home/tasks"
-            className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-slate-200 group"
-          >
-            <CheckSquare className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
-            <span className="truncate">{t("Assign Tasks")}</span>
-          </Link>
-          <Link
-            to="/home/disease-detection"
-            className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-slate-200 group"
-          >
-            <ShieldAlert className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
-            <span className="truncate">{t("Scan Disease")}</span>
-          </Link>
-          <Link
-            to="/home/harvest"
-            className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-slate-200 group"
-          >
-            <Package className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-            <span className="truncate">{t("Log Harvest")}</span>
-          </Link>
-          <Link
-            to="/home/inventory"
-            className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-slate-200 group"
-          >
-            <AlertTriangle className="w-4 h-4 text-orange-400 group-hover:scale-110 transition-transform" />
-            <span className="truncate">{t("Inventory")}</span>
-          </Link>
-          <Link
-            to="/home/reports"
-            className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-slate-200 group"
-          >
-            <BarChart3 className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-            <span className="truncate">{t("Reports & P&L")}</span>
-          </Link>
-        </div>
-      </div>
-
       {/* 2. Official Central Bank Commodity Market Prices Ticker */}
       {marketLoading ? (
         <MarketPricesSkeleton />
@@ -1010,34 +914,38 @@ export default function DashboardPage() {
       {overviewLoading ? (
         <StatCardsSkeleton />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {stats.map((stat, idx) => (
             <Link
               key={idx}
               to={getStatLink(stat.type)}
-              className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
+              className="bg-white p-3 sm:px-3.5 sm:py-3 rounded-xl shadow-xs border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all flex items-center gap-3 group relative overflow-hidden"
             >
-              <div className="flex justify-between items-start gap-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-                  {t(stat.title)}
-                </span>
-                <div className={`p-2 rounded-xl ${getStatBg(stat.type)} transition-transform group-hover:scale-110`}>
-                  {getStatIcon(stat.type)}
-                </div>
+              <div
+                className={`w-9 h-9 rounded-xl ${getStatBg(
+                  stat.type
+                )} flex items-center justify-center shrink-0 transition-transform group-hover:scale-105`}
+              >
+                {getStatIcon(stat.type)}
               </div>
 
-              <div className="mt-3 flex items-baseline justify-between gap-2">
-                <span className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                  {stat.value}
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+                  {t(stat.title)}
                 </span>
-                <span
-                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${stat.isPositive
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                    : "bg-rose-50 text-rose-700 border border-rose-100"
-                    }`}
-                >
-                  {stat.change}
-                </span>
+                <div className="flex flex-wrap items-baseline gap-1.5 mt-0.5">
+                  <span className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                    {stat.value}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none ${stat.isPositive
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                      : "bg-rose-50 text-rose-700 border border-rose-100"
+                      }`}
+                  >
+                    {stat.change}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}
