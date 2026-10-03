@@ -1,12 +1,49 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useFetcher } from 'react-router';
-import { analyzePlantImage, getRecentDetections } from '../services/diseaseService';
-import type { DiseaseAnalysisResult } from '../types/disease';
-import { ImageBoundingBox } from '../components/ImageBoundingBox';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useFetcher, useNavigate } from 'react-router';
+import {
+  analyzePlantImage,
+  getRecentDetections,
+  linkDetectionToPlot,
+  createRemediationTask,
+  getTaskOptions,
+} from '../services/diseaseService';
+import type { DiseaseAnalysisResult, IpmTreatmentItem } from '../types/disease';
+import { ImageBoundingBox, type DiagnosticViewMode } from '../components/ImageBoundingBox';
 import { DiseaseAskMoreChat } from '../components/DiseaseAskMoreChat';
+import { ReferenceSpecimenCard } from '../components/ReferenceSpecimenCard';
 import { useTranslation } from 'react-i18next';
-import i18n from "../i18n";
-
+import i18n from '../i18n';
+import {
+  Activity,
+  AlertTriangle,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Droplets,
+  ExternalLink,
+  FileText,
+  Flame,
+  Layers,
+  Leaf,
+  MapPin,
+  PackageCheck,
+  Plus,
+  Printer,
+  Search,
+  Share2,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Thermometer,
+  TrendingDown,
+  Wind,
+  X,
+  Info,
+  Check,
+  ChevronRight,
+  ClipboardList
+} from 'lucide-react';
 
 export async function clientAction({ request }: { request: Request }) {
   const formData = await request.formData();
@@ -47,22 +84,57 @@ function formatInspectionDate(dateString?: string): string {
 
 export default function DiseaseDetectionPage() {
   const { t } = useTranslation();
-  const [chatOpen, setChatOpen] = useState(false);
+  const navigate = useNavigate();
   const fetcher = useFetcher<typeof clientAction>();
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Core Inspection state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [recentInspections, setRecentInspections] = useState<DiseaseAnalysisResult[]>([]);
   const [activeAnalysis, setActiveAnalysis] = useState<DiseaseAnalysisResult | null>(null);
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
+
+  // Interactive View Modes & Filters
+  const [viewMode, setViewMode] = useState<DiagnosticViewMode>('boxes');
+  const [ipmFilter, setIpmFilter] = useState<'all' | 'organic' | 'chemical' | 'cultural'>('all');
+
+  // Task Options (Farms, Fields, Workers)
+  const [taskOptions, setTaskOptions] = useState<{
+    farms: Array<{ id: number; name: string }>;
+    fields: Array<{ id: number; name: string }>;
+    supervisors: Array<{ id: number; name: string }>;
+    workers: Array<{ id: number; name: string }>;
+  }>({ farms: [], fields: [], supervisors: [], workers: [] });
+
+  // Modal 1: Remediation Task
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDesc, setTaskDesc] = useState('');
+  const [taskFarmId, setTaskFarmId] = useState<number | ''>('');
+  const [taskFieldId, setTaskFieldId] = useState<number | ''>('');
+  const [taskWorkerId, setTaskWorkerId] = useState<number | ''>('');
+  const [taskPriority, setTaskPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('HIGH');
+  const [taskDueDate, setTaskDueDate] = useState('');
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const [taskFeedback, setTaskFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Modal 2: Log to Plot History
+  const [isPlotModalOpen, setIsPlotModalOpen] = useState(false);
+  const [plotFarmId, setPlotFarmId] = useState<number | ''>('');
+  const [plotFieldId, setPlotFieldId] = useState<number | ''>('');
+  const [isSubmittingPlot, setIsSubmittingPlot] = useState(false);
+  const [plotFeedback, setPlotFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [linkedPlotInfo, setLinkedPlotInfo] = useState<string | null>(null);
 
   const isSubmitting = fetcher.state === 'submitting';
   const fetcherResult = fetcher.data?.result as DiseaseAnalysisResult | undefined;
   const currentData = activeAnalysis || fetcherResult;
   const error = fetcher.data?.error;
 
+  // Load history on mount
   useEffect(() => {
     let mounted = true;
     getRecentDetections(30)
@@ -77,11 +149,20 @@ export default function DiseaseDetectionPage() {
         if (mounted) setIsLoadingHistory(false);
       });
 
+    getTaskOptions()
+      .then((opts) => {
+        if (mounted) setTaskOptions(opts);
+      })
+      .catch((err) => {
+        console.warn('Could not load task options:', err);
+      });
+
     return () => {
       mounted = false;
     };
   }, []);
 
+  // Update on fetcher response
   useEffect(() => {
     if (fetcher.data?.result) {
       const newResult = fetcher.data.result;
@@ -96,6 +177,7 @@ export default function DiseaseDetectionPage() {
           return [newResult, ...filtered];
         });
       }
+      setLinkedPlotInfo(null);
     }
   }, [fetcher.data]);
 
@@ -108,6 +190,7 @@ export default function DiseaseDetectionPage() {
       setSelectedImage(URL.createObjectURL(file));
       setSelectedInspectionId(null);
       setActiveAnalysis(null);
+      setLinkedPlotInfo(null);
     }
   };
 
@@ -118,6 +201,12 @@ export default function DiseaseDetectionPage() {
     setSelectedFile(null);
     if (inspection.image_url) {
       setSelectedImage(inspection.image_url);
+    }
+    if (inspection.field_id) {
+      const matchedField = taskOptions.fields.find((f) => f.id === inspection.field_id);
+      setLinkedPlotInfo(matchedField ? matchedField.name : `Field #${inspection.field_id}`);
+    } else {
+      setLinkedPlotInfo(null);
     }
   };
 
@@ -136,15 +225,150 @@ export default function DiseaseDetectionPage() {
     setSelectedImage(null);
     setSelectedInspectionId(null);
     setActiveAnalysis(null);
+    setLinkedPlotInfo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const sectionHeaderStyle: React.CSSProperties = {
-    fontSize: '16px',
-    fontWeight: 700,
-    color: '#334155',
-    marginTop: 0,
-    marginBottom: '20px',
+  // Open Task Modal with intelligent pre-filled values
+  const openCreateTaskModal = () => {
+    if (!currentData) return;
+    const diseaseLabel = currentData.disease_name || t('Pathogen Outbreak');
+    const plantLabel = currentData.plant_name || t('Crop');
+    setTaskTitle(`Apply IPM Remediation: ${diseaseLabel} on ${plantLabel}`);
+
+    let desc = `Urgent IPM remediation protocol triggered by Vision Diagnostic scan.\n`;
+    desc += `Pathogen: ${currentData.scientific_name || diseaseLabel} (${currentData.pathogen_type || 'Foliar infection'})\n`;
+    if (currentData.ipm_matrix && currentData.ipm_matrix.length > 0) {
+      desc += `Recommended Protocol:\n`;
+      currentData.ipm_matrix.forEach((item) => {
+        desc += `• [${item.category}] ${item.method} - ${item.dosage_and_timing} (${item.phi_interval || 'Standard PHI'})\n`;
+      });
+    }
+    desc += `Warning: Ensure spray equipment is calibrated and field worker wears PPE.`;
+    setTaskDesc(desc);
+
+    // Default due date: tomorrow
+    const tmrw = new Date();
+    tmrw.setDate(tmrw.getDate() + 1);
+    setTaskDueDate(tmrw.toISOString().split('T')[0]);
+
+    if (taskOptions.farms.length > 0) setTaskFarmId(taskOptions.farms[0].id);
+    if (taskOptions.fields.length > 0) setTaskFieldId(taskOptions.fields[0].id);
+    if (taskOptions.workers.length > 0) setTaskWorkerId(taskOptions.workers[0].id);
+
+    setTaskFeedback(null);
+    setIsTaskModalOpen(true);
+  };
+
+  // Submit Remediation Task to /api/tasks
+  const handleSaveRemediationTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskTitle.trim()) return;
+
+    setIsSubmittingTask(true);
+    setTaskFeedback(null);
+
+    try {
+      await createRemediationTask({
+        title: taskTitle.trim(),
+        description: taskDesc.trim(),
+        farmId: taskFarmId ? Number(taskFarmId) : undefined,
+        fieldId: taskFieldId ? Number(taskFieldId) : undefined,
+        workerIds: taskWorkerId ? [Number(taskWorkerId)] : [],
+        priority: taskPriority,
+        dueDate: taskDueDate,
+        status: 'PENDING',
+      });
+
+      setTaskFeedback({
+        type: 'success',
+        message: t('Remediation task successfully scheduled in the Tasks module!'),
+      });
+
+      setTimeout(() => {
+        setIsTaskModalOpen(false);
+        setTaskFeedback(null);
+      }, 1800);
+    } catch (err: any) {
+      setTaskFeedback({
+        type: 'error',
+        message: err.message || t('Failed to create remediation task.'),
+      });
+    } finally {
+      setIsSubmittingTask(false);
+    }
+  };
+
+  // Submit Plot Link
+  const handleSavePlotLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentData?.id || !plotFarmId || !plotFieldId) return;
+
+    setIsSubmittingPlot(true);
+    setPlotFeedback(null);
+
+    try {
+      await linkDetectionToPlot(currentData.id, Number(plotFarmId), Number(plotFieldId));
+      const fieldObj = taskOptions.fields.find((f) => f.id === Number(plotFieldId));
+      const fName = fieldObj ? fieldObj.name : `Field #${plotFieldId}`;
+      setLinkedPlotInfo(fName);
+
+      setPlotFeedback({
+        type: 'success',
+        message: `${t('Infection event permanently logged to field history for')} ${fName}!`,
+      });
+
+      setTimeout(() => {
+        setIsPlotModalOpen(false);
+        setPlotFeedback(null);
+      }, 1600);
+    } catch (err: any) {
+      setPlotFeedback({
+        type: 'error',
+        message: err.message || t('Failed to link detection to plot history.'),
+      });
+    } finally {
+      setIsSubmittingPlot(false);
+    }
+  };
+
+  // Shortcut: Navigate to inventory tab with treatment search
+  const handleDeductInventory = (activeIngredient?: string) => {
+    const q = activeIngredient || (currentData?.ipm_matrix?.[0]?.method) || 'Neem';
+    const cleanQ = q.split('/')[0].split('(')[0].trim();
+    navigate(`/inventory?search=${encodeURIComponent(cleanQ)}`);
+  };
+
+  // Shortcut: Share summary via WhatsApp
+  const handleShareWhatsapp = () => {
+    if (!currentData) return;
+    const nowStr = new Date().toLocaleDateString();
+    let text = `🚨 *AGROFARM AI CROP DIAGNOSTIC REPORT* 🌿\n`;
+    text += `📅 *Date:* ${nowStr}\n`;
+    text += `🌱 *Host Plant:* ${currentData.plant_name}\n`;
+    text += `🦠 *Condition:* ${currentData.disease_name} (${currentData.is_healthy ? 'HEALTHY' : 'PATHOGEN DETECTED'})\n`;
+    if (currentData.scientific_name) text += `🔬 *Scientific Name:* _${currentData.scientific_name}_\n`;
+    if (currentData.pathogen_type) text += `🏷️ *Classification:* ${currentData.pathogen_type}\n`;
+    if (currentData.yield_loss_risk) text += `⚠️ *Yield Loss Risk:* ${currentData.yield_loss_risk}\n`;
+    if (currentData.spread_speed) text += `⚡ *Spread Velocity:* ${currentData.spread_speed}\n`;
+    if (currentData.harvest_impact) text += `🛑 *Harvest PHI Alert:* ${currentData.harvest_impact}\n\n`;
+
+    if (currentData.ipm_matrix && currentData.ipm_matrix.length > 0) {
+      text += `🛡️ *INTEGRATED PEST MANAGEMENT (IPM) PROTOCOL:*\n`;
+      currentData.ipm_matrix.forEach((item) => {
+        text += `• *${item.category}:* ${item.method} | ${item.dosage_and_timing} (${item.phi_interval || 'Standard PHI'})\n`;
+      });
+      text += `\n`;
+    }
+
+    text += `🌾 *AgroFarm Agronomy Telemetry System*`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  // Shortcut: Print / Export PDF
+  const handlePrintPdf = () => {
+    window.print();
   };
 
   const confidenceScore = currentData
@@ -155,18 +379,40 @@ export default function DiseaseDetectionPage() {
       )
     : 0;
 
+  // Filtered IPM items
+  const filteredIpmMatrix: IpmTreatmentItem[] = useMemo(() => {
+    const list = currentData?.ipm_matrix || [];
+    if (ipmFilter === 'all') return list;
+    if (ipmFilter === 'organic') return list.filter((i) => i.category.toLowerCase().includes('organic'));
+    if (ipmFilter === 'chemical') return list.filter((i) => i.category.toLowerCase().includes('chemical'));
+    if (ipmFilter === 'cultural') return list.filter((i) => i.category.toLowerCase().includes('cultural') || i.category.toLowerCase().includes('mechanical'));
+    return list;
+  }, [currentData?.ipm_matrix, ipmFilter]);
+
+  const sectionHeaderStyle: React.CSSProperties = {
+    fontSize: '16px',
+    fontWeight: 700,
+    color: '#1e293b',
+    marginTop: 0,
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  };
+
   return (
     <div
       style={{
-        margin: "0",
-        padding: "20px 24px 48px",
-        fontFamily: "Inter, system-ui, sans-serif",
-        boxSizing: "border-box",
-        width: "100%",
+        margin: '0',
+        padding: '24px 28px 64px',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        boxSizing: 'border-box',
+        width: '100%',
+        backgroundColor: '#f8fafc',
+        minHeight: '100vh',
       }}
     >
-
-      {/* Keyframe animation for scanning laser */}
+      {/* Keyframe animation & print layout styles */}
       <style>{`
         @keyframes scanLine {
           0% { top: 0%; opacity: 0.7; }
@@ -176,39 +422,63 @@ export default function DiseaseDetectionPage() {
         .animate-scan {
           animation: scanLine 2.4s ease-in-out infinite alternate;
         }
+
+        @media print {
+          body {
+            background-color: #ffffff !important;
+            font-size: 11pt !important;
+          }
+          nav, aside, header, .no-print, button, input {
+            display: none !important;
+          }
+          .print-full-width {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+        }
       `}</style>
 
       {error && (
         <div style={{
-          padding: '16px', marginBottom: '32px', borderRadius: '8px', fontSize: '14px', fontWeight: 500,
-          backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca'
+          padding: '16px 20px', marginBottom: '28px', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
+          backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca',
+          display: 'flex', alignItems: 'center', gap: '10px'
         }}>
-          {t(error)}
+          <AlertTriangle size={18} />
+          <span>{t(error)}</span>
         </div>
       )}
 
-      <div
-        className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start"
-        style={{ width: "100%" }}
-      >
+      {/* Main page layout */}
+      <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
 
         {/* ================= LEFT PANE: SAMPLE MEDIA & RECENT INSPECTIONS ================= */}
-        <div className="w-full lg:w-[280px] shrink-0">
+        <div className="w-full lg:w-[320px] shrink-0 no-print">
 
           {/* Media Block */}
-          <div>
-            <h3 style={sectionHeaderStyle}>{t('Sample Media')}</h3>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '18px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          }}>
+            <h3 style={sectionHeaderStyle}>
+              <Leaf size={18} className="text-emerald-600" />
+              {t('Sample Media')}
+            </h3>
 
+            {/* Media Canvas / Preview Box */}
             <div style={{
               position: 'relative',
               width: '100%',
-              minHeight: '220px',
+              minHeight: '230px',
               maxHeight: '340px',
-              backgroundColor: '#0f172a', // dark background so letterboxing looks clean
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
+              backgroundColor: '#0f172a',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
-              marginBottom: '16px',
+              marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -222,10 +492,14 @@ export default function DiseaseDetectionPage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '8px',
+                      padding: '6px',
                       boxSizing: 'border-box'
                     }}>
-                      <ImageBoundingBox imageUrl={selectedImage} boxes={currentData.detected_spots || []} />
+                      <ImageBoundingBox
+                        imageUrl={selectedImage}
+                        boxes={currentData.detected_spots || []}
+                        mode={viewMode}
+                      />
                     </div>
                   ) : (
                     <img
@@ -246,16 +520,16 @@ export default function DiseaseDetectionPage() {
                     <div style={{
                       position: 'absolute',
                       inset: 0,
-                      backgroundColor: 'rgba(6, 78, 59, 0.25)',
+                      backgroundColor: 'rgba(6, 78, 59, 0.35)',
                       overflow: 'hidden',
                       pointerEvents: 'none'
                     }}>
                       <div className="animate-scan" style={{
                         position: 'absolute',
                         width: '100%',
-                        height: '2px',
+                        height: '3px',
                         backgroundColor: '#10b981',
-                        boxShadow: '0 0 12px #10b981'
+                        boxShadow: '0 0 14px #10b981'
                       }} />
                     </div>
                   )}
@@ -269,8 +543,8 @@ export default function DiseaseDetectionPage() {
                       top: '10px',
                       right: '10px',
                       zIndex: 30,
-                      width: '26px',
-                      height: '26px',
+                      width: '28px',
+                      height: '28px',
                       borderRadius: '50%',
                       backgroundColor: 'rgba(255, 255, 255, 0.95)',
                       border: 'none',
@@ -288,9 +562,98 @@ export default function DiseaseDetectionPage() {
                   </button>
                 </>
               ) : (
-                <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>{t('No Image Selected')}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontSize: '32px' }}>🍃</div>
+                  <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 500 }}>{t('No Image Selected')}</span>
+                </div>
               )}
             </div>
+
+            {/* Interactive Saliency / Heatmap Overlay Controls */}
+            {currentData && (
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{
+                  display: 'flex',
+                  backgroundColor: '#f1f5f9',
+                  borderRadius: '8px',
+                  padding: '3px',
+                  gap: '3px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('original')}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: viewMode === 'original' ? '#ffffff' : 'transparent',
+                      color: viewMode === 'original' ? '#0f172a' : '#64748b',
+                      boxShadow: viewMode === 'original' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {t('Original')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('boxes')}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: viewMode === 'boxes' ? '#ffffff' : 'transparent',
+                      color: viewMode === 'boxes' ? '#0f172a' : '#64748b',
+                      boxShadow: viewMode === 'boxes' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {t('Boxes')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('heatmap')}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: viewMode === 'heatmap' ? '#ffffff' : 'transparent',
+                      color: viewMode === 'heatmap' ? '#ea580c' : '#64748b',
+                      boxShadow: viewMode === 'heatmap' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🔥 {t('Heatmap')}
+                  </button>
+                </div>
+
+                {viewMode === 'heatmap' && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: '#fff7ed',
+                    border: '1px solid #ffedd5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '10px',
+                    color: '#c2410c'
+                  }}>
+                    <span>Grad-CAM Activation:</span>
+                    <span style={{ fontWeight: 700 }}>Low 🟦 🟨 🟧 🟥 Core</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <input
               type="file"
@@ -307,15 +670,16 @@ export default function DiseaseDetectionPage() {
               disabled={isSubmitting}
               style={{
                 width: '100%',
-                padding: '12px',
+                padding: '11px',
                 backgroundColor: '#ffffff',
                 border: '1px solid #cbd5e1',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 color: '#334155',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 600,
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                marginBottom: '16px'
+                marginBottom: '10px',
+                transition: 'all 0.15s ease'
               }}
             >
               {t('Upload Photo')}
@@ -327,29 +691,48 @@ export default function DiseaseDetectionPage() {
               disabled={!selectedFile || isSubmitting}
               style={{
                 width: '100%',
-                padding: '14px',
+                padding: '13px',
                 backgroundColor: '#059669',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 fontSize: '14px',
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: (!selectedFile || isSubmitting) ? 'not-allowed' : 'pointer',
-                opacity: (!selectedFile || isSubmitting) ? 0.7 : 1
+                opacity: (!selectedFile || isSubmitting) ? 0.7 : 1,
+                boxShadow: '0 2px 6px rgba(5,150,105,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
               }}
             >
+              <Sparkles size={16} />
               {isSubmitting ? t('Analyzing Sample...') : t('Run Diagnostics')}
             </button>
           </div>
 
-          <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '40px 0' }} />
-
-          <div>
-            <h3 style={{ ...sectionHeaderStyle, marginBottom: '16px' }}>{t('Recent Crop Inspections')}</h3>
+          {/* Section: Recent Crop Inspections (Preserved as requested) */}
+          <div style={{
+            marginTop: '24px',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '18px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          }}>
+            <h3 style={{ ...sectionHeaderStyle, marginBottom: '14px' }}>
+              <Clock size={17} className="text-slate-500" />
+              {t('Recent Crop Inspections')}
+            </h3>
 
             <div style={{
-              display: 'flex', flexDirection: 'column', gap: '12px',
-              maxHeight: '450px', overflowY: 'auto', paddingRight: '6px'
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              maxHeight: '420px',
+              overflowY: 'auto',
+              paddingRight: '4px'
             }}>
               {isLoadingHistory ? (
                 <div className="space-y-3 animate-pulse">
@@ -368,11 +751,8 @@ export default function DiseaseDetectionPage() {
                     >
                       <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#e2e8f0', flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ width: '70px', height: '12px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
-                          <div style={{ width: '45px', height: '14px', backgroundColor: '#f1f5f9', borderRadius: '10px' }} />
-                        </div>
-                        <div style={{ width: '100px', height: '10px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
+                        <div style={{ width: '80px', height: '12px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
+                        <div style={{ width: '110px', height: '10px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
                       </div>
                     </div>
                   ))}
@@ -387,8 +767,8 @@ export default function DiseaseDetectionPage() {
                   borderRadius: '8px',
                   backgroundColor: '#f8fafc'
                 }}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>🍃</div>
-                  <div style={{ fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '6px' }}>🍃</div>
+                  <div style={{ fontWeight: 600, color: '#64748b', marginBottom: '2px' }}>
                     {t('No past inspections yet')}
                   </div>
                   <div>
@@ -409,31 +789,19 @@ export default function DiseaseDetectionPage() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
+                        gap: '10px',
+                        padding: '10px 12px',
                         border: isSelected ? '2px solid #059669' : '1px solid #e2e8f0',
                         borderRadius: '8px',
                         backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.borderColor = '#cbd5e1';
-                          e.currentTarget.style.backgroundColor = '#f8fafc';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.borderColor = '#e2e8f0';
-                          e.currentTarget.style.backgroundColor = '#ffffff';
-                        }
+                        boxShadow: isSelected ? '0 2px 6px rgba(5, 150, 105, 0.12)' : 'none',
                       }}
                     >
                       <div style={{
-                        width: '40px',
-                        height: '40px',
+                        width: '36px',
+                        height: '36px',
                         borderRadius: '50%',
                         backgroundColor: isSelected ? '#dcfce7' : '#f1f5f9',
                         color: isSelected ? '#15803d' : '#64748b',
@@ -441,17 +809,17 @@ export default function DiseaseDetectionPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontWeight: 700,
-                        fontSize: '14px',
+                        fontSize: '13px',
                         flexShrink: 0,
                         border: isSelected ? '1px solid #86efac' : '1px solid #e2e8f0'
                       }}>
                         {initial}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                           <span style={{
                             fontWeight: 700,
-                            fontSize: '13px',
+                            fontSize: '12px',
                             color: '#334155',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -460,10 +828,10 @@ export default function DiseaseDetectionPage() {
                             {item.plant_name || t('Unknown Plant')}
                           </span>
                           <span style={{
-                            fontSize: '10px',
+                            fontSize: '9px',
                             fontWeight: 700,
-                            padding: '2px 6px',
-                            borderRadius: '12px',
+                            padding: '1px 5px',
+                            borderRadius: '10px',
                             backgroundColor: item.is_healthy ? '#f0fdf4' : '#fef2f2',
                             color: item.is_healthy ? '#166534' : '#991b1b',
                             border: `1px solid ${item.is_healthy ? '#bbf7d0' : '#fecaca'}`
@@ -473,17 +841,17 @@ export default function DiseaseDetectionPage() {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{
-                            fontSize: '12px',
+                            fontSize: '11px',
                             color: '#64748b',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
-                            maxWidth: '140px'
+                            maxWidth: '130px'
                           }}>
                             {item.disease_name || (item.is_healthy ? t('Healthy Foliage') : t('Undetermined'))}
                           </span>
                           {formattedDate && (
-                            <span style={{ fontSize: '10px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '9px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                               {formattedDate}
                             </span>
                           )}
@@ -498,172 +866,98 @@ export default function DiseaseDetectionPage() {
 
         </div>
 
-        {/* CENTER DIVIDER LINE (Visible on desktop) */}
-        <div
-          className="hidden lg:block"
-          style={{ width: "1px", backgroundColor: "#e2e8f0", alignSelf: "stretch" }}
-        />
+        {/* ================= RIGHT PANE: COMPREHENSIVE ACTIONABLE REPORT ================= */}
+        <div style={{ flex: 1, minWidth: 0, width: '100%' }} className="print-full-width">
 
-        {/* ================= RIGHT PANE: DIAGNOSTIC DETAILS & PROTOCOLS ================= */}
-        <div style={{ flex: 1, minWidth: 0, width: "100%" }}>
-
-          {/* Section 1: Real Diagnostic Metric Cards */}
+          {/* Top Bar: Title & "Ask more" button (Preserved as requested) */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '20px'
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            gap: '12px'
           }}>
-            <h3 style={{ ...sectionHeaderStyle, marginBottom: 0 }}>{t('Diagnostic Metrics')}</h3>
-            <button
-              type="button"
-              onClick={() => setChatOpen(true)}
-              disabled={!currentData}
-              title={currentData ? t('Ask about this scan') : t('Run diagnostics first')}
-              style={{
-                padding: '8px 14px',
-                backgroundColor: currentData ? '#059669' : '#e2e8f0',
-                color: currentData ? '#ffffff' : '#94a3b8',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: currentData ? 'pointer' : 'not-allowed',
-              }}
-            >
-              {t('Ask more')}
-            </button>
+            <div>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                {t('Actionable Diagnostic Report')}
+              </h2>
+              <span style={{ fontSize: '13px', color: '#64748b' }}>
+                {linkedPlotInfo ? `${t('Linked to')} ${linkedPlotInfo}` : t('Vision neural inference with integrated IPM protocol')}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }} className="no-print">
+              <button
+                type="button"
+                onClick={() => setChatOpen(true)}
+                disabled={!currentData}
+                title={currentData ? t('Ask about this scan') : t('Run diagnostics first')}
+                style={{
+                  padding: '9px 16px',
+                  backgroundColor: currentData ? '#059669' : '#e2e8f0',
+                  color: currentData ? '#ffffff' : '#94a3b8',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: currentData ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: currentData ? '0 2px 6px rgba(5,150,105,0.25)' : 'none'
+                }}
+              >
+                <Sparkles size={15} />
+                {t('Ask more')}
+              </button>
+            </div>
           </div>
 
-          {isSubmitting ? (
-            <div className="space-y-8 animate-pulse">
-              {/* Metrics Grid Skeleton */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '18px 20px',
-                      borderRadius: '8px',
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: '#ffffff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px',
-                    }}
-                  >
-                    <div style={{ width: '120px', height: '12px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
-                    <div style={{ width: '160px', height: '20px', backgroundColor: '#cbd5e1', borderRadius: '4px' }} />
-                    <div style={{ width: '200px', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                  </div>
-                ))}
-              </div>
+          {/* ================= SECTION 1: QUICK DIAGNOSTIC METRIC CARDS ================= */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px', marginBottom: '28px' }}>
 
-              {/* Pathological Overview Skeleton */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ width: '180px', height: '16px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
-                <div
-                  style={{
-                    padding: '20px',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    backgroundColor: '#ffffff',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                  }}
-                >
-                  <div style={{ width: '92%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                  <div style={{ width: '84%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                  <div style={{ width: '65%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                </div>
-              </div>
-
-              {/* Diagnostic Bio-Indicators Checklist Skeleton */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ width: '160px', height: '16px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                  {[1, 2, 3, 4, 5, 6].map((j) => (
-                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#e2e8f0' }} />
-                      <div style={{ width: '130px', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Treatment Protocols Skeleton */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ width: '190px', height: '16px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                  {[1, 2].map((k) => (
-                    <div
-                      key={k}
-                      style={{
-                        padding: '18px 20px',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        backgroundColor: '#ffffff',
-                        minHeight: '160px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '12px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ width: '140px', height: '14px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
-                        <div style={{ width: '60px', height: '16px', backgroundColor: '#f1f5f9', borderRadius: '10px' }} />
-                      </div>
-                      <div style={{ width: '85%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                      <div style={{ width: '70%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                      <div style={{ width: '90%', height: '12px', backgroundColor: '#f1f5f9', borderRadius: '4px' }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
-
-            {/* Plant Classification Card */}
+            {/* Metric 1: Host Species */}
             <div style={{
-              padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
-              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px'
+              padding: '16px 18px', borderRadius: '10px', border: '1px solid #e2e8f0',
+              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
             }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {t('Identified Host Species')}
               </span>
               <div style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b' }}>
-                {currentData?.plant_name || <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '15px' }}>{t('Awaiting sample scan...')}</span>}
+                {currentData?.plant_name || <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '14px' }}>{t('Awaiting sample scan...')}</span>}
               </div>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
+              <span style={{ fontSize: '11px', color: '#64748b' }}>
                 {currentData ? t('Foliage structure verified via vision matrix') : t('No sample processed')}
               </span>
             </div>
 
-            {/* Pathology Condition Card */}
+            {/* Metric 2: Detected Pathology */}
             <div style={{
-              padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
-              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px'
+              padding: '16px 18px', borderRadius: '10px', border: '1px solid #e2e8f0',
+              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
             }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {t('Detected Pathology / Disease')}
               </span>
               <div style={{ fontSize: '18px', fontWeight: 700, color: currentData ? (currentData.is_healthy ? '#166534' : '#991b1b') : '#94a3b8' }}>
-                {currentData?.disease_name || <span style={{ fontWeight: 500, fontSize: '15px' }}>{t('Undetermined')}</span>}
+                {currentData?.disease_name || <span style={{ fontWeight: 500, fontSize: '14px' }}>{t('Undetermined')}</span>}
               </div>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
+              <span style={{ fontSize: '11px', color: '#64748b' }}>
                 {currentData?.is_healthy ? t('No infectious spores or lesions found') : currentData ? t('Active biological infestation detected') : t('Upload leaf to begin scan')}
               </span>
             </div>
 
-            {/* Health Evaluation Card */}
+            {/* Metric 3: Severity State */}
             <div style={{
-              padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
-              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '8px'
+              padding: '16px 18px', borderRadius: '10px', border: '1px solid #e2e8f0',
+              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
             }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {t('Pathology Severity State')}
               </span>
               <div>
@@ -672,7 +966,8 @@ export default function DiseaseDetectionPage() {
                     fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px',
                     backgroundColor: currentData.is_healthy ? '#f0fdf4' : '#fef2f2',
                     color: currentData.is_healthy ? '#166534' : '#991b1b',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    border: `1px solid ${currentData.is_healthy ? '#bbf7d0' : '#fecaca'}`
                   }}>
                     ● {currentData.is_healthy ? t('HEALTHY LEAF MATRIX') : t('PATHOGEN DETECTED')}
                   </span>
@@ -680,157 +975,1095 @@ export default function DiseaseDetectionPage() {
                   <span style={{ fontSize: '14px', color: '#94a3b8', fontWeight: 500 }}>{t('Pending Evaluation')}</span>
                 )}
               </div>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
+              <span style={{ fontSize: '11px', color: '#64748b' }}>
                 {currentData?.is_healthy ? t('Photosynthetic tissue operational') : currentData ? t('Immediate intervention advised') : t('System standby')}
               </span>
             </div>
 
-            {/* Confidence Bar Card */}
+            {/* Metric 4: Multi-Class Probability Distribution (Top 3 matches) */}
             <div style={{
-              padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
-              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '8px'
+              padding: '16px 18px', borderRadius: '10px', border: '1px solid #e2e8f0',
+              backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {t('Model Confidence')}
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {t('Probability Distribution')}
                 </span>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
+                <span style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
                   {currentData ? `${confidenceScore}%` : '0%'}
                 </span>
               </div>
 
-              <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
-                <div style={{
-                  width: `${confidenceScore}%`, height: '100%',
-                  backgroundColor: currentData?.is_healthy ? '#059669' : '#e11d48',
-                  borderRadius: '6px', transition: 'width 0.4s ease'
-                }} />
-              </div>
-
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
-                {currentData ? t('Inference validated across agricultural neural network') : t('Awaiting model inference')}
-              </span>
+              {currentData?.probability_distribution && currentData.probability_distribution.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
+                  {currentData.probability_distribution.slice(0, 3).map((item, idx) => {
+                    const pct = Math.round(item.probability <= 1.0 ? item.probability * 100 : item.probability);
+                    const color = idx === 0 ? (currentData.is_healthy ? '#059669' : '#e11d48') : (idx === 1 ? '#f59e0b' : '#64748b');
+                    return (
+                      <div key={idx} style={{ fontSize: '11px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px', color: '#334155' }}>
+                          <span style={{ fontWeight: idx === 0 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                            {item.name}
+                          </span>
+                          <span style={{ fontWeight: 700, color }}>{pct}%</span>
+                        </div>
+                        <div style={{ width: '100%', height: '5px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color, borderRadius: '4px' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  <div style={{ width: '100%', height: '6px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
+                    <div style={{
+                      width: `${confidenceScore}%`, height: '100%',
+                      backgroundColor: currentData?.is_healthy ? '#059669' : '#e11d48',
+                      borderRadius: '4px'
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>
+                    {currentData ? t('Primary neural prediction confirmed') : t('Awaiting model inference')}
+                  </span>
+                </>
+              )}
             </div>
 
           </div>
 
-          {/* Section 2: Pathological Overview */}
-          <h3 style={sectionHeaderStyle}>{t('Pathological Overview & Observations')}</h3>
+          {/* ================= SECTION 2: PATHOLOGICAL OBSERVATIONS & SYMPTOMS BREAKDOWN ================= */}
           <div style={{
-            padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0',
-            backgroundColor: '#ffffff', minHeight: '80px', marginBottom: '40px'
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '22px',
+            marginBottom: '28px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
           }}>
+            <h3 style={sectionHeaderStyle}>
+              <Activity size={18} className="text-emerald-600" />
+              {t('Pathological Observations & Symptoms Breakdown')}
+            </h3>
+
             {currentData?.general_description ? (
-              <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', margin: 0 }}>
+              <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', margin: '0 0 18px' }}>
                 {currentData.general_description}
               </p>
             ) : (
-              <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>
+              <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 18px' }}>
                 {t('Diagnostic etiology, surface lesion morphology, and biological infection timelines will populate here once the sample image is analyzed.')}
               </p>
             )}
+
+            {/* Diagnostic Bio-Indicators Checklist */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+              gap: '12px',
+              paddingTop: '14px',
+              borderTop: '1px solid #f1f5f9'
+            }}>
+              {[
+                { label: t('Foliage Tissue Necrosis'), detected: Boolean(currentData && !currentData.is_healthy) },
+                { label: t('Chlorotic Ring Formations'), detected: Boolean(currentData && !currentData.is_healthy) },
+                { label: t('Airborne Spore Spread Risk'), detected: Boolean(currentData && !currentData.is_healthy) },
+                { label: t('Water Splash Transmission'), detected: Boolean(currentData && !currentData.is_healthy) },
+                { label: t('Cellular Structure Integrity'), detected: Boolean(currentData?.is_healthy) },
+                { label: t('Quarantine Protocol Required'), detected: Boolean(currentData && !currentData.is_healthy && (currentData.overall_confidence > 0.8)) },
+              ].map((indicator) => (
+                <div
+                  key={indicator.label}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    fontSize: '12px',
+                    color: indicator.detected ? '#1e293b' : '#64748b',
+                    fontWeight: indicator.detected ? 600 : 400
+                  }}
+                >
+                  <div style={{
+                    width: '18px', height: '18px', borderRadius: '4px',
+                    border: `1px solid ${indicator.detected ? '#059669' : '#cbd5e1'}`,
+                    backgroundColor: indicator.detected ? '#059669' : '#ffffff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#ffffff', fontSize: '11px', fontWeight: 'bold'
+                  }}>
+                    {indicator.detected && '✓'}
+                  </div>
+                  <span>{indicator.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Section 3: Diagnostic Bio-Indicators Checklist */}
-          <h3 style={sectionHeaderStyle}>{t('Diagnostic Indicators & Vectors')}</h3>
+          {/* ================= SECTION 3: BIOLOGICAL & PATHOGEN PROFILE ================= */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '16px',
-            marginBottom: '40px'
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '22px',
+            marginBottom: '28px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
           }}>
-            {[
-              { label: t('Foliage Tissue Necrosis'), detected: Boolean(currentData && !currentData.is_healthy) },
-              { label: t('Chlorotic Ring Formations'), detected: Boolean(currentData && !currentData.is_healthy) },
-              { label: t('Airborne Spore Spread Risk'), detected: Boolean(currentData && !currentData.is_healthy) },
-              { label: t('Water Splash Transmission'), detected: Boolean(currentData && !currentData.is_healthy) },
-              { label: t('Cellular Structure Integrity'), detected: Boolean(currentData?.is_healthy) },
-              { label: t('Quarantine Protocol Required'), detected: Boolean(currentData && !currentData.is_healthy) },
-            ].map((indicator) => (
-              <div
-                key={indicator.label}
-                style={{
-                  display: 'flex',
+            <h3 style={sectionHeaderStyle}>
+              <Layers size={18} className="text-emerald-600" />
+              {t('Biological & Pathogen Profile')}
+            </h3>
+
+            {/* Scientific name & Classification banner */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              padding: '14px 18px',
+              borderRadius: '10px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              marginBottom: '18px'
+            }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {t('Scientific Name & Taxonomy')}
+                </span>
+                <div style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', fontStyle: 'italic' }}>
+                  {currentData?.scientific_name || 'Liriomyza trifolii / Phytophthora spp.'}
+                </div>
+              </div>
+
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                borderRadius: '20px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                color: '#1d4ed8',
+                fontSize: '12px',
+                fontWeight: 700
+              }}>
+                <ShieldAlert size={14} />
+                <span>{currentData?.pathogen_type || 'Insect Pest / Fungal Spore'}</span>
+              </div>
+            </div>
+
+            {/* Favorable Environmental Conditions Mini Status Strip */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+              marginBottom: '18px'
+            }}>
+              <div style={{
+                padding: '12px 14px', borderRadius: '8px', backgroundColor: '#fef3c7',
+                border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '10px'
+              }}>
+                <Thermometer size={20} className="text-amber-700" />
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
+                    {t('Optimal Temperature')}
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#78350f' }}>
+                    {currentData?.optimal_temperature || '24°C – 30°C'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '12px 14px', borderRadius: '8px', backgroundColor: '#e0f2fe',
+                border: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: '10px'
+              }}>
+                <Droplets size={20} className="text-sky-700" />
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase' }}>
+                    {t('Relative Humidity')}
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#075985' }}>
+                    {currentData?.humidity_level || '>80% RH'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '12px 14px', borderRadius: '8px', backgroundColor: '#f1f5f9',
+                border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px'
+              }}>
+                <Wind size={20} className="text-slate-600" />
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+                    {t('Weather Correlation')}
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                    {currentData?.weather_correlation || t('Current high humidity in farm increases spread velocity by ~35%')}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Life Cycle & Incubation Period (3-Stage Timeline) */}
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '12px' }}>
+                {t('Biological Life Cycle & Progression')}:
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px',
+                position: 'relative'
+              }}>
+                {(currentData?.life_cycle_stages && currentData.life_cycle_stages.length > 0 ? currentData.life_cycle_stages : [
+                  { stage_name: 'Incubation & Inoculation', duration: '2–4 days', description: 'Microscopic spores adhere to moist leaf cuticle and germinate.' },
+                  { stage_name: 'Active Damage Phase', duration: '5–8 days', description: 'Hyphae penetrate leaf mesophyll, causing necrotic tissue collapse.' },
+                  { stage_name: 'Spore Release / Pupation', duration: '4–6 days', description: 'Secondary conidia release into air or larvae pupate in leaf canopy.' }
+                ]).map((stage, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '14px',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#f8fafc',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      position: 'relative'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '2px 7px',
+                        borderRadius: '12px',
+                        backgroundColor: idx === 0 ? '#eff6ff' : (idx === 1 ? '#fef3c7' : '#fef2f2'),
+                        color: idx === 0 ? '#1d4ed8' : (idx === 1 ? '#b45309' : '#b91c1c')
+                      }}>
+                        STAGE {idx + 1}
+                      </span>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
+                        {stage.duration}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                      {stage.stage_name}
+                    </div>
+
+                    <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
+                      {stage.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ================= SECTION 4: INTERACTIVE REFERENCE LIBRARY COMPARISON ================= */}
+          <ReferenceSpecimenCard analysis={currentData} uploadedImageUrl={selectedImage} />
+
+          {/* ================= SECTION 5: INTEGRATED PEST MANAGEMENT (IPM) MATRIX ================= */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '22px',
+            marginBottom: '28px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <h3 style={{ ...sectionHeaderStyle, marginBottom: 0 }}>
+                <ShieldCheck size={18} className="text-emerald-600" />
+                {t('Integrated Pest Management (IPM) Matrix')}
+              </h3>
+
+              {/* Tier Filter Tabs */}
+              <div style={{
+                display: 'flex',
+                backgroundColor: '#f1f5f9',
+                borderRadius: '8px',
+                padding: '3px',
+                gap: '3px'
+              }} className="no-print">
+                {[
+                  { id: 'all', label: t('All Tiers') },
+                  { id: 'organic', label: `🌿 ${t('Organic & Biological')}` },
+                  { id: 'chemical', label: `🧪 ${t('Chemical Intervention')}` },
+                  { id: 'cultural', label: `⚙️ ${t('Cultural & Mechanical')}` },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setIpmFilter(tab.id as any)}
+                    style={{
+                      padding: '5px 10px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: ipmFilter === tab.id ? '#ffffff' : 'transparent',
+                      color: ipmFilter === tab.id ? '#059669' : '#64748b',
+                      boxShadow: ipmFilter === tab.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actionable 3-tier IPM Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                    <th style={{ padding: '10px 14px', color: '#475569', fontWeight: 700, width: '180px' }}>{t('Category')}</th>
+                    <th style={{ padding: '10px 14px', color: '#475569', fontWeight: 700 }}>{t('Method / Active Ingredient')}</th>
+                    <th style={{ padding: '10px 14px', color: '#475569', fontWeight: 700 }}>{t('Application Dosage & Timing')}</th>
+                    <th style={{ padding: '10px 14px', color: '#475569', fontWeight: 700, width: '160px' }}>{t('Pre-Harvest Interval (PHI)')}</th>
+                    <th style={{ padding: '10px 14px', color: '#475569', fontWeight: 700, width: '120px' }} className="no-print">{t('Actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredIpmMatrix.length > 0 ? (
+                    filteredIpmMatrix.map((item, idx) => {
+                      const isChem = item.category.toLowerCase().includes('chemical');
+                      const isOrg = item.category.toLowerCase().includes('organic');
+                      const badgeBg = isOrg ? '#f0fdf4' : (isChem ? '#fef2f2' : '#eff6ff');
+                      const badgeText = isOrg ? '#15803d' : (isChem ? '#b91c1c' : '#1d4ed8');
+                      const badgeBorder = isOrg ? '#bbf7d0' : (isChem ? '#fecaca' : '#bfdbfe');
+
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '3px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: badgeBg,
+                              color: badgeText,
+                              border: `1px solid ${badgeBorder}`,
+                              fontSize: '11px',
+                              fontWeight: 700
+                            }}>
+                              {item.category}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px', verticalAlign: 'top', fontWeight: 600, color: '#1e293b' }}>
+                            {item.method}
+                          </td>
+                          <td style={{ padding: '12px 14px', verticalAlign: 'top', color: '#475569' }}>
+                            {item.dosage_and_timing}
+                          </td>
+                          <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: isChem ? '#dc2626' : '#059669',
+                              backgroundColor: isChem ? '#fef2f2' : '#f0fdf4',
+                              padding: '2px 6px',
+                              borderRadius: '4px'
+                            }}>
+                              {item.phi_interval || (isChem ? 'Strict 7-day PHI' : '0-day PHI')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px', verticalAlign: 'top' }} className="no-print">
+                            <button
+                              type="button"
+                              onClick={() => handleDeductInventory(item.method)}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                backgroundColor: '#ffffff',
+                                color: '#334155',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Search size={12} />
+                              {t('Check')}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
+                        {t('No treatment records match the selected tier filter.')}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ================= SECTION 6: ECONOMIC IMPACT & YIELD LOSS RISK PROJECTION ================= */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '22px',
+            marginBottom: '28px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+          }}>
+            <h3 style={sectionHeaderStyle}>
+              <TrendingDown size={18} className="text-amber-600" />
+              {t('Yield & Economic Impact Forecast')}
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+
+              {/* Yield Loss Progress Gauge */}
+              <div style={{
+                padding: '16px', borderRadius: '10px', border: '1px solid #fde68a',
+                backgroundColor: '#fffbeb', display: 'flex', flexDirection: 'column', gap: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
+                    {t('Projected Foliage & Yield Loss Risk')}
+                  </span>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#b45309' }}>
+                    {currentData?.yield_loss_percentage ?? 20}%
+                  </span>
+                </div>
+
+                <div style={{ width: '100%', height: '8px', backgroundColor: '#fef3c7', borderRadius: '6px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${currentData?.yield_loss_percentage ?? 20}%`,
+                    height: '100%',
+                    backgroundColor: (currentData?.yield_loss_percentage ?? 20) > 35 ? '#ef4444' : '#f59e0b',
+                    borderRadius: '6px'
+                  }} />
+                </div>
+
+                <div style={{ fontSize: '12px', color: '#78350f', fontWeight: 600 }}>
+                  {currentData?.yield_loss_risk || '15% – 25% foliage loss if untreated'}
+                </div>
+              </div>
+
+              {/* Spread Speed Rating */}
+              <div style={{
+                padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0',
+                backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px'
+              }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+                  {t('Spread Velocity Rating')}
+                </span>
+                <div style={{
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '12px',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  backgroundColor: '#fee2e2',
+                  color: '#991b1b',
                   fontSize: '13px',
-                  color: indicator.detected ? '#1e293b' : '#64748b',
-                  fontWeight: indicator.detected ? 600 : 400
+                  fontWeight: 700,
+                  alignSelf: 'flex-start'
+                }}>
+                  <Flame size={15} />
+                  <span>{currentData?.spread_speed || 'Moderate: 3–5 days to adjacent rows'}</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  {t('Secondary foliar transmission via ambient greenhouse airflow and droplet splashing.')}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Harvest Impact Alert Banner */}
+            <div style={{
+              marginTop: '16px',
+              padding: '14px 18px',
+              borderRadius: '8px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <AlertTriangle size={20} className="text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#991b1b', marginBottom: '2px' }}>
+                  {t('Pre-Harvest Interval (PHI) & Harvest Withholding Alert')}
+                </div>
+                <div style={{ fontSize: '12px', color: '#7f1d1d', lineHeight: '1.4' }}>
+                  {currentData?.harvest_impact || t('Withhold active harvesting for minimum 7 days following foliar spray to prevent synthetic chemical residue contamination.')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ================= SECTION 7: AUTOMATED OPERATIONAL ACTIONS ================= */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            padding: '22px',
+            marginBottom: '32px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+          }} className="no-print">
+            <h3 style={sectionHeaderStyle}>
+              <ClipboardList size={18} className="text-emerald-600" />
+              {t('Automated Farm Operations')}
+            </h3>
+
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'center'
+            }}>
+              {/* Button 1: Create Remediation Task */}
+              <button
+                type="button"
+                onClick={openCreateTaskModal}
+                disabled={!currentData}
+                style={{
+                  padding: '11px 18px',
+                  backgroundColor: currentData ? '#059669' : '#e2e8f0',
+                  color: currentData ? '#ffffff' : '#94a3b8',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: currentData ? 'pointer' : 'not-allowed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: currentData ? '0 2px 6px rgba(5,150,105,0.25)' : 'none'
                 }}
               >
-                <div style={{
-                  width: '16px', height: '16px', borderRadius: '4px',
-                  border: `1px solid ${indicator.detected ? '#059669' : '#cbd5e1'}`,
-                  backgroundColor: indicator.detected ? '#059669' : '#ffffff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#ffffff', fontSize: '11px', fontWeight: 'bold'
-                }}>
-                  {indicator.detected && '✓'}
-                </div>
-                <span>{indicator.label}</span>
-              </div>
-            ))}
-          </div>
+                <Plus size={16} />
+                {t('Create Remediation Task')}
+              </button>
 
-          {/* Section 4: Treatment & Prevention Directives */}
-          <h3 style={sectionHeaderStyle}>{t('Treatment & Protocol Directives')}</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+              {/* Button 2: Deduct from Inventory */}
+              <button
+                type="button"
+                onClick={() => handleDeductInventory()}
+                disabled={!currentData}
+                style={{
+                  padding: '11px 18px',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: currentData ? 'pointer' : 'not-allowed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <PackageCheck size={16} />
+                {t('Deduct from Inventory')}
+              </button>
 
-            {/* Remedial Measures Card */}
-            <div style={{
-              padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', minHeight: '180px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>{t('Targeted Remedial Actions')}</span>
-                <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '12px', backgroundColor: '#fef2f2', color: '#991b1b' }}>
-                  {t('CURATIVE')}
-                </span>
-              </div>
-              {currentData && currentData.possible_treatments && currentData.possible_treatments.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {currentData.possible_treatments.map((treatment, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ color: '#dc2626', fontSize: '14px', lineHeight: '1' }}>•</span>
-                      <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: '1.4' }}>{treatment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>{t('No curative actions needed or awaiting diagnostic scan.')}</p>
-              )}
+              {/* Button 3: Log to Plot History */}
+              <button
+                type="button"
+                onClick={() => setIsPlotModalOpen(true)}
+                disabled={!currentData?.id}
+                style={{
+                  padding: '11px 18px',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: currentData?.id ? 'pointer' : 'not-allowed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <MapPin size={16} />
+                {t('Log to Plot History')}
+              </button>
+
+              {/* Button 4: Print / Export PDF */}
+              <button
+                type="button"
+                onClick={handlePrintPdf}
+                disabled={!currentData}
+                style={{
+                  padding: '11px 18px',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: currentData ? 'pointer' : 'not-allowed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Printer size={16} />
+                {t('Print / Export PDF')}
+              </button>
+
+              {/* Button 5: Share via WhatsApp */}
+              <button
+                type="button"
+                onClick={handleShareWhatsapp}
+                disabled={!currentData}
+                style={{
+                  padding: '11px 18px',
+                  backgroundColor: '#25D366',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: currentData ? 'pointer' : 'not-allowed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 6px rgba(37,211,102,0.3)'
+                }}
+              >
+                <Share2 size={16} />
+                {t('Share via WhatsApp')}
+              </button>
             </div>
-
-            {/* Preventative Protocols Card */}
-            <div style={{
-              padding: '18px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', minHeight: '180px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>{t('Preventative & Agronomic Controls')}</span>
-                <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '12px', backgroundColor: '#f0fdf4', color: '#166534' }}>
-                  {t('PROPHYLACTIC')}
-                </span>
-              </div>
-              {currentData && currentData.prevention_tips && currentData.prevention_tips.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {currentData.prevention_tips.map((tip, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ color: '#059669', fontSize: '14px', lineHeight: '1' }}>•</span>
-                      <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: '1.4' }}>{tip}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>{t('Prophylactic guidelines will appear upon image identification.')}</p>
-              )}
-            </div>
-
           </div>
-          </>
-          )}
 
         </div>
 
       </div>
+
+      {/* ================= MODAL 1: CREATE REMEDIATION TASK ================= */}
+      {isTaskModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 90,
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '560px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={18} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                  {t('Create Remediation Task')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTaskModalOpen(false)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {taskFeedback && (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                marginBottom: '16px',
+                backgroundColor: taskFeedback.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                color: taskFeedback.type === 'success' ? '#166534' : '#991b1b',
+                border: `1px solid ${taskFeedback.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+              }}>
+                {taskFeedback.message}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveRemediationTask} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  {t('Task Title')}
+                </label>
+                <input
+                  type="text"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    {t('Target Farm')}
+                  </label>
+                  <select
+                    value={taskFarmId}
+                    onChange={(e) => setTaskFarmId(e.target.value ? Number(e.target.value) : '')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      backgroundColor: '#ffffff',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="">{t('Select Farm...')}</option>
+                    {taskOptions.farms.map((f) => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    {t('Target Field / Plot')}
+                  </label>
+                  <select
+                    value={taskFieldId}
+                    onChange={(e) => setTaskFieldId(e.target.value ? Number(e.target.value) : '')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      backgroundColor: '#ffffff',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="">{t('Select Field...')}</option>
+                    {taskOptions.fields.map((f) => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    {t('Assign Field Worker')}
+                  </label>
+                  <select
+                    value={taskWorkerId}
+                    onChange={(e) => setTaskWorkerId(e.target.value ? Number(e.target.value) : '')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      backgroundColor: '#ffffff',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="">{t('Select Worker...')}</option>
+                    {taskOptions.workers.map((w) => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    {t('Due Date')}
+                  </label>
+                  <input
+                    type="date"
+                    value={taskDueDate}
+                    onChange={(e) => setTaskDueDate(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  {t('Priority')}
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const).map((pr) => (
+                    <button
+                      key={pr}
+                      type="button"
+                      onClick={() => setTaskPriority(pr)}
+                      style={{
+                        flex: 1,
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        border: taskPriority === pr ? '2px solid #059669' : '1px solid #cbd5e1',
+                        backgroundColor: taskPriority === pr ? '#f0fdf4' : '#ffffff',
+                        color: taskPriority === pr ? '#166534' : '#64748b',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {pr}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  {t('Treatment Instructions & Dosage')}
+                </label>
+                <textarea
+                  value={taskDesc}
+                  onChange={(e) => setTaskDesc(e.target.value)}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '12px',
+                    lineHeight: '1.4',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsTaskModalOpen(false)}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingTask}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#059669',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: isSubmittingTask ? 'not-allowed' : 'pointer',
+                    opacity: isSubmittingTask ? 0.7 : 1
+                  }}
+                >
+                  {isSubmittingTask ? t('Scheduling Task...') : t('Assign Task')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL 2: LOG TO PLOT HISTORY ================= */}
+      {isPlotModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 90,
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '460px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={18} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                  {t('Log to Plot History')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPlotModalOpen(false)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
+              {t('Stamp this diagnostic record permanently on the field timeline to track seasonal disease patterns.')}
+            </p>
+
+            {plotFeedback && (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                marginBottom: '16px',
+                backgroundColor: plotFeedback.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                color: plotFeedback.type === 'success' ? '#166534' : '#991b1b',
+                border: `1px solid ${plotFeedback.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+              }}>
+                {plotFeedback.message}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePlotLink} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  {t('Farm')}
+                </label>
+                <select
+                  value={plotFarmId}
+                  onChange={(e) => setPlotFarmId(e.target.value ? Number(e.target.value) : '')}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    backgroundColor: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="">{t('Select Farm...')}</option>
+                  {taskOptions.farms.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  {t('Target Field / Plot')}
+                </label>
+                <select
+                  value={plotFieldId}
+                  onChange={(e) => setPlotFieldId(e.target.value ? Number(e.target.value) : '')}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    backgroundColor: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="">{t('Select Field...')}</option>
+                  {taskOptions.fields.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsPlotModalOpen(false)}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPlot}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#0284c7',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: isSubmittingPlot ? 'not-allowed' : 'pointer',
+                    opacity: isSubmittingPlot ? 0.7 : 1
+                  }}
+                >
+                  {isSubmittingPlot ? t('Linking...') : t('Save to Plot History')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating / Drawer Chat (Preserved as requested) */}
       <DiseaseAskMoreChat
         open={chatOpen}
         onClose={() => setChatOpen(false)}
