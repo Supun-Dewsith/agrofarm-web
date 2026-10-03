@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchWithAuth } from '~/utils/auth';
 import { Search, Plus, Phone, Mail, MoreVertical } from 'lucide-react';
+import { data, useNavigate } from 'react-router';
 
 interface Worker {
   id: number;
@@ -27,6 +28,7 @@ export default function FarmerManagement() {
   const [farmError, setFarmError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFarm, setSelectedFarm] = useState('all');
+  const navigate = useNavigate();
 
   // Fetch workers
   useEffect(() => {
@@ -106,7 +108,9 @@ export default function FarmerManagement() {
             <p className="text-sm text-gray-600 mt-0.5">Manage and track all registered farmers</p>
           </div>
 
-          <button className="inline-flex items-center justify-center gap-2 bg-[#2A471C] hover:bg-[#203714] text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer">
+          <button 
+          onClick={() => navigate("/home/register-users")}
+          className="inline-flex items-center justify-center gap-2 bg-[#2A471C] hover:bg-[#203714] text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer">
             <Plus className="w-4 h-4" />
             Add Farmer
           </button>
