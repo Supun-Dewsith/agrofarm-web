@@ -215,7 +215,7 @@ export default function FarmerManagement() {
             className="inline-flex items-center justify-center gap-2 bg-[#2A471C] hover:bg-[#203714] text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Add Farmer
+            Add Worker
           </button>
 
         </div>
