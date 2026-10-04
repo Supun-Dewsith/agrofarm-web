@@ -860,6 +860,15 @@ export default function DashboardPage() {
 
   const totalExpenseCategoryAmount = (expenseBreakdown || []).reduce((acc, curr) => acc + curr.amount, 0);
 
+  const formatStatChange = (change: string) => {
+    if (!change) return "";
+    const match = change.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
+    if (match) {
+      return `${match[1]} ${t(match[2])}`;
+    }
+    return t(change);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-7 mx-auto text-slate-800">
       {/* 2. Official Central Bank Commodity Market Prices Ticker */}
@@ -876,7 +885,7 @@ export default function DashboardPage() {
                 {t("Live Official Market Commodity Prices (LKR/kg)")}
               </span>
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
-                CBSL Benchmark
+                {t("CBSL Benchmark")}
               </span>
             </div>
             <Link
@@ -902,7 +911,7 @@ export default function DashboardPage() {
                   <span className="text-base font-extrabold text-emerald-700">
                     LKR {item.priceLkrPerKg}
                   </span>
-                  <span className="text-[10px] font-medium text-slate-500">/ kg</span>
+                  <span className="text-[10px] font-medium text-slate-500">{t("/ kg")}</span>
                 </div>
               </div>
             ))}
@@ -943,7 +952,7 @@ export default function DashboardPage() {
                       : "bg-rose-50 text-rose-700 border border-rose-100"
                       }`}
                   >
-                    {stat.change}
+                    {formatStatChange(stat.change)}
                   </span>
                 </div>
               </div>
@@ -1112,7 +1121,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-center text-xs">
                           <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                            <span className="font-medium text-slate-700">{stage.stage}</span>
+                            <span className="font-medium text-slate-700">{t(stage.stage)}</span>
                           </div>
                           <span className="font-bold text-slate-800">{stage.count} {t("crops")} ({stage.percentage}%)</span>
                         </div>
@@ -1166,11 +1175,11 @@ export default function DashboardPage() {
                     >
                       <div className="flex justify-between items-start mb-1.5">
                         <div>
-                          <h5 className="font-bold text-slate-800">{item.cropName}</h5>
+                          <h5 className="font-bold text-slate-800">{t(item.cropName)}</h5>
                           <span className="text-[10px] text-slate-400">{item.variety} • {item.farmName}</span>
                         </div>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                          {item.daysRemaining > 0 ? `${item.daysRemaining} days` : t("Ready")}
+                          {item.daysRemaining > 0 ? `${item.daysRemaining} ${t("days")}` : t("Ready")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1244,7 +1253,7 @@ export default function DashboardPage() {
                                     {activeData?.value ?? 0}%
                                   </tspan>
                                   <tspan x={cx} dy="1.6em" fontSize="10" fontWeight="600" fill="#64748b">
-                                    {(activeData?.name || "STATUS").toUpperCase()}
+                                    {t(activeData?.name || "STATUS").toUpperCase()}
                                   </tspan>
                                 </text>
                               );
@@ -1342,7 +1351,7 @@ export default function DashboardPage() {
                                     {active ? `${active.percentage}%` : "100%"}
                                   </tspan>
                                   <tspan x={cx} dy="1.6em" fontSize="9" fontWeight="600" fill="#64748b">
-                                    {active ? active.category.slice(0, 10).toUpperCase() : "EXPENSE"}
+                                    {active ? t(active.category).slice(0, 10).toUpperCase() : t("EXPENSE")}
                                   </tspan>
                                 </text>
                               );
@@ -1363,7 +1372,7 @@ export default function DashboardPage() {
                       >
                         <div className="flex items-center gap-2 truncate pr-2">
                           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                          <span className="text-slate-700 truncate">{item.category}</span>
+                          <span className="text-slate-700 truncate">{t(item.category)}</span>
                         </div>
                         <span className="font-bold text-slate-800 shrink-0">LKR {item.amount.toLocaleString()}</span>
                       </div>
@@ -1566,10 +1575,10 @@ export default function DashboardPage() {
                     >
                       <div className="truncate pr-2">
                         <h5 className="font-bold text-slate-800 truncate">{item.name}</h5>
-                        <span className="text-[10px] text-slate-400">{item.category} • {item.farmName}</span>
+                        <span className="text-[10px] text-slate-400">{t(item.category)} • {item.farmName}</span>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="font-bold text-orange-700">{item.quantity} {item.unit}</span>
+                        <span className="font-bold text-orange-700">{item.quantity} {t(item.unit)}</span>
                         <span className="text-[10px] text-slate-400 block">{t("Alert")}: {item.alertLimit}</span>
                       </div>
                     </div>
@@ -1588,7 +1597,7 @@ export default function DashboardPage() {
                   <span className="text-slate-400 text-[10px] font-semibold uppercase">{t("Cultivated Land Area")}</span>
                   <span className="font-bold text-emerald-700">
                     {landUtilization && landUtilization.totalAreaAcres > 0
-                      ? `${landUtilization.totalAreaAcres} Acres (${landUtilization.totalFields} ${t("fields")})`
+                      ? `${landUtilization.totalAreaAcres} ${t("Acres")} (${landUtilization.totalFields} ${t("fields")})`
                       : t("0 Acres Registered")}
                   </span>
                 </div>
@@ -1639,8 +1648,8 @@ export default function DashboardPage() {
                       className="p-3 rounded-2xl bg-rose-50/50 border border-rose-100/60 flex items-center justify-between text-xs"
                     >
                       <div>
-                        <h5 className="font-bold text-slate-800">{pathogen.diseaseName}</h5>
-                        <span className="text-[10px] text-slate-400">{t("Plant")}: {pathogen.plantName}</span>
+                        <h5 className="font-bold text-slate-800">{t(pathogen.diseaseName)}</h5>
+                        <span className="text-[10px] text-slate-400">{t("Plant")}: {t(pathogen.plantName)}</span>
                       </div>
                       <div className="text-right">
                         <span className="font-bold text-rose-700">{pathogen.detectionCount} {t("Incidents")}</span>

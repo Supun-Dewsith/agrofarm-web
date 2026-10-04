@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   CircleMarker,
@@ -82,16 +83,16 @@ function PointSequence({ points, onChange }: {
   points: MapPoint[];
   onChange: (points: MapPoint[]) => void;
 }) {
+  const { t } = useTranslation();
   if (points.length === 0) return null;
   return (
     <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4">
-      <p className="font-bold text-slate-900">Boundary point order</p>
+      <p className="font-bold text-slate-900">{t("Boundary point order")}</p>
       <p className="mt-1 text-sm text-slate-700">
-        Points connect in this order. Use the arrows to correct the order after selecting points.
-        With 3 or more points, the last point connects back to point 1.
+        {t("Points connect in this order. Use the arrows to correct the order after selecting points. With 3 or more points, the last point connects back to point 1.")}
       </p>
       {points.length >= 3 && !boundaryIsSimple(points) && (
-        <p role="alert" className="mt-2 font-semibold text-red-700">Boundary lines overlap or the shape has no area. Adjust the point order before saving.</p>
+        <p role="alert" className="mt-2 font-semibold text-red-700">{t("Boundary lines overlap or the shape has no area. Adjust the point order before saving.")}</p>
       )}
       <button
         type="button"
@@ -99,17 +100,17 @@ function PointSequence({ points, onChange }: {
         disabled={points.length < 3}
         className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        ↻ Auto arrange points
+        ↻ {t("Auto arrange points")}
       </button>
       <ol className="mt-3 max-h-60 space-y-2 overflow-y-auto">
         {points.map((point, index) => (
           <li key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-100 p-2 text-sm text-slate-900">
             <span><strong>{index + 1}.</strong> {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)}</span>
             <span className="flex gap-2">
-              <button type="button" aria-label={`Move point ${index + 1} earlier`}
+              <button type="button" aria-label={`${t("Move point")} ${index + 1} ${t("earlier")}`}
                 disabled={index === 0} onClick={() => onChange(moveBoundaryPoint(points, index, -1))}
                 className="rounded border border-slate-400 bg-white px-3 py-1 font-bold disabled:opacity-30">↑</button>
-              <button type="button" aria-label={`Move point ${index + 1} later`}
+              <button type="button" aria-label={`${t("Move point")} ${index + 1} ${t("later")}`}
                 disabled={index === points.length - 1} onClick={() => onChange(moveBoundaryPoint(points, index, 1))}
                 className="rounded border border-slate-400 bg-white px-3 py-1 font-bold disabled:opacity-30">↓</button>
             </span>
@@ -717,6 +718,7 @@ function isPolygonInsidePolygon(
 ========================================================= */
 
 export default function FarmManagement() {
+  const { t } = useTranslation();
   const { canManageFarms, canCreateFields, canManageFields } =
     farmPermissions(getAuthData()?.role);
 
@@ -788,7 +790,7 @@ export default function FarmManagement() {
   const chooseAddress = (match: AddressMatch) => {
     setFarmMapCenter([match.latitude, match.longitude]);
     setFarmMapZoom(16);
-    setAddressMessage(`Map moved to ${match.label}. Check the location before drawing the boundary.`);
+    setAddressMessage(t("Map moved to {{label}}. Check the location before drawing the boundary.", { label: match.label }));
     setAddressMatches([]);
   };
 
@@ -806,11 +808,11 @@ export default function FarmManagement() {
       });
       if (!response.ok) {
         throw new Error(response.status === 429
-          ? "Please wait a moment before searching again."
-          : "Address search is unavailable. Try again or select the location manually on the map.");
+          ? t("Please wait a moment before searching again.")
+          : t("Address search is unavailable. Try again or select the location manually on the map."));
       }
       const data: unknown = await response.json();
-      if (!Array.isArray(data)) throw new Error("Invalid address search response.");
+      if (!Array.isArray(data)) throw new Error(t("Invalid address search response."));
       const matches = data.filter((item): item is AddressMatch =>
         item && typeof item.label === "string" && typeof item.latitude === "number"
         && typeof item.longitude === "number" && Number.isFinite(item.latitude)
@@ -819,10 +821,10 @@ export default function FarmManagement() {
       if (matches.length === 1) chooseAddress(matches[0]);
       else if (matches.length > 1) {
         setAddressMatches(matches);
-        setAddressMessage("Choose the matching location below.");
-      } else setAddressMessage("No matching location found. Try the nearest town or select the location manually.");
+        setAddressMessage(t("Choose the matching location below."));
+      } else setAddressMessage(t("No matching location found. Try the nearest town or select the location manually."));
     } catch (error) {
-      if (!controller.signal.aborted) setAddressMessage(error instanceof Error ? error.message : "Address search failed.");
+      if (!controller.signal.aborted) setAddressMessage(error instanceof Error ? error.message : t("Address search failed."));
     } finally {
       if (addressAbort.current === controller) {
         addressAbort.current = null;
@@ -915,7 +917,7 @@ export default function FarmManagement() {
 
       if (!response.ok) {
         throw new Error(
-          `Failed to load farms (${response.status})`
+          `${t("Failed to load farms")} (${response.status})`
         );
       }
 
@@ -929,7 +931,7 @@ export default function FarmManagement() {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to load farms"
+          : t("Failed to load farms")
       );
     } finally {
       setLoadingFarms(false);
@@ -953,7 +955,7 @@ export default function FarmManagement() {
 
       if (!response.ok) {
         throw new Error(
-          `Failed to load fields (${response.status})`
+          `${t("Failed to load fields")} (${response.status})`
         );
       }
 
@@ -967,7 +969,7 @@ export default function FarmManagement() {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to load fields"
+          : t("Failed to load fields")
       );
     } finally {
       setLoadingFields(false);
@@ -1064,7 +1066,7 @@ export default function FarmManagement() {
         (farm) =>
           farm.id === farmId
       )?.farmName ??
-      `Farm #${farmId}`
+      `${t("Farm")} #${farmId}`
     );
   };
 
@@ -1107,7 +1109,7 @@ export default function FarmManagement() {
     );
 
     setFarmMapMessage(
-      "Click the map to select the real farm boundary. Minimum 3 points."
+      t("Click the map to select the real farm boundary. Minimum 3 points.")
     );
 
     setShowFarmModal(true);
@@ -1167,8 +1169,8 @@ export default function FarmManagement() {
 
     setFarmMapMessage(
       points.length >= 3
-        ? "Existing farm boundary loaded. Remove Last Point or Clear All Points to redraw."
-        : "Select the farm boundary on the map. Minimum 3 points."
+        ? t("Existing farm boundary loaded. Remove Last Point or Clear All Points to redraw.")
+        : t("Select the farm boundary on the map. Minimum 3 points.")
     );
 
     setShowFarmModal(true);
@@ -1189,20 +1191,10 @@ export default function FarmManagement() {
         ];
 
         setFarmMapMessage(
-          `Point ${
-            updated.length
-          } added. ${
+          `${t("Point")} ${updated.length} ${t("added")}. ${
             updated.length >= 3
-              ? "Boundary is ready. You can create the farm."
-              : `Add ${
-                  3 - updated.length
-                } more point${
-                  3 -
-                    updated.length ===
-                  1
-                    ? ""
-                    : "s"
-                }.`
+              ? t("Boundary is ready. You can create the farm.")
+              : `${t("Add")} ${3 - updated.length} ${t("more points")}.`
           }`
         );
 
@@ -1233,17 +1225,9 @@ export default function FarmManagement() {
             );
 
           setFarmMapMessage(
-            updated.length ===
-              0
-              ? "All farm points removed. Click the map to add points."
-              : `Last point removed. ${
-                  updated.length
-                } point${
-                  updated.length ===
-                  1
-                    ? ""
-                    : "s"
-                } remaining.`
+            updated.length === 0
+              ? t("All farm points removed. Click the map to add points.")
+              : `${t("Last point removed.")} ${updated.length} ${t("points remaining.")}`
           );
 
           return updated;
@@ -1259,7 +1243,7 @@ export default function FarmManagement() {
     setFarmPoints([]);
 
     setFarmMapMessage(
-      "Farm boundary cleared. Click the map to draw a new boundary."
+      t("Farm boundary cleared. Click the map to draw a new boundary.")
     );
   };
 
@@ -1273,7 +1257,7 @@ export default function FarmManagement() {
     e.preventDefault();
       if (!canManageFarms) return;
       if (!boundaryIsSimple(farmPoints)) {
-        alert("Select at least 3 distinct boundary points in perimeter order without crossing lines.");
+        alert(t("Select at least 3 distinct boundary points in perimeter order without crossing lines."));
         return;
       }
 
@@ -1282,14 +1266,14 @@ export default function FarmManagement() {
       !farmForm.farmAddress.trim()
     ) {
       alert(
-        "Please fill all farm details."
+        t("Please fill all farm details.")
       );
       return;
     }
 
     if (farmPoints.length < 3) {
       alert(
-        "Please select at least 3 points on the map to create the farm boundary."
+        t("Please select at least 3 points on the map to create the farm boundary.")
       );
       return;
     }
@@ -1350,11 +1334,7 @@ export default function FarmManagement() {
 
         throw new Error(
           message ||
-            `Failed to ${
-              isCreating
-                ? "create"
-                : "update"
-            } farm`
+            (isCreating ? t("Failed to create farm") : t("Failed to update farm"))
         );
       }
 
@@ -1375,8 +1355,8 @@ export default function FarmManagement() {
 
       alert(
         isCreating
-          ? "Farm created successfully."
-          : "Farm updated successfully."
+          ? t("Farm created successfully.")
+          : t("Farm updated successfully.")
       );
     } catch (err) {
       console.error(err);
@@ -1384,7 +1364,7 @@ export default function FarmManagement() {
       alert(
         err instanceof Error
           ? err.message
-          : "Failed to save farm"
+          : t("Failed to save farm")
       );
     } finally {
       setSavingFarm(false);
@@ -1409,14 +1389,14 @@ export default function FarmManagement() {
 
       if (hasFields) {
         alert(
-          "This farm has fields. Please delete its fields first."
+          t("This farm has fields. Please delete its fields first.")
         );
         return;
       }
 
       if (
         !window.confirm(
-          `Are you sure you want to delete "${farm.farmName}"?`
+          t("Are you sure you want to delete \"{{name}}\"?", { name: farm.farmName })
         )
       ) {
         return;
@@ -1438,7 +1418,7 @@ export default function FarmManagement() {
 
           throw new Error(
             message ||
-              "Failed to delete farm"
+              t("Failed to delete farm")
           );
         }
 
@@ -1458,7 +1438,7 @@ export default function FarmManagement() {
         alert(
           err instanceof Error
             ? err.message
-            : "Failed to delete farm"
+            : t("Failed to delete farm")
         );
       }
     };
@@ -1495,7 +1475,7 @@ export default function FarmManagement() {
 
     if (id === null || id === undefined) {
       alert(
-        "Please select a farm first."
+        t("Please select a farm first.")
       );
       return;
     }
@@ -1508,7 +1488,7 @@ export default function FarmManagement() {
 
     if (!farm) {
       alert(
-        "Farm not found."
+        t("Farm not found.")
       );
       return;
     }
@@ -1522,7 +1502,7 @@ export default function FarmManagement() {
       farmBoundary.length < 3
     ) {
       alert(
-        "This farm does not have a valid boundary. Please select the farm boundary first."
+        t("This farm does not have a valid boundary. Please select the farm boundary first.")
       );
       return;
     }
@@ -1553,7 +1533,7 @@ export default function FarmManagement() {
     ]);
 
     setFieldMapMessage(
-      "Click only inside the green farm boundary. Minimum 3 points."
+      t("Click only inside the green farm boundary. Minimum 3 points.")
     );
 
     setShowFieldModal(true);
@@ -1639,10 +1619,9 @@ export default function FarmManagement() {
     }
 
     setFieldMapMessage(
-      fieldBoundary.length >=
-        3
-        ? "Existing field boundary loaded. Remove Last Point or Clear All Points to redraw."
-        : "Select the field boundary inside the green farm boundary."
+      fieldBoundary.length >= 3
+        ? t("Existing field boundary loaded. Remove Last Point or Clear All Points to redraw.")
+        : t("Select the field boundary inside the green farm boundary.")
     );
 
     setShowFieldModal(true);
@@ -1669,7 +1648,7 @@ export default function FarmManagement() {
       farmPoints.length < 3
     ) {
       setFieldMapMessage(
-        "❌ Farm boundary is not available."
+        t("❌ Farm boundary is not available.")
       );
       return;
     }
@@ -1681,7 +1660,7 @@ export default function FarmManagement() {
       )
     ) {
       setFieldMapMessage(
-        "❌ You cannot select this point. It is outside the farm boundary."
+        t("❌ You cannot select this point. It is outside the farm boundary.")
       );
       return;
     }
@@ -1694,20 +1673,10 @@ export default function FarmManagement() {
         ];
 
         setFieldMapMessage(
-          `Point ${
-            updated.length
-          } added inside the farm. ${
+          `${t("Point")} ${updated.length} ${t("added inside the farm.")} ${
             updated.length >= 3
-              ? "Field boundary is ready. You can create the field."
-              : `Add ${
-                  3 - updated.length
-                } more point${
-                  3 -
-                    updated.length ===
-                  1
-                    ? ""
-                    : "s"
-                }.`
+              ? t("Field boundary is ready. You can create the field.")
+              : `${t("Add")} ${3 - updated.length} ${t("more points")}.`
           }`
         );
 
@@ -1738,17 +1707,9 @@ export default function FarmManagement() {
             );
 
           setFieldMapMessage(
-            updated.length ===
-              0
-              ? "All field points removed. Click inside the green farm boundary to add points."
-              : `Last point removed. ${
-                  updated.length
-                } point${
-                  updated.length ===
-                  1
-                    ? ""
-                    : "s"
-                } remaining.`
+            updated.length === 0
+              ? t("All field points removed. Click inside the green farm boundary to add points.")
+              : `${t("Last point removed.")} ${updated.length} ${t("points remaining.")}`
           );
 
           return updated;
@@ -1764,7 +1725,7 @@ export default function FarmManagement() {
     setFieldPoints([]);
 
     setFieldMapMessage(
-      "Field boundary cleared. Click inside the green farm area to draw a new field."
+      t("Field boundary cleared. Click inside the green farm area to draw a new field.")
     );
   };
 
@@ -1779,7 +1740,7 @@ export default function FarmManagement() {
       e.preventDefault();
       if (editingFieldId === null ? !canCreateFields : !canManageFields) return;
       if (!boundaryIsSimple(fieldPoints)) {
-        alert("Select at least 3 distinct boundary points in perimeter order without crossing lines.");
+        alert(t("Select at least 3 distinct boundary points in perimeter order without crossing lines."));
         return;
       }
 
@@ -1789,7 +1750,7 @@ export default function FarmManagement() {
         !fieldForm.fieldSize
       ) {
         alert(
-          "Please fill all field details."
+          t("Please fill all field details.")
         );
         return;
       }
@@ -1798,7 +1759,7 @@ export default function FarmManagement() {
         fieldPoints.length < 3
       ) {
         alert(
-          "Please select at least 3 field boundary points."
+          t("Please select at least 3 field boundary points.")
         );
         return;
       }
@@ -1817,7 +1778,7 @@ export default function FarmManagement() {
         farmPoints.length < 3
       ) {
         alert(
-          "Farm boundary is invalid."
+          t("Farm boundary is invalid.")
         );
         return;
       }
@@ -1829,11 +1790,11 @@ export default function FarmManagement() {
         )
       ) {
         setFieldMapMessage(
-          "❌ Field boundary must be completely inside the farm boundary."
+          t("❌ Field boundary must be completely inside the farm boundary.")
         );
 
         alert(
-          "The complete field boundary must stay inside the farm boundary."
+          t("The complete field boundary must stay inside the farm boundary.")
         );
 
         return;
@@ -1902,11 +1863,7 @@ export default function FarmManagement() {
 
           throw new Error(
             message ||
-              `Failed to ${
-                isCreating
-                  ? "create"
-                  : "update"
-              } field`
+              (isCreating ? t("Failed to create field") : t("Failed to update field"))
           );
         }
 
@@ -1929,8 +1886,8 @@ export default function FarmManagement() {
 
         alert(
           isCreating
-            ? "Field created successfully."
-            : "Field updated successfully."
+            ? t("Field created successfully.")
+            : t("Field updated successfully.")
         );
       } catch (err) {
         console.error(err);
@@ -1938,7 +1895,7 @@ export default function FarmManagement() {
         alert(
           err instanceof Error
             ? err.message
-            : "Failed to save field"
+            : t("Failed to save field")
         );
       } finally {
         setSavingField(false);
@@ -1956,7 +1913,7 @@ export default function FarmManagement() {
     if (!canManageFields) return;
       if (
         !window.confirm(
-          `Are you sure you want to delete "${field.fieldName}"?`
+          t("Are you sure you want to delete \"{{name}}\"?", { name: field.fieldName })
         )
       ) {
         return;
@@ -1978,7 +1935,7 @@ export default function FarmManagement() {
 
           throw new Error(
             message ||
-              "Failed to delete field"
+              t("Failed to delete field")
           );
         }
 
@@ -1989,7 +1946,7 @@ export default function FarmManagement() {
         alert(
           err instanceof Error
             ? err.message
-            : "Failed to delete field"
+            : t("Failed to delete field")
         );
       }
     };
@@ -2008,7 +1965,7 @@ export default function FarmManagement() {
 
     if (points.length < 3) {
       alert(
-        "This farm does not have a valid saved boundary."
+        t("This farm does not have a valid saved boundary.")
       );
       return;
     }
@@ -2052,7 +2009,7 @@ export default function FarmManagement() {
       fieldPoints.length < 3
     ) {
       alert(
-        "This field does not have a valid saved boundary."
+        t("This field does not have a valid saved boundary.")
       );
       return;
     }
@@ -2116,11 +2073,11 @@ export default function FarmManagement() {
 
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Farm Management
+            {t("Farm Management")}
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-            {canManageFarms ? "Manage all farms and fields with real map boundaries" : canCreateFields ? "View your assigned farms and manage their fields" : "View your assigned farms and their fields"}
+            {canManageFarms ? t("Manage all farms and fields with real map boundaries") : canCreateFields ? t("View your assigned farms and manage their fields") : t("View your assigned farms and their fields")}
           </p>
         </div>
 
@@ -2132,7 +2089,7 @@ export default function FarmManagement() {
             }
             className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl hover:shadow-emerald-600/25 focus:outline-none focus:ring-4 focus:ring-emerald-100"
           >
-            + Register Farm
+            + {t("Register Farm")}
           </button>)}
 
           {canCreateFields && (<button
@@ -2144,7 +2101,7 @@ export default function FarmManagement() {
             }
             className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
           >
-            + Register Field
+            + {t("Register Field")}
           </button>)}
 
         </div>
@@ -2167,7 +2124,7 @@ export default function FarmManagement() {
       <div className="mb-7 grid grid-cols-1 gap-4 md:grid-cols-3">
 
         <StatCard
-          title="Total Farms"
+          title={t("Total Farms")}
           value={
             totalFarms
           }
@@ -2175,7 +2132,7 @@ export default function FarmManagement() {
         />
 
         <StatCard
-          title="Total Fields"
+          title={t("Total Fields")}
           value={
             totalFields
           }
@@ -2183,7 +2140,7 @@ export default function FarmManagement() {
         />
 
         <StatCard
-          title="Selected Farm Fields"
+          title={t("Selected Farm Fields")}
           value={
             selectedFarmFields.length
           }
@@ -2221,7 +2178,7 @@ export default function FarmManagement() {
                   : "text-slate-500 hover:bg-white/70 hover:text-slate-700"
               }`}
             >
-              🌾 Farms
+              🌾 {t("Farms")}
             </button>
 
             <button
@@ -2239,7 +2196,7 @@ export default function FarmManagement() {
                   : "text-slate-500 hover:bg-white/70 hover:text-slate-700"
               }`}
             >
-              🌱 Fields
+              🌱 {t("Fields")}
             </button>
 
           </div>
@@ -2249,8 +2206,8 @@ export default function FarmManagement() {
             placeholder={
               activeTab ===
               "farms"
-                ? "Search farms..."
-                : "Search fields..."
+                ? t("Search farms...")
+                : t("Search fields...")
             }
             value={search}
             onChange={(e) =>
@@ -2274,12 +2231,12 @@ export default function FarmManagement() {
         <div>
 
           {loadingFarms ? (
-            <LoadingState text="Loading farms..." />
+            <LoadingState text={t("Loading farms...")} />
           ) : filteredFarms.length ===
             0 ? (
             <EmptyState
-              title="No farms found"
-              description={canManageFarms ? "Register your first farm." : "No farms are assigned to your account. Contact an administrator."}
+              title={t("No farms found")}
+              description={canManageFarms ? t("Register your first farm.") : t("No farms are assigned to your account. Contact an administrator.")}
             />
           ) : (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -2338,19 +2295,19 @@ export default function FarmManagement() {
                         <div className="grid grid-cols-2 gap-3">
 
                           <InfoBox
-                            label="Fields"
+                            label={t("Fields")}
                             value={String(
                               fieldCount
                             )}
                           />
 
                           <InfoBox
-                            label="Boundary"
+                            label={t("Boundary")}
                             value={
                               farmPoints.length >=
                               3
-                                ? "Saved"
-                                : "Missing"
+                                ? t("Saved")
+                                : t("Missing")
                             }
                           />
 
@@ -2359,7 +2316,7 @@ export default function FarmManagement() {
                         <div className="mt-3 grid grid-cols-2 gap-3">
 
                           <InfoBox
-                            label="Latitude"
+                            label={t("Latitude")}
                             value={Number(
                               farm.latitude
                             ).toFixed(
@@ -2368,7 +2325,7 @@ export default function FarmManagement() {
                           />
 
                           <InfoBox
-                            label="Longitude"
+                            label={t("Longitude")}
                             value={Number(
                               farm.longtitude
                             ).toFixed(
@@ -2392,7 +2349,7 @@ export default function FarmManagement() {
                           }
                           className="mt-4 w-full rounded-xl border border-sky-100 bg-sky-50 px-3 py-2.5 text-sm font-bold text-sky-700 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          🗺️ View Saved Boundary
+                          🗺️ {t("View Saved Boundary")}
                         </button>
 
                         {/* EDIT */}
@@ -2405,7 +2362,7 @@ export default function FarmManagement() {
                           }
                           className="mt-2 w-full rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100"
                         >
-                          ✏️ Edit Farm Boundary
+                          ✏️ {t("Edit Farm Boundary")}
                         </button>)}
 
                         {/* VIEW FIELDS */}
@@ -2418,7 +2375,7 @@ export default function FarmManagement() {
                           }
                           className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50"
                         >
-                          🌱 View Fields
+                          🌱 {t("View Fields")}
                         </button>
 
                         {/* ADD FIELD */}
@@ -2435,7 +2392,7 @@ export default function FarmManagement() {
                           }
                           className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          + Add Field
+                          + {t("Add Field")}
                         </button>)}
 
                         {/* ACTIONS */}
@@ -2450,7 +2407,7 @@ export default function FarmManagement() {
                             }
                             className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                           >
-                            ✏️ Edit
+                            ✏️ {t("Edit")}
                           </button>)}
 
                           {canManageFarms && (<button
@@ -2461,7 +2418,7 @@ export default function FarmManagement() {
                             }
                             className="flex-1 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-100"
                           >
-                            🗑️ Delete
+                            🗑️ {t("Delete")}
                           </button>)}
 
                         </div>
@@ -2492,7 +2449,7 @@ export default function FarmManagement() {
 
               <div>
                 <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-emerald-600">
-                  Selected Farm
+                  {t("Selected Farm")}
                 </p>
 
                 <h2 className="mt-1 text-lg font-extrabold text-emerald-900">
@@ -2502,7 +2459,7 @@ export default function FarmManagement() {
                 </h2>
 
                 <p className="text-sm leading-5 text-emerald-700">
-                  Fields can only be created inside this farm boundary.
+                  {t("Fields can only be created inside this farm boundary.")}
                 </p>
               </div>
 
@@ -2516,7 +2473,7 @@ export default function FarmManagement() {
                   }
                   className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700"
                 >
-                  + Add Field
+                  + {t("Add Field")}
                 </button>)}
 
                 <button
@@ -2528,7 +2485,7 @@ export default function FarmManagement() {
                   }}
                   className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                 >
-                  Show All
+                  {t("Show All")}
                 </button>
 
               </div>
@@ -2537,12 +2494,12 @@ export default function FarmManagement() {
           )}
 
           {loadingFields ? (
-            <LoadingState text="Loading fields..." />
+            <LoadingState text={t("Loading fields...")} />
           ) : filteredFields.length ===
             0 ? (
             <EmptyState
-              title="No fields found"
-              description="Select a farm and create a field inside its boundary."
+              title={t("No fields found")}
+              description={t("Select a farm and create a field inside its boundary.")}
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/60">
@@ -2556,27 +2513,27 @@ export default function FarmManagement() {
                     <tr className="border-b border-slate-200 text-left text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
 
                       <th className="px-5 py-4">
-                        Field
+                        {t("Field")}
                       </th>
 
                       <th className="px-5 py-4">
-                        Farm
+                        {t("Farm")}
                       </th>
 
                       <th className="px-5 py-4">
-                        Size
+                        {t("Size")}
                       </th>
 
                       <th className="px-5 py-4">
-                        Location
+                        {t("Location")}
                       </th>
 
                       <th className="px-5 py-4">
-                        Boundary
+                        {t("Boundary")}
                       </th>
 
                       <th className="px-5 py-4 text-right">
-                        Actions
+                        {t("Actions")}
                       </th>
 
                     </tr>
@@ -2610,7 +2567,7 @@ export default function FarmManagement() {
                               </p>
 
                               <p className="text-xs font-medium text-slate-400">
-                                ID:{" "}
+                                {t("ID")}:{" "}
                                 {
                                   field.id
                                 }
@@ -2636,7 +2593,7 @@ export default function FarmManagement() {
                             <td className="px-5 py-4 text-sm text-slate-600">
 
                               <div>
-                                Lat:{" "}
+                                {t("Lat")}:{" "}
                                 {Number(
                                   field.latitude
                                 ).toFixed(
@@ -2645,7 +2602,7 @@ export default function FarmManagement() {
                               </div>
 
                               <div>
-                                Lng:{" "}
+                                {t("Lng")}:{" "}
                                 {Number(
                                   field.longtitude
                                 ).toFixed(
@@ -2667,8 +2624,8 @@ export default function FarmManagement() {
                               >
                                 {fieldBoundary.length >=
                                 3
-                                  ? "Saved"
-                                  : "Missing"}
+                                  ? t("Saved")
+                                  : t("Missing")}
                               </span>
 
                             </td>
@@ -2687,7 +2644,7 @@ export default function FarmManagement() {
                                     fieldBoundary.length <
                                     3
                                   }
-                                  title="View saved boundary"
+                                  title={t("View saved boundary")}
                                   className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sky-700 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                   🗺️
@@ -2699,7 +2656,7 @@ export default function FarmManagement() {
                                       field
                                     )
                                   }
-                                  title="Edit field"
+                                  title={t("Edit field")}
                                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 transition hover:bg-slate-50"
                                 >
                                   ✏️
@@ -2711,7 +2668,7 @@ export default function FarmManagement() {
                                       field
                                     )
                                   }
-                                  title="Delete field"
+                                  title={t("Delete field")}
                                   className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-red-600 transition hover:bg-red-100"
                                 >
                                   🗑️
@@ -2746,8 +2703,8 @@ export default function FarmManagement() {
           title={
             editingFarmId ===
             null
-              ? "Register New Farm"
-              : "Edit Farm"
+              ? t("Register New Farm")
+              : t("Edit Farm")
           }
           wide
           onClose={() =>
@@ -2768,8 +2725,8 @@ export default function FarmManagement() {
 
 
               <Input
-                label="Farm Name"
-                placeholder="e.g. Green Valley Farm"
+                label={t("Farm Name")}
+                placeholder={t("e.g. Green Valley Farm")}
                 value={
                   farmForm.farmName
                 }
@@ -2787,8 +2744,8 @@ export default function FarmManagement() {
               />
 
               <Input
-                label="Farm Address"
-                placeholder="e.g. Gampaha"
+                label={t("Farm Address")}
+                placeholder={t("e.g. Gampaha")}
                 value={
                   farmForm.farmAddress
                 }
@@ -2811,9 +2768,9 @@ export default function FarmManagement() {
               <button type="button" onClick={findFarmAddress}
                 disabled={addressSearching || farmForm.farmAddress.trim().length < 3}
                 className="rounded-xl bg-emerald-700 px-4 py-2 font-bold text-white disabled:opacity-40">
-                {addressSearching ? "Finding address…" : "Find address on map"}
+                {addressSearching ? t("Finding address…") : t("Find address on map")}
               </button>
-              <p className="mt-2 text-sm text-slate-700">Search a Sri Lankan farm address or nearby town. Search uses OpenStreetMap.</p>
+              <p className="mt-2 text-sm text-slate-700">{t("Search a Sri Lankan farm address or nearby town. Search uses OpenStreetMap.")}</p>
               <p role="status" aria-live="polite" className="mt-2 text-sm font-semibold text-slate-900">{addressMessage}</p>
               {addressMatches.length > 0 && <ul className="mt-3 space-y-2">
                 {addressMatches.map((match, index) => <li key={`${match.latitude}-${match.longitude}-${index}`}>
@@ -2834,12 +2791,11 @@ export default function FarmManagement() {
               <div className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4 shadow-sm">
 
                 <p className="font-extrabold text-emerald-900">
-                  🗺️ Select Real Farm Boundary
+                  🗺️ {t("Select Real Farm Boundary")}
                 </p>
 
                 <p className="mt-1 text-sm leading-5 text-emerald-700">
-                  Click the actual farm boundary on the map.
-                  Minimum 3 points are required.
+                  {t("Click the actual farm boundary on the map. Minimum 3 points are required.")}
                 </p>
 
                 <p className="mt-2 text-sm font-semibold text-emerald-800">
@@ -2954,22 +2910,22 @@ export default function FarmManagement() {
                 <div className="pointer-events-none absolute left-4 top-4 z-[1000] rounded-2xl border border-white/80 bg-white/90 px-4 py-3 text-xs shadow-xl backdrop-blur">
 
                   <p className="font-bold text-green-700">
-                    FARM BOUNDARY
+                    {t("FARM BOUNDARY")}
                   </p>
 
                   <p className="text-gray-500">
-                    Click map to add points
+                    {t("Click map to add points")}
                   </p>
 
                   <p className="font-semibold text-gray-700">
-                    Points:{" "}
+                    {t("Points:")}{" "}
                     {
                       farmPoints.length
                     }
                   </p>
 
                   <p className="mt-1 text-gray-500">
-                    Required: 3+
+                    {t("Required: 3+")}
                   </p>
 
                 </div>
@@ -2985,14 +2941,14 @@ export default function FarmManagement() {
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
 
                   <InfoBox
-                    label="Selected Points"
+                    label={t("Selected Points")}
                     value={String(
                       farmPoints.length
                     )}
                   />
 
                   <InfoBox
-                    label="Latitude"
+                    label={t("Latitude")}
                     value={calculateCenter(
                       farmPoints
                     ).latitude.toFixed(
@@ -3001,7 +2957,7 @@ export default function FarmManagement() {
                   />
 
                   <InfoBox
-                    label="Longitude"
+                    label={t("Longitude")}
                     value={calculateCenter(
                       farmPoints
                     ).longitude.toFixed(
@@ -3031,7 +2987,7 @@ export default function FarmManagement() {
                   }
                   className="rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  ↩️ Remove Last Point
+                  ↩️ {t("Remove Last Point")}
                 </button>
 
                 <button
@@ -3045,7 +3001,7 @@ export default function FarmManagement() {
                   }
                   className="rounded-xl border border-red-100 bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  🧹 Clear All Points
+                  🧹 {t("Clear All Points")}
                 </button>
 
               </div>
@@ -3061,7 +3017,7 @@ export default function FarmManagement() {
                   }
                   className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
 
                 <button
@@ -3074,11 +3030,11 @@ export default function FarmManagement() {
                   className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {savingFarm
-                    ? "Saving..."
+                    ? t("Saving...")
                     : editingFarmId ===
                         null
-                    ? "Create Farm"
-                    : "Update Farm"}
+                    ? t("Create Farm")
+                    : t("Update Farm")}
                 </button>
 
               </div>
@@ -3087,7 +3043,7 @@ export default function FarmManagement() {
 
             {farmPoints.length < 3 && (
               <p className="text-right text-xs font-semibold text-red-500">
-                Select at least 3 points to enable Create/Update.
+                {t("Select at least 3 points to enable Create/Update.")}
               </p>
             )}
 
@@ -3105,8 +3061,8 @@ export default function FarmManagement() {
           title={
             editingFieldId ===
             null
-              ? "Register New Field"
-              : "Edit Field"
+              ? t("Register New Field")
+              : t("Edit Field")
           }
           wide
           onClose={() =>
@@ -3128,7 +3084,7 @@ export default function FarmManagement() {
             <div>
 
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Farm
+                {t("Farm")}
               </label>
 
               <select
@@ -3192,7 +3148,7 @@ export default function FarmManagement() {
               >
 
                 <option value="">
-                  Select farm
+                  {t("Select farm")}
                 </option>
 
                 {farms.map(
@@ -3238,7 +3194,7 @@ export default function FarmManagement() {
                   <div className="rounded-lg border border-green-200 bg-green-50 p-4">
 
                     <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-emerald-600">
-                      Selected Farm
+                      {t("Selected Farm")}
                     </p>
 
                     <p className="font-bold text-green-800">
@@ -3248,15 +3204,15 @@ export default function FarmManagement() {
                     </p>
 
                     <p className="mt-1 text-sm leading-5 text-emerald-700">
-                      🟢 Green polygon = Farm boundary
+                      🟢 {t("Green polygon = Farm boundary")}
                     </p>
 
                     <p className="text-sm leading-5 text-emerald-700">
-                      Field points must stay inside the green area.
+                      {t("Field points must stay inside the green area.")}
                     </p>
 
                     <p className="mt-1 text-xs text-green-600">
-                      Farm boundary points:{" "}
+                      {t("Farm boundary points:")}{" "}
                       {
                         points.length
                       }
@@ -3271,8 +3227,8 @@ export default function FarmManagement() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 
               <Input
-                label="Field Name"
-                placeholder="e.g. Field A"
+                label={t("Field Name")}
+                placeholder={t("e.g. Field A")}
                 value={
                   fieldForm.fieldName
                 }
@@ -3290,9 +3246,9 @@ export default function FarmManagement() {
               />
 
               <Input
-                label="Field Size"
+                label={t("Field Size")}
                 type="number"
-                placeholder="e.g. 5"
+                placeholder={t("e.g. 5")}
                 value={
                   fieldForm.fieldSize
                 }
@@ -3312,7 +3268,7 @@ export default function FarmManagement() {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Size Unit
+                  {t("Size Unit")}
                 </label>
 
                 <select
@@ -3359,12 +3315,11 @@ export default function FarmManagement() {
               <div className="mb-3 rounded-2xl border border-sky-100 bg-sky-50/80 p-4 shadow-sm">
 
                 <p className="font-extrabold text-sky-900">
-                  🗺️ Select Field Boundary
+                  🗺️ {t("Select Field Boundary")}
                 </p>
 
                 <p className="mt-1 text-sm leading-5 text-sky-700">
-                  Click points inside the green farm boundary.
-                  Minimum 3 points are required.
+                  {t("Click points inside the green farm boundary. Minimum 3 points are required.")}
                 </p>
 
                 <p className="mt-1 text-sm font-semibold text-sky-800">
@@ -3544,22 +3499,22 @@ export default function FarmManagement() {
                 <div className="pointer-events-none absolute left-4 top-4 z-[1000] rounded-2xl border border-white/80 bg-white/90 px-4 py-3 text-xs shadow-xl backdrop-blur">
 
                   <p className="font-bold text-green-700">
-                    🟢 FARM
+                    🟢 {t("FARM")}
                   </p>
 
                   <p className="font-bold text-blue-700">
-                    🔵 FIELD
+                    🔵 {t("FIELD")}
                   </p>
 
                   <p className="mt-1 font-semibold text-gray-700">
-                    Points:{" "}
+                    {t("Points:")}{" "}
                     {
                       fieldPoints.length
                     }
                   </p>
 
                   <p className="text-gray-500">
-                    Required: 3+
+                    {t("Required: 3+")}
                   </p>
 
                 </div>
@@ -3575,14 +3530,14 @@ export default function FarmManagement() {
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
 
                   <InfoBox
-                    label="Selected Points"
+                    label={t("Selected Points")}
                     value={String(
                       fieldPoints.length
                     )}
                   />
 
                   <InfoBox
-                    label="Latitude"
+                    label={t("Latitude")}
                     value={calculateCenter(
                       fieldPoints
                     ).latitude.toFixed(
@@ -3591,7 +3546,7 @@ export default function FarmManagement() {
                   />
 
                   <InfoBox
-                    label="Longitude"
+                    label={t("Longitude")}
                     value={calculateCenter(
                       fieldPoints
                     ).longitude.toFixed(
@@ -3621,7 +3576,7 @@ export default function FarmManagement() {
                   }
                   className="rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  ↩️ Remove Last Point
+                  ↩️ {t("Remove Last Point")}
                 </button>
 
                 <button
@@ -3635,7 +3590,7 @@ export default function FarmManagement() {
                   }
                   className="rounded-xl border border-red-100 bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  🧹 Clear All Points
+                  🧹 {t("Clear All Points")}
                 </button>
 
               </div>
@@ -3651,7 +3606,7 @@ export default function FarmManagement() {
                   }
                   className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
 
                 <button
@@ -3664,11 +3619,11 @@ export default function FarmManagement() {
                   className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {savingField
-                    ? "Saving..."
+                    ? t("Saving...")
                     : editingFieldId ===
                         null
-                    ? "Create Field"
-                    : "Update Field"}
+                    ? t("Create Field")
+                    : t("Update Field")}
                 </button>
 
               </div>
@@ -3677,7 +3632,7 @@ export default function FarmManagement() {
 
             {fieldPoints.length < 3 && (
               <p className="text-right text-xs font-semibold text-red-500">
-                Select at least 3 points to enable Create/Update.
+                {t("Select at least 3 points to enable Create/Update.")}
               </p>
             )}
 
@@ -3720,16 +3675,16 @@ export default function FarmManagement() {
               >
                 {savedMapType ===
                 "farm"
-                  ? "🌾 Saved Farm Boundary"
-                  : "🌱 Saved Field Boundary"}
+                  ? `🌾 ${t("Saved Farm Boundary")}`
+                  : `🌱 ${t("Saved Field Boundary")}`}
               </p>
 
               <p className="mt-1 text-sm text-gray-600">
-                This boundary is loaded from the API/database.
+                {t("This boundary is loaded from the API/database.")}
               </p>
 
               <p className="mt-1 text-sm font-medium text-gray-700">
-                Points:{" "}
+                {t("Points:")}{" "}
                 {
                   savedMapPoints.length
                 }
@@ -3839,12 +3794,12 @@ export default function FarmManagement() {
                 >
                   {savedMapType ===
                   "farm"
-                    ? "🌾 FARM"
-                    : "🌱 FIELD"}
+                    ? `🌾 ${t("FARM")}`
+                    : `🌱 ${t("FIELD")}`}
                 </p>
 
                 <p className="mt-1 font-semibold text-gray-700">
-                  Saved Points:{" "}
+                  {t("Saved Points:")}{" "}
                   {
                     savedMapPoints.length
                   }
@@ -3857,14 +3812,14 @@ export default function FarmManagement() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
 
               <InfoBox
-                label="Saved Points"
+                label={t("Saved Points")}
                 value={String(
                   savedMapPoints.length
                 )}
               />
 
               <InfoBox
-                label="Center Latitude"
+                label={t("Center Latitude")}
                 value={calculateCenter(
                   savedMapPoints
                 ).latitude.toFixed(
@@ -3873,7 +3828,7 @@ export default function FarmManagement() {
               />
 
               <InfoBox
-                label="Center Longitude"
+                label={t("Center Longitude")}
                 value={calculateCenter(
                   savedMapPoints
                 ).longitude.toFixed(
@@ -3892,7 +3847,7 @@ export default function FarmManagement() {
                 }
                 className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-slate-800"
               >
-                Close Map
+                {t("Close Map")}
               </button>
 
             </div>

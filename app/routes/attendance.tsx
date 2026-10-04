@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import QRCode from "qrcode";
 import {
   CalendarDays,
@@ -181,6 +182,16 @@ const statusClass = (s: string) =>
   `status status-${s.toLowerCase().replace("_", "-")}`;
 
 const prettyStatus = (s: string) => s.replaceAll("_", " ").toLowerCase();
+
+const formatStatus = (s: string, t: (k: string) => string) => {
+  const norm = (s || "").toUpperCase();
+  if (norm === "PRESENT") return t("Present");
+  if (norm === "LATE") return t("Late");
+  if (norm === "ABSENT") return t("Absent");
+  if (norm === "HALF_DAY") return t("Half Day");
+  if (norm === "LEAVE") return t("Leave");
+  return t(s.replaceAll("_", " "));
+};
 
 const metersBetween = (
   lat1: number,
@@ -700,6 +711,7 @@ const detectClientDeviceType = (): AttendanceDeviceType => {
 ========================================================= */
 
 function QrScanLanding({ token }: { token: string }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<QrAttendanceResponse | null>(null);
   const [error, setError] = useState("");
@@ -767,18 +779,15 @@ function QrScanLanding({ token }: { token: string }) {
           {isMobile ? <LocateFixed size={34} /> : <QrCode size={34} />}
         </div>
 
-        <h1>AgroFarm Attendance</h1>
+        <h1>{t("AgroFarm Attendance")}</h1>
 
         {isMobile ? (
           <p>
-            Phone/tablet attendance requires the current GPS/browser location.
-            The backend verifies that the position is inside the farm linked to
-            this attendance session.
+            {t("Phone/tablet attendance requires the current GPS/browser location. The backend verifies that the position is inside the farm linked to this attendance session.")}
           </p>
         ) : (
           <p>
-            Laptop/desktop attendance does not require device location. The QR
-            session and your farm assignment are still validated by the backend.
+            {t("Laptop/desktop attendance does not require device location. The QR session and your farm assignment are still validated by the backend.")}
           </p>
         )}
 
@@ -788,13 +797,13 @@ function QrScanLanding({ token }: { token: string }) {
             <div>
               <strong>
                 {isMobile
-                  ? "Mobile GPS + farm boundary check"
-                  : "Laptop/Desktop mode"}
+                  ? t("Mobile GPS + farm boundary check")
+                  : t("Laptop/Desktop mode")}
               </strong>
               <span>
                 {isMobile
-                  ? "Location must be available and accurate enough before attendance is sent."
-                  : "No Windows location service, Wi-Fi helper, or Google Geolocation API is required."}
+                  ? t("Location must be available and accurate enough before attendance is sent.")
+                  : t("No Windows location service, Wi-Fi helper, or Google Geolocation API is required.")}
               </span>
             </div>
           </div>
@@ -804,9 +813,9 @@ function QrScanLanding({ token }: { token: string }) {
           <div className="location-progress-card">
             <div className="progress-top">
               <div>
-                <strong>Finding your current phone location...</strong>
+                <strong>{t("Finding your current phone location...")}</strong>
                 <span>
-                  Reading {progress.sampleCount} fresh sample
+                  {t("Reading")} {progress.sampleCount} {t("fresh sample")}
                   {progress.sampleCount === 1 ? "" : "s"}
                 </span>
               </div>
@@ -815,15 +824,15 @@ function QrScanLanding({ token }: { token: string }) {
 
             <div className="progress-grid">
               <div>
-                <small>Best accuracy</small>
+                <small>{t("Best accuracy")}</small>
                 <b>
                   {progress.bestAccuracyMeters == null
-                    ? "Waiting..."
+                    ? t("Waiting...")
                     : `±${Math.round(progress.bestAccuracyMeters)} m`}
                 </b>
               </div>
               <div>
-                <small>Time remaining</small>
+                <small>{t("Time remaining")}</small>
                 <b>{progress.secondsRemaining}s</b>
               </div>
             </div>
@@ -846,7 +855,7 @@ function QrScanLanding({ token }: { token: string }) {
             <CheckCircle2 size={18} />
             <div>
               <strong>
-                Phone location captured • {captured.quality.toLowerCase()} accuracy
+                {t("Phone location captured •")} {captured.quality.toLowerCase()} {t("accuracy")}
               </strong>
               <span>
                 ±{Math.round(captured.accuracyMeters)}m • {captured.latitude.toFixed(7)}, {" "}
@@ -860,14 +869,14 @@ function QrScanLanding({ token }: { token: string }) {
           <div className={result.success ? "scan-success" : "scan-warning"}>
             <strong>{result.message}</strong>
             <span>
-              Status: {result.status ? prettyStatus(result.status) : "-"}
+              {t("Status:")} {result.status ? formatStatus(result.status, t) : "-"}
             </span>
-            <span>Check in: {time(result.checkInTime)}</span>
-            <span>Check out: {time(result.checkOutTime)}</span>
+            <span>{t("Check in:")} {time(result.checkInTime)}</span>
+            <span>{t("Check out:")} {time(result.checkOutTime)}</span>
 
             {result.accuracyMeters != null && (
               <span>
-                Captured accuracy: ±{Math.round(result.accuracyMeters)} meters
+                {t("Captured accuracy:")} ±{Math.round(result.accuracyMeters)} {t("meters")}
               </span>
             )}
 
@@ -877,7 +886,7 @@ function QrScanLanding({ token }: { token: string }) {
                 rel="noreferrer"
                 href={`https://www.google.com/maps?q=${result.latitude},${result.longitude}`}
               >
-                <MapPin size={16} /> View captured location on map
+                <MapPin size={16} /> {t("View captured location on map")}
               </a>
             )}
           </div>
@@ -886,28 +895,28 @@ function QrScanLanding({ token }: { token: string }) {
             {isMobile ? <LocateFixed size={18} /> : <QrCode size={18} />}
             {busy
               ? isMobile
-                ? "Checking phone location..."
-                : "Marking attendance..."
-              : "Mark Attendance"}
+                ? t("Checking phone location...")
+                : t("Marking attendance...")
+              : t("Mark Attendance")}
           </button>
         )}
 
         {error && (
           <div className="error-box scan-error">
-            <strong>Attendance was not sent.</strong>
+            <strong>{t("Attendance was not sent.")}</strong>
             <span>{error}</span>
           </div>
         )}
 
         {isMobile && (
           <div className="location-help">
-            <strong>Phone attendance requirements:</strong>
-            <span>1. Phone Location/GPS = ON</span>
-            <span>2. Browser Location permission = Allow</span>
-            <span>3. Open AgroFarm through HTTPS in production</span>
+            <strong>{t("Phone attendance requirements:")}</strong>
+            <span>1. {t("Phone Location/GPS = ON")}</span>
+            <span>2. {t("Browser Location permission = Allow")}</span>
+            <span>3. {t("Open AgroFarm through HTTPS in production")}</span>
             <span>
-              4. Location accuracy must be ±
-              {LOCATION_MAX_ATTENDANCE_ACCURACY_METERS}m or better
+              4. {t("Location accuracy must be ±")}
+              {LOCATION_MAX_ATTENDANCE_ACCURACY_METERS}{t("m or better")}
             </span>
           </div>
         )}
@@ -929,6 +938,7 @@ function ManualCodeAttendance({
   onMarked: () => void | Promise<void>;
   farm?: AttendanceFarm;
 }) {
+  const { t } = useTranslation();
   const [sessionCode, setSessionCode] = useState("");
   const [liveCode, setLiveCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -956,17 +966,17 @@ function ManualCodeAttendance({
 
   const markWithCode = async () => {
     if (!/^\d{4}$/.test(sessionCode)) {
-      setError("Enter the 4-digit attendance code shown under the QR.");
+      setError(t("Enter the 4-digit attendance code shown under the QR."));
       return;
     }
 
     if (!/^\d{2}$/.test(liveCode)) {
-      setError("Enter the current 2-digit live number shown under the QR.");
+      setError(t("Enter the current 2-digit live number shown under the QR."));
       return;
     }
 
     if (!farm) {
-      setError("Select your farm before marking attendance.");
+      setError(t("Select your farm before marking attendance."));
       return;
     }
 
@@ -974,7 +984,7 @@ function ManualCodeAttendance({
 
     if (isMobile && polygon.length < 3) {
       setError(
-        `${farm.farmName} does not have a valid saved boundary. Ask an ADMIN/SUPERVISOR to draw and save the farm boundary first.`
+        `${farm.farmName} ${t("does not have a valid saved boundary. Ask an ADMIN/SUPERVISOR to draw and save the farm boundary first.")}`
       );
       return;
     }
@@ -1049,22 +1059,22 @@ function ManualCodeAttendance({
           <QrCode size={22} />
         </div>
         <div>
-          <h3>Can't scan the QR?</h3>
+          <h3>{t("Can't scan the QR?")}</h3>
           <p>
-            Enter the 4-digit attendance code and current 2-digit live number.
+            {t("Enter the 4-digit attendance code and current 2-digit live number.")}
             {isMobile
-              ? " On a phone/tablet, AgroFarm also requires GPS location and checks the farm boundary."
-              : " On a laptop/desktop, location is not required."}
+              ? t(" On a phone/tablet, AgroFarm also requires GPS location and checks the farm boundary.")
+              : t(" On a laptop/desktop, location is not required.")}
           </p>
 
           {farm && isMobile && (
             <div className="boundary-ready">
               <ShieldCheck size={15} />
               <span>
-                Phone farm check: <b>{farm.farmName}</b>{" "}
+                {t("Phone farm check:")} <b>{farm.farmName}</b>{" "}
                 {parseFarmBoundary(farm.boundary).length >= 3
-                  ? "• boundary ready"
-                  : "• boundary missing"}
+                  ? t("• boundary ready")
+                  : t("• boundary missing")}
               </span>
             </div>
           )}
@@ -1073,7 +1083,7 @@ function ManualCodeAttendance({
             <div className="boundary-ready">
               <ShieldCheck size={15} />
               <span>
-                Laptop/Desktop mode • location check not required
+                {t("Laptop/Desktop mode • location check not required")}
               </span>
             </div>
           )}
@@ -1082,7 +1092,7 @@ function ManualCodeAttendance({
 
       <div className="manual-code-inputs">
         <label>
-          <span>4-digit code</span>
+          <span>{t("4-digit code")}</span>
           <input
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -1095,7 +1105,7 @@ function ManualCodeAttendance({
         </label>
 
         <label>
-          <span>Live number</span>
+          <span>{t("Live number")}</span>
           <input
             inputMode="numeric"
             placeholder="00"
@@ -1114,20 +1124,20 @@ function ManualCodeAttendance({
           {isMobile ? <LocateFixed size={17} /> : <QrCode size={17} />}
           {busy
             ? isMobile
-              ? "Checking phone location..."
-              : "Marking attendance..."
-            : "Mark Attendance"}
+              ? t("Checking phone location...")
+              : t("Marking attendance...")
+            : t("Mark Attendance")}
         </button>
       </div>
 
       {busy && isMobile && (
         <div className="manual-location-progress">
           <span>
-            GPS readings: <b>{progress.sampleCount}</b>
+            {t("GPS readings:")} <b>{progress.sampleCount}</b>
           </span>
           <span>
-            Accuracy: {progress.bestAccuracyMeters == null
-              ? "waiting for coordinates..."
+            {t("Accuracy:")} {progress.bestAccuracyMeters == null
+              ? t("waiting for coordinates...")
               : `±${Math.round(progress.bestAccuracyMeters)} m`}
           </span>
           <span>{progress.secondsRemaining}s max</span>
@@ -1144,10 +1154,10 @@ function ManualCodeAttendance({
           <div>
             <strong>
               {insideFarm === true
-                ? `Inside ${farm?.farmName ?? "farm"} boundary`
+                ? `${t("Inside")} ${farm?.farmName ?? t("farm")} ${t("boundary")}`
                 : insideFarm === false
-                  ? `Outside ${farm?.farmName ?? "farm"} boundary`
-                  : "Phone location captured"}
+                  ? `${t("Outside")} ${farm?.farmName ?? t("farm")} ${t("boundary")}`
+                  : t("Phone location captured")}
             </strong>
             <span>
               {capturedLocation.latitude.toFixed(7)}, {" "}
@@ -1159,7 +1169,7 @@ function ManualCodeAttendance({
               rel="noreferrer"
               href={`https://www.google.com/maps?q=${capturedLocation.latitude},${capturedLocation.longitude}`}
             >
-              View current location on map
+              {t("View current location on map")}
             </a>
           </div>
         </div>
@@ -1171,10 +1181,10 @@ function ManualCodeAttendance({
           <div>
             <strong>{result.message}</strong>
             <span>
-              Check in: {time(result.checkInTime)} • Check out: {time(result.checkOutTime)}
+              {t("Check in:")} {time(result.checkInTime)} • {t("Check out:")} {time(result.checkOutTime)}
             </span>
             {result.accuracyMeters != null && (
-              <span>Location accuracy: ±{Math.round(result.accuracyMeters)} m</span>
+              <span>{t("Location accuracy:")} ±{Math.round(result.accuracyMeters)} m</span>
             )}
           </div>
         </div>
@@ -1190,6 +1200,7 @@ function ManualCodeAttendance({
 ========================================================= */
 
 export default function Attendance() {
+  const { t } = useTranslation();
   const [routeReady, setRouteReady] = useState(false);
   const [scanToken, setScanToken] = useState<string | null>(null);
 
@@ -1204,7 +1215,7 @@ export default function Attendance() {
   if (!routeReady) {
     return (
       <div className="route-loading">
-        <RefreshCw className="spin" size={22} /> Loading attendance...
+        <RefreshCw className="spin" size={22} /> {t("Loading attendance...")}
         <style>{styles}</style>
       </div>
     );
@@ -1222,6 +1233,7 @@ export default function Attendance() {
 ========================================================= */
 
 function AttendanceDashboard() {
+  const { t } = useTranslation();
   const today = getActiveTimeZoneToday();
   const monthStart = `${today.slice(0, 8)}01`;
 
@@ -1285,11 +1297,11 @@ function AttendanceDashboard() {
       setDashboard(d);
       setItems(list);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load attendance.");
+      setError(e instanceof Error ? e.message : t("Unable to load attendance."));
     } finally {
       setLoading(false);
     }
-  }, [date, farmId, search]);
+  }, [date, farmId, search, t]);
 
   useEffect(() => {
     getAttendanceFarms()
@@ -1302,9 +1314,9 @@ function AttendanceDashboard() {
         }
       })
       .catch((e) =>
-        setError(e instanceof Error ? e.message : "Unable to load farms.")
+        setError(e instanceof Error ? e.message : t("Unable to load farms."))
       );
-  }, [isFarmer]);
+  }, [isFarmer, t]);
 
   useEffect(() => {
     getAttendanceWorkers(farmId, search)
@@ -1334,12 +1346,12 @@ function AttendanceDashboard() {
 
   const generateQr = async () => {
     if (!canGenerateQr) {
-      setError("Only ADMIN or SUPERVISOR users can generate attendance QR codes.");
+      setError(t("Only ADMIN or SUPERVISOR users can generate attendance QR codes."));
       return;
     }
 
     if (!farmId) {
-      setError("Select a farm first. The QR code is generated for one farm.");
+      setError(t("Select a farm first. The QR code is generated for one farm."));
       return;
     }
 
@@ -1370,7 +1382,7 @@ function AttendanceDashboard() {
       setQrExpires(qr.expiresAt);
       setQrOpen(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to generate QR.");
+      setError(e instanceof Error ? e.message : t("Unable to generate QR."));
     } finally {
       setQrBusy(false);
     }
@@ -1393,7 +1405,7 @@ function AttendanceDashboard() {
       } catch (e) {
         if (!cancelled) {
           setError(
-            e instanceof Error ? e.message : "Unable to refresh live number."
+            e instanceof Error ? e.message : t("Unable to refresh live number.")
           );
         }
       } finally {
@@ -1415,7 +1427,7 @@ function AttendanceDashboard() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [qrOpen, qrToken]);
+  }, [qrOpen, qrToken, t]);
 
   const runReport = async () => {
     try {
@@ -1423,11 +1435,11 @@ function AttendanceDashboard() {
       setError("");
 
       if (!from || !to) {
-        throw new Error("Select both From and To dates.");
+        throw new Error(t("Select both From and To dates."));
       }
 
       if (from > to) {
-        throw new Error("From date cannot be after To date.");
+        throw new Error(t("From date cannot be after To date."));
       }
 
       const [rows, sums] = await Promise.all([
@@ -1438,7 +1450,7 @@ function AttendanceDashboard() {
       setReportRows(rows);
       setSummary(sums);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to create report.");
+      setError(e instanceof Error ? e.message : t("Unable to create report."));
     } finally {
       setReportBusy(false);
     }
@@ -1508,10 +1520,10 @@ function AttendanceDashboard() {
   };
 
   const farmLabel = farmId
-    ? farms.find((farm) => farm.id === farmId)?.farmName ?? "Selected farm"
+    ? farms.find((farm) => farm.id === farmId)?.farmName ?? t("Selected farm")
     : isFarmer
-      ? "My farm"
-      : "All farms";
+      ? t("My farm")
+      : t("All farms");
 
   const otpProgress = Math.max(
     0,
@@ -1532,11 +1544,11 @@ function AttendanceDashboard() {
             </div>
 
             <div>
-              <h1>Attendance Management</h1>
+              <h1>{t("Attendance Management")}</h1>
               <p>
                 {isFarmer
-                  ? "View your attendance, precise location details and personal reports"
-                  : "Track workers, precise location check-ins and payroll-ready reports"}
+                  ? t("View your attendance, precise location details and personal reports")
+                  : t("Track workers, precise location check-ins and payroll-ready reports")}
               </p>
             </div>
           </div>
@@ -1549,7 +1561,7 @@ function AttendanceDashboard() {
                 disabled={qrBusy}
               >
                 <QrCode size={17} />
-                {qrBusy ? "Generating..." : "Generate QR"}
+                {qrBusy ? t("Generating...") : t("Generate QR")}
               </button>
             )}
 
@@ -1561,14 +1573,14 @@ function AttendanceDashboard() {
               }}
             >
               <Download size={17} />
-              Export Report
+              {t("Export Report")}
             </button>
           </div>
         </section>
 
         {error && (
           <div className="error-box">
-            <strong>Attendance notice</strong>
+            <strong>{t("Attendance notice")}</strong>
             <span>{error}</span>
           </div>
         )}
@@ -1581,8 +1593,8 @@ function AttendanceDashboard() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder={
                 isFarmer
-                  ? "Search my attendance..."
-                  : "Search worker name or email..."
+                  ? t("Search my attendance...")
+                  : t("Search worker name or email...")
               }
             />
           </div>
@@ -1595,7 +1607,7 @@ function AttendanceDashboard() {
                 setFarmId(e.target.value ? Number(e.target.value) : undefined)
               }
             >
-              <option value="">{isFarmer ? "My farms" : "All farms"}</option>
+              <option value="">{isFarmer ? t("My farms") : t("All farms")}</option>
               {farms.map((farm) => (
                 <option key={farm.id} value={farm.id}>
                   {farm.farmName}
@@ -1617,34 +1629,34 @@ function AttendanceDashboard() {
             className="refresh-btn"
             onClick={load}
             disabled={loading}
-            title="Refresh attendance"
+            title={t("Refresh attendance")}
           >
             <RefreshCw size={17} className={loading ? "spin" : ""} />
-            <span>Refresh</span>
+            <span>{t("Refresh")}</span>
           </button>
         </section>
 
         <section className="stats-grid">
           <Stat
-            label={isFarmer ? "Attendance Records" : "Total Workers"}
+            label={isFarmer ? t("Attendance Records") : t("Total Workers")}
             value={stats.total}
             icon={<UserRound />}
             kind="blue"
           />
           <Stat
-            label="Present"
+            label={t("Present")}
             value={stats.present}
             icon={<UserCheck />}
             kind="green"
           />
           <Stat
-            label="Late"
+            label={t("Late")}
             value={stats.late}
             icon={<Clock3 />}
             kind="orange"
           />
           <Stat
-            label="Absent"
+            label={t("Absent")}
             value={stats.absent}
             icon={<UserX />}
             kind="red"
@@ -1660,7 +1672,7 @@ function AttendanceDashboard() {
                 <UserCheck size={18} />
               </div>
               <div>
-                <h2>{isFarmer ? "My Attendance" : "Attendance"}</h2>
+                <h2>{isFarmer ? t("My Attendance") : t("Attendance")}</h2>
                 <p>
                   {farmLabel}
                   <span>•</span>
@@ -1670,7 +1682,7 @@ function AttendanceDashboard() {
             </div>
 
             <div className="record-count">
-              {items.length} record{items.length === 1 ? "" : "s"}
+              {items.length} {items.length === 1 ? t("record") : t("records")}
             </div>
           </div>
 
@@ -1678,13 +1690,13 @@ function AttendanceDashboard() {
             <table className="attendance-table">
               <thead>
                 <tr>
-                  <th>Worker</th>
-                  <th>Farm</th>
-                  <th>Check In</th>
-                  <th>Check Out</th>
-                  <th>Status</th>
-                  <th>Check-in Location</th>
-                  <th>Check-out Location</th>
+                  <th>{t("Worker")}</th>
+                  <th>{t("Farm")}</th>
+                  <th>{t("Check In")}</th>
+                  <th>{t("Check Out")}</th>
+                  <th>{t("Status")}</th>
+                  <th>{t("Check-in Location")}</th>
+                  <th>{t("Check-out Location")}</th>
                 </tr>
               </thead>
 
@@ -1694,14 +1706,14 @@ function AttendanceDashboard() {
                     <td colSpan={7} className="empty">
                       <div className="table-loading">
                         <RefreshCw className="spin" size={18} />
-                        Loading attendance...
+                        {t("Loading attendance...")}
                       </div>
                     </td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="empty">
-                      No attendance records found for this filter.
+                      {t("No attendance records found for this filter.")}
                     </td>
                   </tr>
                 ) : (
@@ -1726,7 +1738,7 @@ function AttendanceDashboard() {
                       <td>
                         <span className={statusClass(a.status)}>
                           <i />
-                          {prettyStatus(a.status)}
+                          {formatStatus(a.status, t)}
                         </span>
                       </td>
 
@@ -1735,7 +1747,7 @@ function AttendanceDashboard() {
                           latitude={a.latitude}
                           longitude={a.longitude}
                           accuracyMeters={a.accuracyMeters}
-                          label="Check-in"
+                          label={t("Check-in")}
                         />
                       </td>
 
@@ -1744,7 +1756,7 @@ function AttendanceDashboard() {
                           latitude={a.checkOutLatitude ?? null}
                           longitude={a.checkOutLongitude ?? null}
                           accuracyMeters={a.checkOutAccuracyMeters ?? null}
-                          label="Check-out"
+                          label={t("Check-out")}
                         />
                       </td>
                     </tr>
@@ -1758,13 +1770,13 @@ function AttendanceDashboard() {
         <footer className="attendance-footer">
           <div>
             <Leaf size={15} />
-            <span>Growing People</span>
+            <span>{t("Growing People")}</span>
             <b>•</b>
-            <span>Stronger Farms</span>
+            <span>{t("Stronger Farms")}</span>
             <b>•</b>
-            <span>Brighter Tomorrows</span>
+            <span>{t("Brighter Tomorrows")}</span>
           </div>
-          <span>Farm Management System</span>
+          <span>{t("Farm Management System")}</span>
         </footer>
       </div>
 
@@ -1774,7 +1786,7 @@ function AttendanceDashboard() {
             <button
               className="close"
               onClick={() => setQrOpen(false)}
-              aria-label="Close attendance session"
+              aria-label={t("Close attendance session")}
             >
               <X />
             </button>
@@ -1784,27 +1796,27 @@ function AttendanceDashboard() {
                 <Leaf size={25} />
               </div>
               <div>
-                <h2>Attendance Session</h2>
-                <p>Scan the QR code to check in or check out</p>
+                <h2>{t("Attendance Session")}</h2>
+                <p>{t("Scan the QR code to check in or check out")}</p>
               </div>
             </div>
 
             <div className="qr-farm-pill">
               <MapPin size={15} />
-              <span>{qrFarm || "Selected Farm"}</span>
+              <span>{qrFarm || t("Selected Farm")}</span>
             </div>
 
             <div className="qr-code-shell">
-              <img src={qrImage} alt="Attendance QR code" />
+              <img src={qrImage} alt={t("Attendance QR code")} />
             </div>
 
             <div className="qr-scan-caption">
               <QrCode size={19} />
-              <strong>Scan this QR code to check in / check out</strong>
+              <strong>{t("Scan this QR code to check in / check out")}</strong>
             </div>
 
             <p className="qr-helper">
-              If a device cannot scan the QR, use the codes below.
+              {t("If a device cannot scan the QR, use the codes below.")}
             </p>
 
             <div className="session-code-grid">
@@ -1813,7 +1825,7 @@ function AttendanceDashboard() {
                   <span className="session-code-icon">
                     <QrCode size={18} />
                   </span>
-                  <span>Attendance Code</span>
+                  <span>{t("Attendance Code")}</span>
                 </div>
 
                 <div className="code-value-row">
@@ -1827,13 +1839,13 @@ function AttendanceDashboard() {
                         void navigator.clipboard?.writeText(qrManualCode);
                       }
                     }}
-                    title="Copy attendance code"
+                    title={t("Copy attendance code")}
                   >
                     <Copy size={15} />
                   </button>
                 </div>
 
-                <small>4-digit code valid for this session</small>
+                <small>{t("4-digit code valid for this session")}</small>
               </div>
 
               <div className="session-code-card otp-code-card">
@@ -1841,7 +1853,7 @@ function AttendanceDashboard() {
                   <span className="session-code-icon otp-icon">
                     <Clock3 size={18} />
                   </span>
-                  <span>OTP Code</span>
+                  <span>{t("OTP Code")}</span>
                 </div>
 
                 <div className="otp-content">
@@ -1857,12 +1869,12 @@ function AttendanceDashboard() {
                             void navigator.clipboard?.writeText(qrLiveCode);
                           }
                         }}
-                        title="Copy OTP code"
+                        title={t("Copy OTP code")}
                       >
                         <Copy size={15} />
                       </button>
                     </div>
-                    <small>Changes every 45 seconds</small>
+                    <small>{t("Changes every 45 seconds")}</small>
                   </div>
 
                   <div
@@ -1888,14 +1900,13 @@ function AttendanceDashboard() {
             <div className="manual-attendance-note">
               <ShieldCheck size={18} />
               <span>
-                Manual attendance requires the 4-digit code + current 2-digit
-                OTP code + verified worker location.
+                {t("Manual attendance requires the 4-digit code + current 2-digit OTP code + verified worker location.")}
               </span>
             </div>
 
             <div className="qr-session-meta">
               <div>
-                <span>Created by</span>
+                <span>{t("Created by")}</span>
                 <strong>
                   {qrCreatedByName || "-"}
                   {qrCreatedByRole ? ` (${qrCreatedByRole})` : ""}
@@ -1903,14 +1914,14 @@ function AttendanceDashboard() {
               </div>
 
               <div>
-                <span>Created</span>
+                <span>{t("Created")}</span>
                 <strong>
                   {dateTimeInActiveTimeZone(qrCreatedAt)}
                 </strong>
               </div>
 
               <div>
-                <span>Session expires</span>
+                <span>{t("Session expires")}</span>
                 <strong>
                   {dateTimeInActiveTimeZone(qrExpires)}
                 </strong>
@@ -1919,7 +1930,7 @@ function AttendanceDashboard() {
 
             <div className="qr-modal-actions">
               <span>
-                Session is active for 1 hour. A new session replaces the old one.
+                {t("Session is active for 1 hour. A new session replaces the old one.")}
               </span>
 
               <button
@@ -1928,7 +1939,7 @@ function AttendanceDashboard() {
                 disabled={qrBusy}
               >
                 <RefreshCw size={15} className={qrBusy ? "spin" : ""} />
-                {qrBusy ? "Generating..." : "New Session"}
+                {qrBusy ? t("Generating...") : t("New Session")}
               </button>
             </div>
           </div>
@@ -1941,17 +1952,16 @@ function AttendanceDashboard() {
             <button
               className="close"
               onClick={() => setReportOpen(false)}
-              aria-label="Close report"
+              aria-label={t("Close report")}
             >
               <X />
             </button>
 
             <div className="report-title">
               <div>
-                <h2>Attendance Report</h2>
+                <h2>{t("Attendance Report")}</h2>
                 <p>
-                  Choose a date range, farm and worker. Export the summary for
-                  payroll or salary calculations.
+                  {t("Choose a date range, farm and worker. Export the summary for payroll or salary calculations.")}
                 </p>
               </div>
 
@@ -1961,18 +1971,18 @@ function AttendanceDashboard() {
                 disabled={!summary.length}
               >
                 <Download size={16} />
-                Download CSV
+                {t("Download CSV")}
               </button>
             </div>
 
             <div className="report-presets">
-              <button onClick={() => setMonth(0)}>This month</button>
-              <button onClick={() => setMonth(-1)}>Previous month</button>
+              <button onClick={() => setMonth(0)}>{t("This month")}</button>
+              <button onClick={() => setMonth(-1)}>{t("Previous month")}</button>
             </div>
 
             <div className="report-filters">
               <label>
-                <span>From</span>
+                <span>{t("From")}</span>
                 <input
                   type="date"
                   value={from}
@@ -1981,7 +1991,7 @@ function AttendanceDashboard() {
               </label>
 
               <label>
-                <span>To</span>
+                <span>{t("To")}</span>
                 <input
                   type="date"
                   value={to}
@@ -1990,7 +2000,7 @@ function AttendanceDashboard() {
               </label>
 
               <label>
-                <span>Worker</span>
+                <span>{t("Worker")}</span>
                 <select
                   value={reportUserId ?? ""}
                   onChange={(e) =>
@@ -2000,7 +2010,7 @@ function AttendanceDashboard() {
                   }
                 >
                   <option value="">
-                    {isFarmer ? "My records" : "All workers"}
+                    {isFarmer ? t("My records") : t("All workers")}
                   </option>
                   {workers.map((worker) => (
                     <option key={worker.id} value={worker.id}>
@@ -2018,10 +2028,10 @@ function AttendanceDashboard() {
                 {reportBusy ? (
                   <>
                     <RefreshCw size={15} className="spin" />
-                    Loading...
+                    {t("Loading...")}
                   </>
                 ) : (
-                  "Generate Report"
+                  t("Generate Report")
                 )}
               </button>
             </div>
@@ -2030,15 +2040,15 @@ function AttendanceDashboard() {
               <table>
                 <thead>
                   <tr>
-                    <th>Worker</th>
-                    <th>Farm</th>
-                    <th>Days</th>
-                    <th>Present</th>
-                    <th>Late</th>
-                    <th>Absent</th>
-                    <th>Half Day</th>
-                    <th>Leave</th>
-                    <th>Worked Hours</th>
+                    <th>{t("Worker")}</th>
+                    <th>{t("Farm")}</th>
+                    <th>{t("Days")}</th>
+                    <th>{t("Present")}</th>
+                    <th>{t("Late")}</th>
+                    <th>{t("Absent")}</th>
+                    <th>{t("Half Day")}</th>
+                    <th>{t("Leave")}</th>
+                    <th>{t("Worked Hours")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2059,7 +2069,7 @@ function AttendanceDashboard() {
                   ) : (
                     <tr>
                       <td colSpan={9} className="empty">
-                        Choose filters and generate the report.
+                        {t("Choose filters and generate the report.")}
                       </td>
                     </tr>
                   )}
@@ -2086,6 +2096,7 @@ function LocationCell({
   accuracyMeters: number | null | undefined;
   label: string;
 }) {
+  const { t } = useTranslation();
   if (latitude == null || longitude == null) return <>-</>;
 
   return (
@@ -2095,7 +2106,7 @@ function LocationCell({
         rel="noreferrer"
         href={`https://www.google.com/maps?q=${latitude},${longitude}`}
       >
-        <MapPin size={15} /> View map
+        <MapPin size={15} /> {t("View map")}
       </a>
       <small>
         {latitude.toFixed(7)}, {longitude.toFixed(7)}
@@ -2110,7 +2121,7 @@ function LocationCell({
                 : "accuracy-poor"
           }
         >
-          {label} accuracy ±{Math.round(accuracyMeters)}m
+          {label} {t("accuracy")} ±{Math.round(accuracyMeters)}m
         </small>
       )}
     </div>
