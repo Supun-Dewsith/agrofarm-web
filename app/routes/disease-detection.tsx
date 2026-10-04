@@ -1130,8 +1130,16 @@ export default function DiseaseDetectionPage() {
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {t('Scientific Name & Taxonomy')}
                 </span>
-                <div style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', fontStyle: 'italic' }}>
-                  {currentData?.scientific_name || 'Liriomyza trifolii / Phytophthora spp.'}
+                <div style={{ fontSize: '17px', fontWeight: 700, color: currentData?.scientific_name ? '#0f172a' : '#64748b', fontStyle: currentData?.scientific_name ? 'italic' : 'normal' }}>
+                  {currentData?.scientific_name ? (
+                    currentData.scientific_name
+                  ) : currentData ? (
+                    currentData.is_healthy ? t('Plantae (Normal Flora)') : t('Undetermined Pathogen')
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontStyle: 'normal', fontWeight: 500, fontSize: '15px' }}>
+                      {t('Awaiting scientific identification...')}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1141,14 +1149,20 @@ export default function DiseaseDetectionPage() {
                 gap: '6px',
                 padding: '5px 12px',
                 borderRadius: '20px',
-                backgroundColor: '#eff6ff',
-                border: '1px solid #bfdbfe',
-                color: '#1d4ed8',
+                backgroundColor: currentData?.pathogen_type ? '#eff6ff' : (currentData?.is_healthy ? '#f0fdf4' : '#f8fafc'),
+                border: `1px solid ${currentData?.pathogen_type ? '#bfdbfe' : (currentData?.is_healthy ? '#bbf7d0' : '#e2e8f0')}`,
+                color: currentData?.pathogen_type ? '#1d4ed8' : (currentData?.is_healthy ? '#166534' : '#64748b'),
                 fontSize: '12px',
                 fontWeight: 700
               }}>
-                <ShieldAlert size={14} />
-                <span>{currentData?.pathogen_type || 'Insect Pest / Fungal Spore'}</span>
+                <ShieldAlert size={14} className={currentData?.pathogen_type ? 'text-blue-600' : (currentData?.is_healthy ? 'text-emerald-600' : 'text-slate-400')} />
+                <span>
+                  {currentData?.pathogen_type || (
+                    currentData
+                      ? (currentData.is_healthy ? t('Beneficial / Non-Pathogenic') : t('Unspecified'))
+                      : t('Pending Classification')
+                  )}
+                </span>
               </div>
             </div>
 
@@ -1160,46 +1174,77 @@ export default function DiseaseDetectionPage() {
               marginBottom: '18px'
             }}>
               <div style={{
-                padding: '12px 14px', borderRadius: '8px', backgroundColor: '#fef3c7',
-                border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '10px'
+                padding: '12px 14px', borderRadius: '8px',
+                backgroundColor: currentData?.optimal_temperature ? '#fef3c7' : '#f8fafc',
+                border: `1px solid ${currentData?.optimal_temperature ? '#fde68a' : '#e2e8f0'}`,
+                display: 'flex', alignItems: 'center', gap: '10px'
               }}>
-                <Thermometer size={20} className="text-amber-700" />
+                <Thermometer size={20} className={currentData?.optimal_temperature ? "text-amber-700" : "text-slate-400"} />
                 <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
+                  <div style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: currentData?.optimal_temperature ? '#92400e' : '#64748b',
+                    textTransform: 'uppercase'
+                  }}>
                     {t('Optimal Temperature')}
                   </div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#78350f' }}>
-                    {currentData?.optimal_temperature || '24°C – 30°C'}
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: currentData?.optimal_temperature ? 700 : 500,
+                    color: currentData?.optimal_temperature ? '#78350f' : '#94a3b8'
+                  }}>
+                    {currentData?.optimal_temperature || (currentData ? (currentData.is_healthy ? t('N/A (Healthy)') : t('Not specified')) : t('Awaiting scan...'))}
                   </div>
                 </div>
               </div>
 
               <div style={{
-                padding: '12px 14px', borderRadius: '8px', backgroundColor: '#e0f2fe',
-                border: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: '10px'
+                padding: '12px 14px', borderRadius: '8px',
+                backgroundColor: currentData?.humidity_level ? '#e0f2fe' : '#f8fafc',
+                border: `1px solid ${currentData?.humidity_level ? '#bae6fd' : '#e2e8f0'}`,
+                display: 'flex', alignItems: 'center', gap: '10px'
               }}>
-                <Droplets size={20} className="text-sky-700" />
+                <Droplets size={20} className={currentData?.humidity_level ? "text-sky-700" : "text-slate-400"} />
                 <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase' }}>
+                  <div style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: currentData?.humidity_level ? '#0369a1' : '#64748b',
+                    textTransform: 'uppercase'
+                  }}>
                     {t('Relative Humidity')}
                   </div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#075985' }}>
-                    {currentData?.humidity_level || '>80% RH'}
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: currentData?.humidity_level ? 700 : 500,
+                    color: currentData?.humidity_level ? '#075985' : '#94a3b8'
+                  }}>
+                    {currentData?.humidity_level || (currentData ? (currentData.is_healthy ? t('N/A (Healthy)') : t('Not specified')) : t('Awaiting scan...'))}
                   </div>
                 </div>
               </div>
 
               <div style={{
-                padding: '12px 14px', borderRadius: '8px', backgroundColor: '#f1f5f9',
+                padding: '12px 14px', borderRadius: '8px',
+                backgroundColor: currentData?.weather_correlation ? '#f1f5f9' : '#f8fafc',
                 border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px'
               }}>
-                <Wind size={20} className="text-slate-600" />
+                <Wind size={20} className={currentData?.weather_correlation ? "text-slate-600" : "text-slate-400"} />
                 <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: currentData?.weather_correlation ? '#475569' : '#64748b', textTransform: 'uppercase' }}>
                     {t('Weather Correlation')}
                   </div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                    {currentData?.weather_correlation || t('Current high humidity in farm increases spread velocity by ~35%')}
+                  <div style={{
+                    fontSize: '12px',
+                    fontWeight: currentData?.weather_correlation ? 600 : 500,
+                    color: currentData?.weather_correlation ? '#334155' : '#94a3b8'
+                  }}>
+                    {currentData?.weather_correlation || (
+                      currentData
+                        ? (currentData.is_healthy ? t('Normal ambient farm weather supports vigorous photosynthesis.') : t('No specific weather vulnerability correlation recorded.'))
+                        : t('Ambient weather correlation data will calculate once leaf diagnostics are complete.')
+                    )}
                   </div>
                 </div>
               </div>
@@ -1217,49 +1262,93 @@ export default function DiseaseDetectionPage() {
                 gap: '12px',
                 position: 'relative'
               }}>
-                {(currentData?.life_cycle_stages && currentData.life_cycle_stages.length > 0 ? currentData.life_cycle_stages : [
-                  { stage_name: 'Incubation & Inoculation', duration: '2–4 days', description: 'Microscopic spores adhere to moist leaf cuticle and germinate.' },
-                  { stage_name: 'Active Damage Phase', duration: '5–8 days', description: 'Hyphae penetrate leaf mesophyll, causing necrotic tissue collapse.' },
-                  { stage_name: 'Spore Release / Pupation', duration: '4–6 days', description: 'Secondary conidia release into air or larvae pupate in leaf canopy.' }
-                ]).map((stage, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '14px',
-                      borderRadius: '8px',
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: '#f8fafc',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px',
-                      position: 'relative'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        padding: '2px 7px',
-                        borderRadius: '12px',
-                        backgroundColor: idx === 0 ? '#eff6ff' : (idx === 1 ? '#fef3c7' : '#fef2f2'),
-                        color: idx === 0 ? '#1d4ed8' : (idx === 1 ? '#b45309' : '#b91c1c')
-                      }}>
-                        {t('STAGE')} {idx + 1}
-                      </span>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
-                        {stage.duration}
-                      </span>
-                    </div>
+                {currentData?.life_cycle_stages && currentData.life_cycle_stages.length > 0 ? (
+                  currentData.life_cycle_stages.map((stage, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        backgroundColor: '#f8fafc',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        position: 'relative'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: '12px',
+                          backgroundColor: idx === 0 ? '#eff6ff' : (idx === 1 ? '#fef3c7' : '#fef2f2'),
+                          color: idx === 0 ? '#1d4ed8' : (idx === 1 ? '#b45309' : '#b91c1c')
+                        }}>
+                          {t('STAGE')} {idx + 1}
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
+                          {stage.duration}
+                        </span>
+                      </div>
 
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
-                      {stage.stage_name}
-                    </div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                        {stage.stage_name}
+                      </div>
 
-                    <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
-                      {stage.description}
+                      <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
+                        {stage.description}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  [
+                    { stage_name: t('Incubation & Inoculation'), desc: t('Spore adhesion and germination phases will be mapped upon pathogen detection.') },
+                    { stage_name: t('Active Damage Phase'), desc: t('Tissue colonization and necrosis progression rates will display here.') },
+                    { stage_name: t('Spore Dissemination / Maturation'), desc: t('Secondary transmission cycle and release windows will appear here.') }
+                  ].map((placeholderStage, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '8px',
+                        border: '1px dashed #cbd5e1',
+                        backgroundColor: '#f8fafc',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        position: 'relative'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: '12px',
+                          backgroundColor: '#f1f5f9',
+                          color: '#64748b'
+                        }}>
+                          {t('STAGE')} {idx + 1}
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: 500, color: '#94a3b8' }}>
+                          —
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#64748b' }}>
+                        {currentData?.is_healthy ? t('Normal Growth Phase') : placeholderStage.stage_name}
+                      </div>
+
+                      <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
+                        {currentData?.is_healthy
+                          ? t('Photosynthetic leaf tissue is healthy. No parasitic life cycle present.')
+                          : placeholderStage.desc}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -1408,7 +1497,9 @@ export default function DiseaseDetectionPage() {
                   ) : (
                     <tr>
                       <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
-                        {t('No treatment records match the selected tier filter.')}
+                        {currentData
+                          ? t('No treatment records match the selected tier filter.')
+                          : t('Diagnostic scan required. IPM recommendations will appear here after sample analysis.')}
                       </td>
                     </tr>
                   )}
@@ -1435,29 +1526,35 @@ export default function DiseaseDetectionPage() {
 
               {/* Yield Loss Progress Gauge */}
               <div style={{
-                padding: '16px', borderRadius: '10px', border: '1px solid #fde68a',
-                backgroundColor: '#fffbeb', display: 'flex', flexDirection: 'column', gap: '8px'
+                padding: '16px', borderRadius: '10px',
+                border: `1px solid ${currentData ? '#fde68a' : '#e2e8f0'}`,
+                backgroundColor: currentData ? '#fffbeb' : '#f8fafc',
+                display: 'flex', flexDirection: 'column', gap: '8px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: currentData ? '#92400e' : '#64748b', textTransform: 'uppercase' }}>
                     {t('Projected Foliage & Yield Loss Risk')}
                   </span>
-                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#b45309' }}>
-                    {currentData?.yield_loss_percentage ?? 20}%
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: currentData ? '#b45309' : '#94a3b8' }}>
+                    {currentData?.yield_loss_percentage !== undefined ? `${currentData.yield_loss_percentage}%` : (currentData ? '0%' : '—')}
                   </span>
                 </div>
 
-                <div style={{ width: '100%', height: '8px', backgroundColor: '#fef3c7', borderRadius: '6px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: '8px', backgroundColor: currentData ? '#fef3c7' : '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
                   <div style={{
-                    width: `${currentData?.yield_loss_percentage ?? 20}%`,
+                    width: `${currentData?.yield_loss_percentage ?? 0}%`,
                     height: '100%',
-                    backgroundColor: (currentData?.yield_loss_percentage ?? 20) > 35 ? '#ef4444' : '#f59e0b',
+                    backgroundColor: (currentData?.yield_loss_percentage ?? 0) > 35 ? '#ef4444' : '#f59e0b',
                     borderRadius: '6px'
                   }} />
                 </div>
 
-                <div style={{ fontSize: '12px', color: '#78350f', fontWeight: 600 }}>
-                  {currentData?.yield_loss_risk || '15% – 25% foliage loss if untreated'}
+                <div style={{ fontSize: '12px', color: currentData ? '#78350f' : '#94a3b8', fontWeight: currentData ? 600 : 500 }}>
+                  {currentData?.yield_loss_risk || (
+                    currentData
+                      ? (currentData.is_healthy ? t('0% – Normal yield expected') : t('Yield loss risk undetermined'))
+                      : t('Yield loss impact will be calculated after scanning.')
+                  )}
                 </div>
               </div>
 
@@ -1469,49 +1566,116 @@ export default function DiseaseDetectionPage() {
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
                   {t('Spread Velocity Rating')}
                 </span>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '12px',
-                  backgroundColor: '#fee2e2',
-                  color: '#991b1b',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  alignSelf: 'flex-start'
-                }}>
-                  <Flame size={15} />
-                  <span>{currentData?.spread_speed || 'Moderate: 3–5 days to adjacent rows'}</span>
-                </div>
+                {currentData?.spread_speed ? (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    backgroundColor: currentData.is_healthy ? '#f0fdf4' : '#fee2e2',
+                    color: currentData.is_healthy ? '#166534' : '#991b1b',
+                    border: `1px solid ${currentData.is_healthy ? '#bbf7d0' : '#fecaca'}`,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    alignSelf: 'flex-start'
+                  }}>
+                    <Flame size={15} />
+                    <span>{currentData.spread_speed}</span>
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    backgroundColor: '#f1f5f9',
+                    color: '#64748b',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    alignSelf: 'flex-start'
+                  }}>
+                    <span>{currentData ? (currentData.is_healthy ? t('None: Foliage healthy') : t('Undetermined')) : t('Awaiting scan...')}</span>
+                  </div>
+                )}
                 <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  {t('Secondary foliar transmission via ambient greenhouse airflow and droplet splashing.')}
+                  {currentData?.spread_speed
+                    ? t('Secondary foliar transmission via ambient greenhouse airflow and droplet splashing.')
+                    : (currentData?.is_healthy
+                      ? t('No pathogen transmission vectors detected for healthy crop foliage.')
+                      : t('Transmission velocity metrics will calculate upon pathogen detection.'))}
                 </div>
               </div>
 
             </div>
 
             {/* Harvest Impact Alert Banner */}
-            <div style={{
-              marginTop: '16px',
-              padding: '14px 18px',
-              borderRadius: '8px',
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '12px'
-            }}>
-              <AlertTriangle size={20} className="text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#991b1b', marginBottom: '2px' }}>
-                  {t('Pre-Harvest Interval (PHI) & Harvest Withholding Alert')}
-                </div>
-                <div style={{ fontSize: '12px', color: '#7f1d1d', lineHeight: '1.4' }}>
-                  {currentData?.harvest_impact || t('Withhold active harvesting for minimum 7 days following foliar spray to prevent synthetic chemical residue contamination.')}
+            {currentData?.harvest_impact ? (
+              <div style={{
+                marginTop: '16px',
+                padding: '14px 18px',
+                borderRadius: '8px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <AlertTriangle size={20} className="text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#991b1b', marginBottom: '2px' }}>
+                    {t('Pre-Harvest Interval (PHI) & Harvest Withholding Alert')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#7f1d1d', lineHeight: '1.4' }}>
+                    {currentData.harvest_impact}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : currentData?.is_healthy ? (
+              <div style={{
+                marginTop: '16px',
+                padding: '14px 18px',
+                borderRadius: '8px',
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <ShieldCheck size={20} className="text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#166534', marginBottom: '2px' }}>
+                    {t('No Withholding Period Needed')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#15803d', lineHeight: '1.4' }}>
+                    {t('Foliage is healthy. Standard crop harvesting schedule is unaffected.')}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                marginTop: '16px',
+                padding: '14px 18px',
+                borderRadius: '8px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <Info size={20} className="text-slate-400 shrink-0 mt-0.5" />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#475569', marginBottom: '2px' }}>
+                    {t('Pre-Harvest Interval (PHI) Notice')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: '1.4' }}>
+                    {t('Chemical safety withholding intervals and harvest impact alerts will populate here after diagnostic evaluation.')}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ================= SECTION 7: AUTOMATED OPERATIONAL ACTIONS ================= */}
