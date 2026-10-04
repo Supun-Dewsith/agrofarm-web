@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchWithAuth } from '../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 import {
   Package,
@@ -74,6 +75,7 @@ interface InventoryResponse {
 }
 
 const Inventory = () => {
+  const { t } = useTranslation();
   const [farms, setFarms] = useState<Farms[]>([]);
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
 
@@ -183,7 +185,7 @@ const Inventory = () => {
       );
 
       setError(
-        'Failed to load farms.'
+        t('Failed to load farms.')
       );
     }
   };
@@ -274,7 +276,7 @@ const Inventory = () => {
       );
 
       setError(
-        'Failed to load inventory.'
+        t('Failed to load inventory.')
       );
     }
   };
@@ -318,7 +320,7 @@ const Inventory = () => {
       );
 
       setError(
-        'Failed to load low stock alerts.'
+        t('Failed to load low stock alerts.')
       );
     }
   };
@@ -412,28 +414,28 @@ const Inventory = () => {
 
     if (!formData.name.trim()) {
       setError(
-        'Please enter an inventory name.'
+        t('Please enter an inventory name.')
       );
       return;
     }
 
     if (formData.quantity < 0) {
       setError(
-        'Quantity cannot be negative.'
+        t('Quantity cannot be negative.')
       );
       return;
     }
 
     if (formData.alertLimit < 0) {
       setError(
-        'Alert limit cannot be negative.'
+        t('Alert limit cannot be negative.')
       );
       return;
     }
 
     if (!formData.farmIDs) {
       setError(
-        'Please select a farm.'
+        t('Please select a farm.')
       );
       return;
     }
@@ -483,7 +485,7 @@ const Inventory = () => {
       }
 
       setSuccessMessage(
-        'Inventory item added successfully.'
+        t('Inventory item added successfully.')
       );
 
       resetInventoryForm();
@@ -501,7 +503,7 @@ const Inventory = () => {
       setError(
         err instanceof Error
           ? err.message
-          : 'Failed to add inventory item.'
+          : t('Failed to add inventory item.')
       );
     }
   };
@@ -558,35 +560,35 @@ const Inventory = () => {
 
     if (!selectedInventoryItem) {
       setError(
-        'No inventory item selected.'
+        t('No inventory item selected.')
       );
       return;
     }
 
     if (!updateFormData.name.trim()) {
       setError(
-        'Please enter an inventory name.'
+        t('Please enter an inventory name.')
       );
       return;
     }
 
     if (updateFormData.quantity < 0) {
       setError(
-        'Quantity cannot be negative.'
+        t('Quantity cannot be negative.')
       );
       return;
     }
 
     if (updateFormData.alertLimit < 0) {
       setError(
-        'Alert limit cannot be negative.'
+        t('Alert limit cannot be negative.')
       );
       return;
     }
 
     if (!updateFormData.farmIds) {
       setError(
-        'Please select a farm.'
+        t('Please select a farm.')
       );
       return;
     }
@@ -646,7 +648,7 @@ const Inventory = () => {
       }
 
       setSuccessMessage(
-        'Inventory item updated successfully.'
+        t('Inventory item updated successfully.')
       );
 
       setShowUpdateModal(false);
@@ -666,7 +668,7 @@ const Inventory = () => {
       setError(
         err instanceof Error
           ? err.message
-          : 'Failed to update inventory item.'
+          : t('Failed to update inventory item.')
       );
     }
   };
@@ -696,11 +698,11 @@ const Inventory = () => {
         <div>
 
           <h1 className="text-2xl font-bold text-gray-900">
-            Inventory Management
+            {t("Inventory Management")}
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Manage farm inventory, stock levels and supplies.
+            {t("Manage farm inventory, stock levels and supplies.")}
           </p>
 
         </div>
@@ -713,7 +715,7 @@ const Inventory = () => {
           className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-700 text-white text-sm font-semibold shadow-sm hover:bg-emerald-800 transition-colors"
         >
           <Plus size={18} />
-          Add Inventory
+          {t("Add Inventory")}
         </button>
 
       </div>
@@ -772,7 +774,7 @@ const Inventory = () => {
             <div>
 
               <label className="mb-1 block text-xs font-medium text-gray-500">
-                Select Farm
+                {t("Select Farm")}
               </label>
 
               <select
@@ -792,7 +794,7 @@ const Inventory = () => {
               >
 
                 <option value="all">
-                  All Farms
+                  {t("All Farms")}
                 </option>
 
                 {farms.map((farm) => (
@@ -828,7 +830,7 @@ const Inventory = () => {
                   e.target.value
                 )
               }
-              placeholder="Search inventory..."
+              placeholder={t("Search inventory...")}
               className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
             />
 
@@ -848,7 +850,7 @@ const Inventory = () => {
             <div>
 
               <p className="text-sm text-gray-500">
-                Total Items
+                {t("Total Items")}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-gray-900">
@@ -872,7 +874,7 @@ const Inventory = () => {
             <div>
 
               <p className="text-sm text-gray-500">
-                Low Stock
+                {t("Low Stock")}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-red-600">
@@ -896,7 +898,7 @@ const Inventory = () => {
             <div>
 
               <p className="text-sm text-gray-500">
-                Categories
+                {t("Categories")}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-gray-900">
@@ -932,7 +934,7 @@ const Inventory = () => {
                   : 'text-gray-500 hover:text-gray-800'
               }`}
             >
-              {category}
+              {t(category)}
             </button>
           ))}
 
@@ -953,7 +955,7 @@ const Inventory = () => {
             />
 
             <h2 className="font-semibold text-gray-900">
-              Low Stock Alerts
+              {t("Low Stock Alerts")}
             </h2>
 
           </div>
@@ -966,7 +968,7 @@ const Inventory = () => {
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
           >
             <RefreshCw size={16} />
-            Refresh
+            {t("Refresh")}
           </button>
 
         </div>
@@ -976,7 +978,7 @@ const Inventory = () => {
           {filteredLowStockAlerts.length === 0 ? (
 
             <div className="p-8 text-center text-sm text-gray-500">
-              No low stock items for this farm.
+              {t("No low stock items for this farm.")}
             </div>
 
           ) : (
@@ -988,23 +990,23 @@ const Inventory = () => {
                 <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-500">
 
                   <th className="px-5 py-3 font-medium">
-                    Item
+                    {t("Item")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Category
+                    {t("Category")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Current
+                    {t("Current")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Reorder At
+                    {t("Reorder At")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Action
+                    {t("Action")}
                   </th>
 
                 </tr>
@@ -1034,7 +1036,7 @@ const Inventory = () => {
                             item.category
                           )}`}
                         >
-                          {item.category}
+                          {t(item.category)}
                         </span>
 
                       </td>
@@ -1065,13 +1067,13 @@ const Inventory = () => {
                               );
                             } else {
                               setError(
-                                'Unable to find this inventory item.'
+                                t('Unable to find this inventory item.')
                               );
                             }
                           }}
                           className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-600 transition hover:bg-green-50"
                         >
-                          Update
+                          {t("Update")}
                         </button>
 
                       </td>
@@ -1099,21 +1101,21 @@ const Inventory = () => {
           <div>
 
             <h2 className="font-semibold text-gray-900">
-              All Inventory
+              {t("All Inventory")}
             </h2>
 
             <p className="mt-1 text-xs text-gray-500">
 
               {selectedFarm === 'all'
-                ? 'Showing inventory from all farms'
-                : `Showing inventory for ${
+                ? t('Showing inventory from all farms')
+                : `${t('Showing inventory for')} ${
                     farms.find(
                       (farm) =>
                         String(
                           farm.farmIDs
                         ) === selectedFarm
                     )?.farmNames ||
-                    'selected farm'
+                    t('selected farm')
                   }`}
 
             </p>
@@ -1121,7 +1123,7 @@ const Inventory = () => {
           </div>
 
           <div className="text-sm text-gray-500">
-            {filteredInventory.length} items
+            {filteredInventory.length} {t("items")}
           </div>
 
         </div>
@@ -1138,12 +1140,11 @@ const Inventory = () => {
               />
 
               <p className="font-medium text-gray-700">
-                No inventory found
+                {t("No inventory found")}
               </p>
 
               <p className="mt-1 text-sm text-gray-500">
-                There are no inventory items matching
-                your current filters.
+                {t("There are no inventory items matching your current filters.")}
               </p>
 
             </div>
@@ -1157,31 +1158,31 @@ const Inventory = () => {
                 <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-500">
 
                   <th className="px-5 py-3 font-medium">
-                    Item
+                    {t("Item")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Category
+                    {t("Category")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Quantity
+                    {t("Quantity")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Last Restocked
+                    {t("Last Restocked")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Status
+                    {t("Status")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Farm
+                    {t("Farm")}
                   </th>
 
                   <th className="px-5 py-3 font-medium">
-                    Action
+                    {t("Action")}
                   </th>
 
                 </tr>
@@ -1232,7 +1233,7 @@ const Inventory = () => {
                           <span
                             className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.categoryBg}`}
                           >
-                            {item.category}
+                            {t(item.category)}
                           </span>
 
                         </td>
@@ -1255,7 +1256,7 @@ const Inventory = () => {
                                 : 'bg-green-100 text-green-700'
                             }`}
                           >
-                            {item.status}
+                            {t(item.status)}
                           </span>
 
                         </td>
@@ -1284,7 +1285,7 @@ const Inventory = () => {
                             }
                             className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-600 transition hover:bg-green-50"
                           >
-                            Update
+                            {t("Update")}
                           </button>
 
                         </td>
@@ -1320,11 +1321,11 @@ const Inventory = () => {
               <div>
 
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Add Inventory Item
+                  {t("Add Inventory Item")}
                 </h2>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Add a new item to your farm inventory.
+                  {t("Add a new item to your farm inventory.")}
                 </p>
 
               </div>
@@ -1349,7 +1350,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Inventory Name
+                  {t("Inventory Name")}
                 </label>
 
                 <input
@@ -1361,7 +1362,7 @@ const Inventory = () => {
                       name: e.target.value
                     })
                   }
-                  placeholder="e.g. Urea Fertilizer"
+                  placeholder={t("e.g. Urea Fertilizer")}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
                 />
 
@@ -1370,7 +1371,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Category
+                  {t("Category")}
                 </label>
 
                 <select
@@ -1386,23 +1387,23 @@ const Inventory = () => {
                 >
 
                   <option value="Fertilizer">
-                    Fertilizer
+                    {t("Fertilizer")}
                   </option>
 
                   <option value="Pesticide & Crop Protection">
-                    Pesticide & Crop Protection
+                    {t("Pesticide & Crop Protection")}
                   </option>
 
                   <option value="Equipment">
-                    Equipment
+                    {t("Equipment")}
                   </option>
 
                   <option value="Machinery">
-                    Machinery
+                    {t("Machinery")}
                   </option>
 
                   <option value="Seeds">
-                    Seeds
+                    {t("Seeds")}
                   </option>
 
                 </select>
@@ -1412,7 +1413,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Farm
+                  {t("Farm")}
                 </label>
 
                 <select
@@ -1430,7 +1431,7 @@ const Inventory = () => {
                 >
 
                   <option value={0}>
-                    Select Farm
+                    {t("Select Farm")}
                   </option>
 
                   {farms.map((farm) => (
@@ -1453,7 +1454,7 @@ const Inventory = () => {
                 <div>
 
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Quantity
+                    {t("Quantity")}
                   </label>
 
                   <input
@@ -1477,7 +1478,7 @@ const Inventory = () => {
                 <div>
 
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Unit
+                    {t("Unit")}
                   </label>
 
                   <select
@@ -1508,7 +1509,7 @@ const Inventory = () => {
                     </option>
 
                     <option value="units">
-                      units
+                      {t("units")}
                     </option>
 
                   </select>
@@ -1520,7 +1521,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Alert Limit
+                  {t("Alert Limit")}
                 </label>
 
                 <input
@@ -1540,8 +1541,7 @@ const Inventory = () => {
                 />
 
                 <p className="mt-1 text-xs text-gray-500">
-                  A low-stock alert will appear when
-                  quantity reaches this value.
+                  {t("A low-stock alert will appear when quantity reaches this value.")}
                 </p>
 
               </div>
@@ -1556,7 +1556,7 @@ const Inventory = () => {
                   }}
                   className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
 
                 <button
@@ -1564,7 +1564,7 @@ const Inventory = () => {
                   className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
                 >
                   <Check size={17} />
-                  Add Inventory
+                  {t("Add Inventory")}
                 </button>
 
               </div>
@@ -1592,11 +1592,11 @@ const Inventory = () => {
               <div>
 
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Update Inventory Item
+                  {t("Update Inventory Item")}
                 </h2>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Update the selected farm inventory item.
+                  {t("Update the selected farm inventory item.")}
                 </p>
 
               </div>
@@ -1621,7 +1621,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Inventory Name
+                  {t("Inventory Name")}
                 </label>
 
                 <input
@@ -1633,7 +1633,7 @@ const Inventory = () => {
                       name: e.target.value
                     })
                   }
-                  placeholder="e.g. Urea Fertilizer"
+                  placeholder={t("e.g. Urea Fertilizer")}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
                 />
 
@@ -1642,7 +1642,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Category
+                  {t("Category")}
                 </label>
 
                 <select
@@ -1660,23 +1660,23 @@ const Inventory = () => {
                 >
 
                   <option value="Fertilizer">
-                    Fertilizer
+                    {t("Fertilizer")}
                   </option>
 
                   <option value="Pesticide & Crop Protection">
-                    Pesticide & Crop Protection
+                    {t("Pesticide & Crop Protection")}
                   </option>
 
                   <option value="Equipment">
-                    Equipment
+                    {t("Equipment")}
                   </option>
 
                   <option value="Machinery">
-                    Machinery
+                    {t("Machinery")}
                   </option>
 
                   <option value="Seeds">
-                    Seeds
+                    {t("Seeds")}
                   </option>
 
                 </select>
@@ -1686,7 +1686,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Farm
+                  {t("Farm")}
                 </label>
 
                 <select
@@ -1706,7 +1706,7 @@ const Inventory = () => {
                 >
 
                   <option value={0}>
-                    Select Farm
+                    {t("Select Farm")}
                   </option>
 
                   {farms.map((farm) => (
@@ -1729,7 +1729,7 @@ const Inventory = () => {
                 <div>
 
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Quantity
+                    {t("Quantity")}
                   </label>
 
                   <input
@@ -1755,7 +1755,7 @@ const Inventory = () => {
                 <div>
 
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Unit
+                    {t("Unit")}
                   </label>
 
                   <select
@@ -1788,7 +1788,7 @@ const Inventory = () => {
                     </option>
 
                     <option value="units">
-                      units
+                      {t("units")}
                     </option>
 
                   </select>
@@ -1800,7 +1800,7 @@ const Inventory = () => {
               <div>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Alert Limit
+                  {t("Alert Limit")}
                 </label>
 
                 <input
@@ -1822,8 +1822,7 @@ const Inventory = () => {
                 />
 
                 <p className="mt-1 text-xs text-gray-500">
-                  A low-stock alert will appear when
-                  quantity reaches this value.
+                  {t("A low-stock alert will appear when quantity reaches this value.")}
                 </p>
 
               </div>
@@ -1838,7 +1837,7 @@ const Inventory = () => {
                   }}
                   className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
 
                 <button
@@ -1846,7 +1845,7 @@ const Inventory = () => {
                   className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
                 >
                   <Check size={17} />
-                  Update Inventory
+                  {t("Update Inventory")}
                 </button>
 
               </div>

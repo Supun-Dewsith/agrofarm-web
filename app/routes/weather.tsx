@@ -9,6 +9,7 @@ import SlowSnowy from '../asserts/icons/animated/snowy-5.svg';
 import HeavySnowy from '../asserts/icons/animated/snowy-6.svg';
 import Thunder from '../asserts/icons/animated/thunder.svg';
 import { fetchWithAuth } from '../utils/auth';
+import { useTranslation } from 'react-i18next';
 import {
   MapPin,
   Droplets,
@@ -183,66 +184,66 @@ function getWeatherIcons(code: number | undefined) {
   }
 }
 
-function getWeatherCondition(code: number | undefined) {
+function getWeatherCondition(code: number | undefined, t: (k: string) => string) {
   if (code === undefined || code === null) {
     return <h2>N/A</h2>;
   }
 
   switch (code) {
     case 0:
-      return <h2>Clear Sky</h2>;
+      return <h2>{t("Clear Sky")}</h2>;
 
     case 1:
     case 2:
     case 3:
-      return <h2>Partly Cloudy</h2>;
+      return <h2>{t("Partly Cloudy")}</h2>;
 
     case 45:
     case 48:
-      return <h2>Foggy</h2>;
+      return <h2>{t("Foggy")}</h2>;
 
     case 51:
     case 53:
     case 55:
-      return <h2>Light Drizzle</h2>;
+      return <h2>{t("Light Drizzle")}</h2>;
 
     case 56:
     case 57:
-      return <h2>Freezing Drizzle</h2>;
+      return <h2>{t("Freezing Drizzle")}</h2>;
 
     case 61:
     case 63:
     case 65:
-      return <h2>Slightly Rainy</h2>;
+      return <h2>{t("Slightly Rainy")}</h2>;
 
     case 66:
     case 67:
-      return <h2>Freezing Rain</h2>;
+      return <h2>{t("Freezing Rain")}</h2>;
 
     case 71:
     case 73:
     case 75:
     case 77:
-      return <h2>Snowy</h2>;
+      return <h2>{t("Snowy")}</h2>;
 
     case 80:
     case 81:
     case 82:
-      return <h2>Heavy Rain</h2>;
+      return <h2>{t("Heavy Rain")}</h2>;
 
     case 85:
     case 86:
-      return <h2>Heavy Snow</h2>;
+      return <h2>{t("Heavy Snow")}</h2>;
 
     case 95:
-      return <h2>Thunderstorm</h2>;
+      return <h2>{t("Thunderstorm")}</h2>;
 
     case 96:
     case 99:
-      return <h2>Heavy Thunderstorm</h2>;
+      return <h2>{t("Heavy Thunderstorm")}</h2>;
 
     default:
-      return <h2>Clear Sky</h2>;
+      return <h2>{t("Clear Sky")}</h2>;
   }
 }
 
@@ -262,6 +263,7 @@ const val = (value: any, suffix: string = '') => {
 };
 
 export default function WeatherPage() {
+  const { t } = useTranslation();
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -278,7 +280,7 @@ export default function WeatherPage() {
         const farmsList = data as Farms[];
 
         if (farmsList.length === 0) {
-          setErrorMessage('No farms found.');
+          setErrorMessage(t('No farms found.'));
         } else {
           setItems(farmsList);
 
@@ -288,9 +290,9 @@ export default function WeatherPage() {
       })
       .catch((err) => {
         console.error(err);
-        setErrorMessage('Failed to load farms.');
+        setErrorMessage(t('Failed to load farms.'));
       });
-  }, []);
+  }, [t]);
 
   // Fetch weather whenever selected farm changes
   useEffect(() => {
@@ -319,7 +321,7 @@ export default function WeatherPage() {
 
           setErrorMessage(
             errorData.message ||
-            'Weather data is empty. Please configure your farm location.'
+            t('Weather data is empty. Please configure your farm location.')
           );
 
           setWeather(null);
@@ -330,7 +332,7 @@ export default function WeatherPage() {
         console.error('Failed to fetch weather data:', err);
 
         setErrorMessage(
-          'Location data is empty or server error occurred.'
+          t('Location data is empty or server error occurred.')
         );
 
         setWeather(null);
@@ -340,7 +342,7 @@ export default function WeatherPage() {
     };
 
     loadWeather();
-  }, [selected]);
+  }, [selected, t]);
 
   return (
     <div className="bg-white min-h-full w-full flex flex-col gap-6 p-5">
@@ -356,11 +358,11 @@ export default function WeatherPage() {
 
             <div>
               <p className="text-sm font-medium text-gray-500">
-                Weather Location
+                {t("Weather Location")}
               </p>
 
               <h2 className="text-lg font-bold text-gray-900">
-                Select Farm
+                {t("Select Farm")}
               </h2>
             </div>
           </div>
@@ -374,7 +376,7 @@ export default function WeatherPage() {
               onChange={(e) => setSelected(e.target.value)}
               className="w-full appearance-none bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl pl-10 pr-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
             >
-              <option value="">Select a farm</option>
+              <option value="">{t("Select a farm")}</option>
 
               {items.map((item) => (
                 <option
@@ -404,11 +406,11 @@ export default function WeatherPage() {
           <div className="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
 
           <p className="font-semibold text-gray-700">
-            Loading weather details...
+            {t("Loading weather details...")}
           </p>
 
           <p className="text-sm text-gray-400 mt-1">
-            Getting the latest weather information
+            {t("Getting the latest weather information")}
           </p>
         </div>
       )}
@@ -427,7 +429,7 @@ export default function WeatherPage() {
                 <Sun className="w-5 h-5 text-emerald-600" />
 
                 <h1 className="text-xl font-bold text-gray-900">
-                  Current Weather
+                  {t("Current Weather")}
                 </h1>
               </div>
 
@@ -441,7 +443,7 @@ export default function WeatherPage() {
 
                   <div>
                     <p className="text-sm text-emerald-100">
-                      Current temperature
+                      {t("Current temperature")}
                     </p>
 
                     <div className="flex items-end gap-2 mt-1">
@@ -459,12 +461,13 @@ export default function WeatherPage() {
 
                     <div>
                       <p className="text-sm text-emerald-100 mb-1">
-                        Weather Condition
+                        {t("Weather Condition")}
                       </p>
 
                       <div className="text-xl font-bold">
                         {getWeatherCondition(
-                          weather?.current?.weather_code
+                          weather?.current?.weather_code,
+                          t
                         )}
                       </div>
                     </div>
@@ -484,7 +487,7 @@ export default function WeatherPage() {
                         <Droplets className="w-4 h-4" />
 
                         <span className="text-xs">
-                          Humidity
+                          {t("Humidity")}
                         </span>
                       </div>
 
@@ -500,7 +503,7 @@ export default function WeatherPage() {
                         <Wind className="w-4 h-4" />
 
                         <span className="text-xs">
-                          Wind Speed
+                          {t("Wind Speed")}
                         </span>
                       </div>
 
@@ -525,7 +528,7 @@ export default function WeatherPage() {
                 <Thermometer className="w-5 h-5 text-emerald-600" />
 
                 <h1 className="text-xl font-bold text-gray-900">
-                  Additional Data
+                  {t("Additional Data")}
                 </h1>
               </div>
 
@@ -545,7 +548,7 @@ export default function WeatherPage() {
                     </div>
 
                     <p className="text-sm text-emerald-100">
-                      UV Index
+                      {t("UV Index")}
                     </p>
 
                     <p className="text-3xl font-bold mt-1">
@@ -555,7 +558,7 @@ export default function WeatherPage() {
                     </p>
 
                     <p className="text-xs text-emerald-100 mt-2">
-                      Maximum UV index expected today
+                      {t("Maximum UV index expected today")}
                     </p>
 
                   </div>
@@ -568,7 +571,7 @@ export default function WeatherPage() {
                     </div>
 
                     <p className="text-sm text-emerald-100">
-                      Expected Rainfall
+                      {t("Expected Rainfall")}
                     </p>
 
                     <p className="text-3xl font-bold mt-1">
@@ -576,7 +579,7 @@ export default function WeatherPage() {
                     </p>
 
                     <p className="text-xs text-emerald-100 mt-2">
-                      Current rainfall measurement
+                      {t("Current rainfall measurement")}
                     </p>
 
                   </div>
@@ -596,11 +599,11 @@ export default function WeatherPage() {
 
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Daily Forecast
+                  {t("Daily Forecast")}
                 </h1>
 
                 <p className="text-sm text-gray-500">
-                  Weather forecast for the upcoming days
+                  {t("Weather forecast for the upcoming days")}
                 </p>
               </div>
             </div>
@@ -626,7 +629,7 @@ export default function WeatherPage() {
 
                       <div className="min-w-0">
                         <p className="text-[11px] text-emerald-100">
-                          Date
+                          {t("Date")}
                         </p>
 
                         <p className="font-bold text-sm truncate">
@@ -650,7 +653,8 @@ export default function WeatherPage() {
 
                       <div className="text-sm font-semibold">
                         {getWeatherCondition(
-                          weather?.daily?.weather_code?.[index]
+                          weather?.daily?.weather_code?.[index],
+                          t
                         )}
                       </div>
 
@@ -661,7 +665,7 @@ export default function WeatherPage() {
 
                       <div className="bg-white/10 rounded-xl p-3">
                         <p className="text-[11px] text-emerald-100 mb-1">
-                          High
+                          {t("High")}
                         </p>
 
                         <p className="font-bold text-sm">
@@ -674,7 +678,7 @@ export default function WeatherPage() {
 
                       <div className="bg-white/10 rounded-xl p-3">
                         <p className="text-[11px] text-emerald-100 mb-1">
-                          Low
+                          {t("Low")}
                         </p>
 
                         <p className="font-bold text-sm">
@@ -712,7 +716,7 @@ export default function WeatherPage() {
           </div>
 
           <p>
-            Please select a farm from the dropdown above to view weather details.
+            {t("Please select a farm from the dropdown above to view weather details.")}
           </p>
         </div>
       )}

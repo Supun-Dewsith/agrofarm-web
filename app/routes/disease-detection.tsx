@@ -62,7 +62,7 @@ export async function clientAction({ request }: { request: Request }) {
   }
 }
 
-function formatInspectionDate(dateString?: string): string {
+function formatInspectionDate(dateString?: string, t?: any): string {
   if (!dateString) return '';
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return dateString;
@@ -73,11 +73,11 @@ function formatInspectionDate(dateString?: string): string {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMinutes < 1) return t ? t('Just now') : 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ${t ? t('ago') : 'ago'}`;
+  if (diffHours < 24) return `${diffHours}h ${t ? t('ago') : 'ago'}`;
+  if (diffDays === 1) return t ? t('Yesterday') : 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ${t ? t('ago') : 'ago'}`;
 
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
@@ -648,8 +648,8 @@ export default function DiseaseDetectionPage() {
                     fontSize: '10px',
                     color: '#c2410c'
                   }}>
-                    <span>Grad-CAM Activation:</span>
-                    <span style={{ fontWeight: 700 }}>Low 🟦 🟨 🟧 🟥 Core</span>
+                    <span>{t("Grad-CAM Activation:")}</span>
+                    <span style={{ fontWeight: 700 }}>{t("Low")} 🟦 🟨 🟧 🟥 {t("Core")}</span>
                   </div>
                 )}
               </div>
@@ -780,7 +780,7 @@ export default function DiseaseDetectionPage() {
                   const isSelected = selectedInspectionId === item.id;
                   const initial = item.plant_name ? item.plant_name.trim().charAt(0).toUpperCase() : '🌿';
                   const status = item.is_healthy ? 'HEALTHY' : 'INFECTED';
-                  const formattedDate = formatInspectionDate(item.created_at);
+                  const formattedDate = formatInspectionDate(item.created_at, t);
 
                   return (
                     <div
@@ -836,7 +836,7 @@ export default function DiseaseDetectionPage() {
                             color: item.is_healthy ? '#166534' : '#991b1b',
                             border: `1px solid ${item.is_healthy ? '#bbf7d0' : '#fecaca'}`
                           }}>
-                            {status}
+                            {t(status)}
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1244,7 +1244,7 @@ export default function DiseaseDetectionPage() {
                         backgroundColor: idx === 0 ? '#eff6ff' : (idx === 1 ? '#fef3c7' : '#fef2f2'),
                         color: idx === 0 ? '#1d4ed8' : (idx === 1 ? '#b45309' : '#b91c1c')
                       }}>
-                        STAGE {idx + 1}
+                        {t('STAGE')} {idx + 1}
                       </span>
                       <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
                         {stage.duration}
@@ -1359,7 +1359,7 @@ export default function DiseaseDetectionPage() {
                               fontSize: '11px',
                               fontWeight: 700
                             }}>
-                              {item.category}
+                              {t(item.category)}
                             </span>
                           </td>
                           <td style={{ padding: '12px 14px', verticalAlign: 'top', fontWeight: 600, color: '#1e293b' }}>
@@ -1782,7 +1782,7 @@ export default function DiseaseDetectionPage() {
                         cursor: 'pointer'
                       }}
                     >
-                      {pr}
+                      {t(pr)}
                     </button>
                   ))}
                 </div>

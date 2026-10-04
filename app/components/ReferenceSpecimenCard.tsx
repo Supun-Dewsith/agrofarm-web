@@ -360,7 +360,7 @@ export const ReferenceSpecimenCard: React.FC<Props> = ({ analysis, uploadedImage
               {specimenType === 'healthy' && (
                 <>
                   <circle cx="120" cy="65" r="28" fill="none" stroke="#86efac" strokeWidth="1" strokeDasharray="3,3" />
-                  <text x="120" y="70" textAnchor="middle" fill="#86efac" fontSize="10" fontWeight="bold">OPTIMAL</text>
+                  <text x="120" y="70" textAnchor="middle" fill="#86efac" fontSize="10" fontWeight="bold">{t('OPTIMAL')}</text>
                 </>
               )}
             </svg>
@@ -376,7 +376,7 @@ export const ReferenceSpecimenCard: React.FC<Props> = ({ analysis, uploadedImage
               fontSize: '10px',
               fontWeight: 600
             }}>
-              {analysis.scientific_name || 'Standard Reference'}
+              {analysis.scientific_name || t('Standard Reference')}
             </div>
           </div>
 
@@ -389,7 +389,7 @@ export const ReferenceSpecimenCard: React.FC<Props> = ({ analysis, uploadedImage
               {hallmarks.map((h, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
                   <span style={{ color: '#059669', fontSize: '11px', lineHeight: '1.4' }}>✓</span>
-                  <span style={{ fontSize: '11px', color: '#334155', lineHeight: '1.4' }}>{h}</span>
+                  <span style={{ fontSize: '11px', color: '#334155', lineHeight: '1.4' }}>{t(h)}</span>
                 </div>
               ))}
             </div>

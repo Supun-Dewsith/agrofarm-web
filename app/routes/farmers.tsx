@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchWithAuth } from '~/utils/auth';
 import { Search, Plus, Phone, Mail, MoreVertical } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Worker {
   id: number;
@@ -21,6 +22,7 @@ interface Farm {
 }
 
 export default function FarmerManagement() {
+  const { t } = useTranslation();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [workerError, setWorkerError] = useState('');
@@ -74,9 +76,9 @@ export default function FarmerManagement() {
       .catch((err) => {
         console.error('Farm API error:', err);
         setFarms([]);
-        setFarmError('Farm data is currently unavailable.');
+        setFarmError(t('Farm data is currently unavailable.'));
       });
-  }, []);
+  }, [t]);
 
   // Search + farm filtering
   const filteredWorkers = workers.filter((worker) => {
@@ -102,13 +104,13 @@ export default function FarmerManagement() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[#2A471C] tracking-tight">Farmer Management</h1>
-            <p className="text-sm text-gray-600 mt-0.5">Manage and track all registered farmers</p>
+            <h1 className="text-3xl font-bold text-[#2A471C] tracking-tight">{t("Farmer Management")}</h1>
+            <p className="text-sm text-gray-600 mt-0.5">{t("Manage and track all registered farmers")}</p>
           </div>
 
           <button className="inline-flex items-center justify-center gap-2 bg-[#2A471C] hover:bg-[#203714] text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer">
             <Plus className="w-4 h-4" />
-            Add Farmer
+            {t("Add Farmer")}
           </button>
         </div>
 
@@ -124,7 +126,7 @@ export default function FarmerManagement() {
 
               <input
                 type="text"
-                placeholder="Search farmers..."
+                placeholder={t("Search farmers...")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -137,7 +139,7 @@ export default function FarmerManagement() {
               onChange={(e) => setSelectedFarm(e.target.value)}
               className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-600"
             >
-              <option value="all">All Farms</option>
+              <option value="all">{t("All Farms")}</option>
 
               {farms.map((farm) => (
                 <option key={farm.farmIDs} value={farm.farmNames}>
@@ -155,7 +157,7 @@ export default function FarmerManagement() {
           {/* Active Farmers */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center justify-between relative overflow-hidden">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Farmers</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t("Active Farmers")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">{activeCount}</p>
             </div>
 
@@ -167,7 +169,7 @@ export default function FarmerManagement() {
           {/* Total Farmers */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center justify-between relative overflow-hidden">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Farmers</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t("Total Farmers")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">{totalCount}</p>
             </div>
 
@@ -186,14 +188,14 @@ export default function FarmerManagement() {
 
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-white">
-                  <th className="py-4 px-6">Farmer</th>
-                  <th className="py-4 px-6">Role</th>
-                  <th className="py-4 px-6">Contact</th>
-                  <th className="py-4 px-6">Farm</th>
-                  <th className="py-4 px-6">Tasks</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6">Join Date</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
+                  <th className="py-4 px-6">{t("Farmer")}</th>
+                  <th className="py-4 px-6">{t("Role")}</th>
+                  <th className="py-4 px-6">{t("Contact")}</th>
+                  <th className="py-4 px-6">{t("Farm")}</th>
+                  <th className="py-4 px-6">{t("Tasks")}</th>
+                  <th className="py-4 px-6">{t("Status")}</th>
+                  <th className="py-4 px-6">{t("Join Date")}</th>
+                  <th className="py-4 px-6 text-right">{t("Actions")}</th>
                 </tr>
               </thead>
 
@@ -226,7 +228,7 @@ export default function FarmerManagement() {
                         </div>
                       </td>
 
-                      <td className="py-4 px-6 whitespace-nowrap">{worker.role}</td>
+                      <td className="py-4 px-6 whitespace-nowrap">{t(worker.role)}</td>
 
                       {/* Contact */}
                       <td className="py-4 px-6 whitespace-nowrap">
@@ -256,7 +258,7 @@ export default function FarmerManagement() {
 
                           {Array.isArray(worker.tasks) && worker.tasks.map((task, index) => (
                             <span key={index} className="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                              {task}
+                              {t(task)}
                             </span>
                           ))}
 
@@ -266,7 +268,7 @@ export default function FarmerManagement() {
                       {/* Status */}
                       <td className="py-4 px-6 whitespace-nowrap">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${worker.status.toLowerCase() === 'active' ? 'bg-[#008728]' : 'bg-gray-400'}`}>
-                          {worker.status}
+                          {t(worker.status)}
                         </span>
                       </td>
 
@@ -293,8 +295,8 @@ export default function FarmerManagement() {
                       {workerError
                         ? workerError
                         : searchTerm || selectedFarm !== 'all'
-                          ? 'No farmers found matching your filters.'
-                          : 'No farmer data available.'}
+                          ? t('No farmers found matching your filters.')
+                          : t('No farmer data available.')}
                     </td>
                   </tr>
 

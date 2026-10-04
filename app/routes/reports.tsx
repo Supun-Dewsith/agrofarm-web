@@ -895,10 +895,10 @@ export default function ReportsPage() {
                               : 'bg-rose-50 text-rose-700 border-rose-200'
                             }`}
                         >
-                          {item.recordType}
+                          {t(item.recordType)}
                         </span>
                       </td>
-                      <td className="p-3 whitespace-nowrap font-medium text-slate-800">{item.category}</td>
+                      <td className="p-3 whitespace-nowrap font-medium text-slate-800">{t(item.category)}</td>
                       <td className="p-3 max-w-xs truncate text-slate-500">{item.description}</td>
                       <td
                         className={`p-3 whitespace-nowrap text-right font-bold ${item.recordType === 'INCOME' ? 'text-emerald-700' : 'text-rose-600'
@@ -944,7 +944,7 @@ export default function ReportsPage() {
                         <div className="font-medium text-slate-800">{c.farmName}</div>
                         <div className="text-[11px] text-slate-400">{c.fieldName}</div>
                       </td>
-                      <td className="p-3 font-medium text-slate-700">{c.growthStage}</td>
+                      <td className="p-3 font-medium text-slate-700">{t(c.growthStage)}</td>
                       <td className="p-3">
                         <div className="w-20 bg-slate-200 rounded-full h-1.5 overflow-hidden">
                           <div
@@ -961,7 +961,7 @@ export default function ReportsPage() {
                               : 'bg-amber-50 text-amber-700 border-amber-200'
                             }`}
                         >
-                          {c.status}
+                          {t(c.status)}
                         </span>
                       </td>
                       <td className="p-3 text-slate-500 whitespace-nowrap">
@@ -1005,7 +1005,7 @@ export default function ReportsPage() {
                       <td className="p-3 text-slate-600">{a.farmName}</td>
                       <td className="p-3 text-slate-600">{a.checkInTime ? a.checkInTime.slice(11, 16) : '-'}</td>
                       <td className="p-3 text-slate-600">{a.checkOutTime ? a.checkOutTime.slice(11, 16) : '-'}</td>
-                      <td className="p-3 font-semibold text-slate-900">{a.hoursWorked} hrs</td>
+                      <td className="p-3 font-semibold text-slate-900">{a.hoursWorked} {t("hrs")}</td>
                       <td className="p-3">
                         <span
                           className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${a.status === 'PRESENT'
@@ -1015,7 +1015,7 @@ export default function ReportsPage() {
                                 : 'bg-rose-50 text-rose-700 border-rose-200'
                             }`}
                         >
-                          {a.status}
+                          {t(a.status)}
                         </span>
                       </td>
                       <td className="p-3 text-slate-500 max-w-xs truncate">{a.location || '-'}</td>
@@ -1068,7 +1068,7 @@ export default function ReportsPage() {
                                 : 'bg-slate-100 text-slate-600 border-slate-200'
                             }`}
                         >
-                          {tItem.priority}
+                          {t(tItem.priority)}
                         </span>
                       </td>
                       <td className="p-3">
@@ -1080,7 +1080,7 @@ export default function ReportsPage() {
                                 : 'bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                         >
-                          {tItem.status}
+                          {t(tItem.status)}
                         </span>
                       </td>
                       <td className="p-3 text-slate-500 whitespace-nowrap">{tItem.dueDate || '-'}</td>

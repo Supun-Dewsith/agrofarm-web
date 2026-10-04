@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Calendar,
   Coins,
@@ -186,6 +187,7 @@ function optionalNumber(form: FormData, name: string) {
 }
 
 export default function HarvestPage() {
+  const { t } = useTranslation();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [records, setRecords] = useState<Harvest[]>([]);
   const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY);
@@ -401,7 +403,7 @@ export default function HarvestPage() {
       (unitPrice !== null &&
         (!Number.isFinite(unitPrice) || unitPrice <= 0))
     ) {
-      setFormError("Enter a valid crop, harvest date, quantity and sale price.");
+      setFormError(t("Enter a valid crop, harvest date, quantity and sale price."));
       return;
     }
 
@@ -431,7 +433,7 @@ export default function HarvestPage() {
       setShowHarvestForm(false);
       setEditing(null);
       setNotice(
-        editing ? "Harvest record updated." : "Harvest record saved.",
+        editing ? t("Harvest record updated.") : t("Harvest record saved."),
       );
 
       await loadPage();
@@ -464,7 +466,7 @@ export default function HarvestPage() {
       !textValue(form, "marketName") ||
       !textValue(form, "sourceName")
     ) {
-      setFormError("Enter a valid crop, market, report date, price and source.");
+      setFormError(t("Enter a valid crop, market, report date, price and source."));
       return;
     }
 
@@ -475,12 +477,12 @@ export default function HarvestPage() {
       (longitude !== null &&
         (!Number.isFinite(longitude) || Math.abs(longitude) > 180))
     ) {
-      setFormError("Enter both valid market coordinates, or leave both empty.");
+      setFormError(t("Enter both valid market coordinates, or leave both empty."));
       return;
     }
 
     if (sourceUrl && !safeLink(sourceUrl)?.startsWith("https://")) {
-      setFormError("Enter a valid HTTPS source link.");
+      setFormError(t("Enter a valid HTTPS source link."));
       return;
     }
 
@@ -513,7 +515,7 @@ export default function HarvestPage() {
       setPriceType(textValue(form, "priceType"));
       setPriceReload((value) => value + 1);
       setShowPriceForm(false);
-      setNotice("Market price saved with its report date and source.");
+      setNotice(t("Market price saved with its report date and source."));
     } catch (err) {
       setFormError(errorMessage(err));
     } finally {
@@ -526,7 +528,7 @@ export default function HarvestPage() {
 
     if (
       !window.confirm(
-        `Delete the harvest record for ${record.cropName} on ${dateLabel(record.harvestedOn)}?`,
+        `${t("Delete the harvest record for")} ${record.cropName} ${t("on")} ${dateLabel(record.harvestedOn)}?`,
       )
     ) {
       return;
@@ -543,7 +545,7 @@ export default function HarvestPage() {
       );
 
       await ensureSuccess(response);
-      setNotice("Harvest record deleted.");
+      setNotice(t("Harvest record deleted."));
       await loadPage();
     } catch (err) {
       setError(errorMessage(err));
@@ -558,13 +560,13 @@ export default function HarvestPage() {
         <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-              AgroFarm / Harvest
+              {t("AgroFarm / Harvest")}
             </p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Harvest & Market Prices
+              {t("Harvest & Market Prices")}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              Record your harvest and compare dated market prices.
+              {t("Record your harvest and compare dated market prices.")}
             </p>
           </div>
 
@@ -582,7 +584,7 @@ export default function HarvestPage() {
                 size={16}
                 className={loading || pricesLoading ? "animate-spin" : ""}
               />
-              Refresh
+              {t("Refresh")}
             </button>
 
             <button
@@ -592,7 +594,7 @@ export default function HarvestPage() {
               onClick={() => openHarvest()}
             >
               <Plus size={17} />
-              Record harvest
+              {t("Record harvest")}
             </button>
           </div>
         </header>
@@ -602,22 +604,22 @@ export default function HarvestPage() {
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Stat
-            title="Harvested · last 30 days"
+            title={t("Harvested · last 30 days")}
             value={`${quantityLabel(summary.totalQuantityKg)} kg`}
             icon={<Leaf size={20} />}
           />
           <Stat
-            title="Crops harvested · last 30 days"
+            title={t("Crops harvested · last 30 days")}
             value={quantityLabel(summary.cropCount)}
             icon={<Leaf size={20} />}
           />
           <Stat
-            title="Harvest entries · last 30 days"
+            title={t("Harvest entries · last 30 days")}
             value={quantityLabel(summary.recordCount)}
             icon={<Calendar size={20} />}
           />
           <Stat
-            title="Recorded harvest value · last 30 days"
+            title={t("Recorded harvest value · last 30 days")}
             value={money(summary.recordedSalesLkr)}
             icon={<Coins size={20} />}
           />
@@ -630,12 +632,10 @@ export default function HarvestPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Manual market observations
+                  {t("Manual market observations")}
                 </h2>
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-                  Open the official bulletin and enter the reported price,
-                  market and publication date. Saved prices are manual
-                  observations.
+                  {t("Open the official bulletin and enter the reported price, market and publication date. Saved prices are manual observations.")}
                 </p>
               </div>
 
@@ -647,7 +647,7 @@ export default function HarvestPage() {
                   className={secondaryButton}
                 >
                   <ExternalLink size={16} />
-                  Open HARTI
+                  {t("Open HARTI")}
                 </a>
 
                 {canManagePrices && (
@@ -658,7 +658,7 @@ export default function HarvestPage() {
                     onClick={openPriceForm}
                   >
                     <Plus size={16} />
-                    Add market price
+                    {t("Add market price")}
                   </button>
                 )}
               </div>
@@ -667,7 +667,7 @@ export default function HarvestPage() {
 
           <div className="space-y-5 p-5 sm:p-6">
             <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Registered crop">
+              <Field label={t("Registered crop")}>
                 <select
                   value={selectedCropId}
                   onChange={(event) => {
@@ -678,7 +678,7 @@ export default function HarvestPage() {
                   disabled={loading || crops.length === 0}
                 >
                   {crops.length === 0 && (
-                    <option value="">No registered crops</option>
+                    <option value="">{t("No registered crops")}</option>
                   )}
                   {crops.map((crop) => (
                     <option key={crop.cropId} value={crop.cropId}>
@@ -691,26 +691,26 @@ export default function HarvestPage() {
                 </select>
               </Field>
 
-              <Field label="Compare price type">
+              <Field label={t("Compare price type")}>
                 <select
                   value={priceType}
                   onChange={(event) => setPriceType(event.target.value)}
                   className={inputClass}
                 >
-                  <option value="WHOLESALE">Wholesale</option>
-                  <option value="FARMGATE">Farm-gate</option>
-                  <option value="RETAIL">Retail</option>
+                  <option value="WHOLESALE">{t("Wholesale")}</option>
+                  <option value="FARMGATE">{t("Farm-gate")}</option>
+                  <option value="RETAIL">{t("Retail")}</option>
                 </select>
               </Field>
 
-              <Field label="Expected quantity (kg)">
+              <Field label={t("Expected quantity (kg)")}>
                 <input
                   type="number"
                   min="0.001"
                   step="0.001"
                   value={expectedKg}
                   onChange={(event) => setExpectedKg(event.target.value)}
-                  placeholder="e.g. 100"
+                  placeholder={t("e.g. 100")}
                   className={inputClass}
                 />
               </Field>
@@ -728,7 +728,7 @@ export default function HarvestPage() {
                 </span>
                 {selectedCrop.expectedHarvestDate && (
                   <span>
-                    Expected harvest: {dateLabel(selectedCrop.expectedHarvestDate)}
+                    {t("Expected harvest:")} {dateLabel(selectedCrop.expectedHarvestDate)}
                   </span>
                 )}
               </div>
@@ -737,45 +737,45 @@ export default function HarvestPage() {
             {priceError ? (
               <Message kind="error">{priceError}</Message>
             ) : pricesLoading ? (
-              <EmptyState title="Loading saved market prices…" />
+              <EmptyState title={t("Loading saved market prices…")} />
             ) : !selectedCrop ? (
               <EmptyState
-                title="Select a registered crop"
-                description="Register a crop first to start recording harvests and market prices."
+                title={t("Select a registered crop")}
+                description={t("Register a crop first to start recording harvests and market prices.")}
               />
             ) : comparablePrices.length === 0 ? (
               <EmptyState
-                title="No saved prices for this price type"
-                description="Check the HARTI bulletin and add a dated observation. Only prices returned by the backend are shown."
+                title={t("No saved prices for this price type")}
+                description={t("Check the HARTI bulletin and add a dated observation. Only prices returned by the backend are shown.")}
               />
             ) : (
               <>
                 <div className="grid gap-4 md:grid-cols-3">
                   <Highlight
-                    title="Highest saved observation"
+                    title={t("Highest saved observation")}
                     value={`${money(bestPrice.priceLkrPerKg)} / kg`}
                     detail={`${bestPrice.marketName} · ${dateLabel(bestPrice.observedOn)}`}
                   />
                   <Highlight
-                    title="Nearest priced market"
-                    value={nearest?.marketName ?? "Coordinates needed"}
+                    title={t("Nearest priced market")}
+                    value={nearest?.marketName ?? t("Coordinates needed")}
                     detail={
                       nearest
-                        ? `Approximately ${quantityLabel(nearest.distanceKm)} km straight-line`
-                        : "Enter market coordinates when adding a price."
+                        ? `${t("Approximately")} ${quantityLabel(nearest.distanceKm)} ${t("km straight-line")}`
+                        : t("Enter market coordinates when adding a price.")
                     }
                   />
                   <Highlight
-                    title="Estimated gross revenue"
+                    title={t("Estimated gross revenue")}
                     value={
                       validKg
                         ? money(kg * Number(bestPrice.priceLkrPerKg))
-                        : "Enter quantity"
+                        : t("Enter quantity")
                     }
                     detail={
                       validKg
-                        ? `${quantityLabel(kg)} kg at the highest reported price`
-                        : "Calculated using the selected price type."
+                        ? `${quantityLabel(kg)} kg ${t("at the highest reported price")}`
+                        : t("Calculated using the selected price type.")
                     }
                   />
                 </div>
@@ -784,12 +784,12 @@ export default function HarvestPage() {
                   <table className="w-full min-w-[780px] text-left text-sm">
                     <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                       <tr>
-                        <th className="px-4 py-3">Market</th>
-                        <th className="px-4 py-3">Price / kg</th>
-                        <th className="px-4 py-3">Report date</th>
-                        <th className="px-4 py-3">Distance</th>
-                        <th className="px-4 py-3">Source</th>
-                        <th className="px-4 py-3">Gross revenue</th>
+                        <th className="px-4 py-3">{t("Market")}</th>
+                        <th className="px-4 py-3">{t("Price / kg")}</th>
+                        <th className="px-4 py-3">{t("Report date")}</th>
+                        <th className="px-4 py-3">{t("Distance")}</th>
+                        <th className="px-4 py-3">{t("Source")}</th>
+                        <th className="px-4 py-3">{t("Gross revenue")}</th>
                       </tr>
                     </thead>
 
@@ -807,7 +807,7 @@ export default function HarvestPage() {
                               {Number(price.priceLkrPerKg) ===
                                 Number(bestPrice.priceLkrPerKg) && (
                                 <span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                                  HIGHEST SAVED
+                                  {t("HIGHEST SAVED")}
                                 </span>
                               )}
                             </td>
@@ -817,7 +817,7 @@ export default function HarvestPage() {
                             <td className="px-4 py-4 text-slate-600">
                               {dateLabel(price.observedOn)}
                               {Number(price.daysOld) > 0 && (
-                                <span className="block text-xs text-amber-700">{price.daysOld} days old · saved observation</span>
+                                <span className="block text-xs text-amber-700">{price.daysOld} {t("days old · saved observation")}</span>
                               )}
                             </td>
                             <td className="px-4 py-4 text-slate-600">
@@ -832,7 +832,7 @@ export default function HarvestPage() {
                                   className="mt-1 flex items-center gap-1 text-xs font-medium text-emerald-700"
                                 >
                                   <MapPin size={12} />
-                                  View route
+                                  {t("View route")}
                                 </a>
                               )}
                             </td>
@@ -866,10 +866,7 @@ export default function HarvestPage() {
             )}
 
             <p className="text-xs leading-5 text-slate-500">
-              Prices are manually entered observations, not live quotes or
-              guaranteed buyer offers. Check the report date and variety.
-              Gross revenue excludes transport, fees and losses. Distance
-              is a straight-line estimate.
+              {t("Prices are manually entered observations, not live quotes or guaranteed buyer offers. Check the report date and variety. Gross revenue excludes transport, fees and losses. Distance is a straight-line estimate.")}
             </p>
           </div>
         </section>
@@ -878,10 +875,10 @@ export default function HarvestPage() {
           <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <h2 className="text-lg font-bold text-slate-900">
-                Harvest records
+                {t("Harvest records")}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                {filteredRecords.length} matching records
+                {filteredRecords.length} {t("matching records")}
               </p>
             </div>
 
@@ -891,24 +888,24 @@ export default function HarvestPage() {
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
-                aria-label="Search harvest records"
+                aria-label={t("Search harvest records")}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search crop, farm or market"
+                placeholder={t("Search crop, farm or market")}
                 className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-emerald-600"
               />
             </div>
           </div>
 
           {loading ? (
-            <EmptyState title="Loading harvest records…" />
+            <EmptyState title={t("Loading harvest records…")} />
           ) : filteredRecords.length === 0 ? (
             <EmptyState
-              title={search ? "No matching records" : "No harvest records yet"}
+              title={search ? t("No matching records") : t("No harvest records yet")}
               description={
                 search
-                  ? "Try a different crop, farm or market name."
-                  : "Use Record harvest to add your first entry."
+                  ? t("Try a different crop, farm or market name.")
+                  : t("Use Record harvest to add your first entry.")
               }
             />
           ) : (
@@ -916,12 +913,12 @@ export default function HarvestPage() {
               <table className="w-full min-w-[850px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-5 py-3">Crop / farm</th>
-                    <th className="px-5 py-3">Harvest date</th>
-                    <th className="px-5 py-3">Quantity</th>
-                    <th className="px-5 py-3">Grade</th>
-                    <th className="px-5 py-3">Sale / buyer</th>
-                    <th className="px-5 py-3">Actions</th>
+                    <th className="px-5 py-3">{t("Crop / farm")}</th>
+                    <th className="px-5 py-3">{t("Harvest date")}</th>
+                    <th className="px-5 py-3">{t("Quantity")}</th>
+                    <th className="px-5 py-3">{t("Grade")}</th>
+                    <th className="px-5 py-3">{t("Sale / buyer")}</th>
+                    <th className="px-5 py-3">{t("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -944,11 +941,11 @@ export default function HarvestPage() {
                         {quantityLabel(record.quantityKg)} kg
                       </td>
                       <td className="px-5 py-4 text-slate-600">
-                        {record.grade || "Not graded"}
+                        {record.grade || t("Not graded")}
                       </td>
                       <td className="px-5 py-4">
                         <p className="text-slate-700">
-                          {record.soldMarket || "Not entered"}
+                          {record.soldMarket || t("Not entered")}
                         </p>
                         {record.unitPriceLkrPerKg != null && (
                           <p className="mt-1 text-xs text-slate-500">
@@ -988,7 +985,7 @@ export default function HarvestPage() {
 
       {showHarvestForm && (
         <Modal
-          title={editing ? "Edit harvest record" : "Record harvest"}
+          title={editing ? t("Edit harvest record") : t("Record harvest")}
           busy={saving}
           onClose={() => setShowHarvestForm(false)}
         >
@@ -996,7 +993,7 @@ export default function HarvestPage() {
             {formError && <Message kind="error">{formError}</Message>}
 
             <fieldset disabled={saving} className="space-y-4">
-              <Field label="Registered crop">
+              <Field label={t("Registered crop")}>
                 <select
                   name="cropId"
                   required
@@ -1021,7 +1018,7 @@ export default function HarvestPage() {
               </Field>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Harvest date">
+                <Field label={t("Harvest date")}>
                   <input
                     name="harvestedOn"
                     type="date"
@@ -1034,7 +1031,7 @@ export default function HarvestPage() {
                   />
                 </Field>
 
-                <Field label="Quantity (kg)">
+                <Field label={t("Quantity (kg)")}>
                   <input
                     name="quantityKg"
                     type="number"
@@ -1046,46 +1043,46 @@ export default function HarvestPage() {
                   />
                 </Field>
 
-                <Field label="Quality grade">
+                <Field label={t("Quality grade")}>
                   <input
                     name="grade"
                     maxLength={30}
                     defaultValue={editing?.grade ?? ""}
-                    placeholder="e.g. Grade A"
+                    placeholder={t("e.g. Grade A")}
                     className={inputClass}
                   />
                 </Field>
 
-                <Field label="Sale price (LKR / kg)">
+                <Field label={t("Sale price (LKR / kg)")}>
                   <input
                     name="unitPriceLkrPerKg"
                     type="number"
                     min="0.01"
                     step="0.01"
                     defaultValue={editing?.unitPriceLkrPerKg ?? ""}
-                    placeholder="Optional"
+                    placeholder={t("Optional")}
                     className={inputClass}
                   />
                 </Field>
               </div>
 
-              <Field label="Buyer / market">
+              <Field label={t("Buyer / market")}>
                 <input
                   name="soldMarket"
                   maxLength={150}
                   defaultValue={editing?.soldMarket ?? ""}
-                  placeholder="Optional"
+                  placeholder={t("Optional")}
                   className={inputClass}
                 />
               </Field>
 
-              <Field label="Notes">
+              <Field label={t("Notes")}>
                 <textarea
                   name="notes"
                   rows={3}
                   maxLength={1000}
                   defaultValue={editing?.notes ?? ""}
-                  placeholder="Quality, storage or other details"
+                  placeholder={t("Quality, storage or other details")}
                   className={inputClass}
                 />
               </Field>
@@ -1093,7 +1090,7 @@ export default function HarvestPage() {
 
             <FormActions
               saving={saving}
-              label={editing ? "Update harvest" : "Save harvest"}
+              label={editing ? t("Update harvest") : t("Save harvest")}
               onCancel={() => setShowHarvestForm(false)}
             />
           </form>
@@ -1102,28 +1099,27 @@ export default function HarvestPage() {
 
       {showPriceForm && canManagePrices && (
         <Modal
-          title="Add a market price"
+          title={t("Add a market price")}
           busy={saving}
           onClose={() => setShowPriceForm(false)}
         >
           <form onSubmit={savePrice} className="space-y-4">
             <div className="rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
-              Use the price and date printed in the HARTI bulletin.
-              Enter prices in LKR per kilogram.
+              {t("Use the price and date printed in the HARTI bulletin. Enter prices in LKR per kilogram.")}
               <a
                 href={HARTI_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 block font-semibold underline"
               >
-                Open HARTI bulletin
+                {t("Open HARTI bulletin")}
               </a>
             </div>
 
             {formError && <Message kind="error">{formError}</Message>}
 
             <fieldset disabled={saving} className="space-y-4">
-              <Field label="Registered crop">
+              <Field label={t("Registered crop")}>
                 <select
                   name="cropId"
                   required
@@ -1142,29 +1138,29 @@ export default function HarvestPage() {
               </Field>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Market name">
+                <Field label={t("Market name")}>
                   <input
                     name="marketName"
                     required
                     maxLength={150}
-                    placeholder="e.g. Dambulla"
+                    placeholder={t("e.g. Dambulla")}
                     className={inputClass}
                   />
                 </Field>
 
-                <Field label="Price type">
+                <Field label={t("Price type")}>
                   <select
                     name="priceType"
                     defaultValue={priceType}
                     className={inputClass}
                   >
-                    <option value="WHOLESALE">Wholesale</option>
-                    <option value="FARMGATE">Farm-gate</option>
-                    <option value="RETAIL">Retail</option>
+                    <option value="WHOLESALE">{t("Wholesale")}</option>
+                    <option value="FARMGATE">{t("Farm-gate")}</option>
+                    <option value="RETAIL">{t("Retail")}</option>
                   </select>
                 </Field>
 
-                <Field label="Report / observation date">
+                <Field label={t("Report / observation date")}>
                   <input
                     name="observedOn"
                     type="date"
@@ -1174,7 +1170,7 @@ export default function HarvestPage() {
                   />
                 </Field>
 
-                <Field label="Price (LKR / kg)">
+                <Field label={t("Price (LKR / kg)")}>
                   <input
                     name="priceLkrPerKg"
                     type="number"
@@ -1187,7 +1183,7 @@ export default function HarvestPage() {
                 </Field>
               </div>
 
-              <Field label="Source name">
+              <Field label={t("Source name")}>
                 <input
                   name="sourceName"
                   required
@@ -1197,7 +1193,7 @@ export default function HarvestPage() {
                 />
               </Field>
 
-              <Field label="Source / report link">
+              <Field label={t("Source / report link")}>
                 <input
                   name="sourceUrl"
                   type="url"
@@ -1209,13 +1205,13 @@ export default function HarvestPage() {
 
               <details className="rounded-xl border border-slate-200 p-4">
                 <summary className="cursor-pointer text-sm font-semibold text-slate-700">
-                  Market location — optional
+                  {t("Market location — optional")}
                 </summary>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Enter both coordinates to calculate straight-line distance.
+                  {t("Enter both coordinates to calculate straight-line distance.")}
                 </p>
                 <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                  <Field label="Latitude">
+                  <Field label={t("Latitude")}>
                     <input
                       name="marketLatitude"
                       type="number"
@@ -1225,7 +1221,7 @@ export default function HarvestPage() {
                       className={inputClass}
                     />
                   </Field>
-                  <Field label="Longitude">
+                  <Field label={t("Longitude")}>
                     <input
                       name="marketLongitude"
                       type="number"
@@ -1241,7 +1237,7 @@ export default function HarvestPage() {
 
             <FormActions
               saving={saving}
-              label="Save market price"
+              label={t("Save market price")}
               onCancel={() => setShowPriceForm(false)}
             />
           </form>
@@ -1359,6 +1355,7 @@ function FormActions({
   label: string;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
       <button
@@ -1367,10 +1364,10 @@ function FormActions({
         onClick={onCancel}
         className={secondaryButton}
       >
-        Cancel
+        {t("Cancel")}
       </button>
       <button type="submit" disabled={saving} className={primaryButton}>
-        {saving ? "Saving…" : label}
+        {saving ? t("Saving…") : label}
       </button>
     </div>
   );

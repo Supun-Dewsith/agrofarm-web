@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, CheckCircle, AlertTriangle, AlertCircle, Filter, Calendar } from 'lucide-react';
 import { data, useNavigate } from 'react-router';
 import { fetchWithAuth } from '~/utils/auth';
+import { useTranslation } from 'react-i18next';
 
 
 
@@ -37,6 +38,7 @@ interface farms {
 
 // ------------- function page --------------
 export default function Page() {
+  const { t } = useTranslation();
 
 
   
@@ -65,7 +67,7 @@ export default function Page() {
   async function handleDelete(cropId: string) {
 
   const confirmed = window.confirm(
-    "Are you sure you want to delete this crop?"
+    t("Are you sure you want to delete this crop?")
   );
 
   if (!confirmed) {
@@ -93,7 +95,7 @@ export default function Page() {
   } catch (error) {
 
     console.error(error);
-    setError("Failed to delete crop.");
+    setError(t("Failed to delete crop."));
 
   }
 }
@@ -112,14 +114,14 @@ export default function Page() {
         const farms = data as farms[];
 
          if (farms.length === 0) {
-          setError("No farms found.");
+          setError(t("No farms found."));
          } else{
           setItems(data as farms[]);
          }
       })
       .catch(console.error);
       
-  }, []); 
+  }, [t]); 
 
 
     // request crop details
@@ -140,7 +142,7 @@ export default function Page() {
         const crops = data as Crop[];
 
          if (crops.length === 0) {
-          setError("No crops found.");
+          setError(t("No crops found."));
           setCrops([]);
          } else{
           setCrops(data as Crop[]);
@@ -148,7 +150,7 @@ export default function Page() {
       })
       .catch(console.error);
       
-  }, [selected]);  
+  }, [selected, t]);  
 
   
 
@@ -182,7 +184,7 @@ export default function Page() {
 
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">
-              Select Farm
+              {t("Select Farm")}
             </p>
 
             <select
@@ -190,7 +192,7 @@ export default function Page() {
               onChange={(e) => setSelected(e.target.value)}
               className="w-full sm:w-64 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              <option value="">Select a farm</option>
+              <option value="">{t("Select a farm")}</option>
 
               {items.map((item) => (
                 <option key={item.farmIDs} value={item.farmIDs}>
@@ -204,7 +206,7 @@ export default function Page() {
             onClick={() => navigate("/home/cropInsert")}
             className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-700 text-white text-sm font-semibold shadow-sm hover:bg-emerald-800 transition-colors"
           >
-            + Insert Crop
+            + {t("Insert Crop")}
           </button>
 
         </div>
@@ -220,7 +222,7 @@ export default function Page() {
           {/* Total Crops */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Crops</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("Total Crops")}</p>
               <h3 className="text-3xl font-bold text-gray-900 mt-1">{totalCrops}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -231,7 +233,7 @@ export default function Page() {
           {/* Healthy */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Healthy</p>
+              <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">{t("Healthy")}</p>
               <h3 className="text-3xl font-bold text-gray-900 mt-1">{healthyCount}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -242,7 +244,7 @@ export default function Page() {
           {/* Moderate */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Moderate</p>
+              <p className="text-xs font-semibold text-amber-500 uppercase tracking-wider">{t("Moderate")}</p>
               <h3 className="text-3xl font-bold text-gray-900 mt-1">{moderateCount}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
@@ -253,7 +255,7 @@ export default function Page() {
           {/* Critical */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider">Critical</p>
+              <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider">{t("Critical")}</p>
               <h3 className="text-3xl font-bold text-gray-900 mt-1">{criticalCount}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
@@ -273,10 +275,10 @@ export default function Page() {
             onChange={(e) => setSelectedFilter(e.target.value)}
             className="bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-4 py-2.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option>All Crops</option>
-            <option>Healthy</option>
-            <option>Moderate</option>
-            <option>Critical</option>
+            <option value="All Crops">{t("All Crops")}</option>
+            <option value="Healthy">{t("Healthy")}</option>
+            <option value="Moderate">{t("Moderate")}</option>
+            <option value="Critical">{t("Critical")}</option>
           </select>
         </div>
 
@@ -299,17 +301,17 @@ export default function Page() {
               {/* Details List */}
               <div className="space-y-2.5 pt-2 border-t border-gray-100 text-sm">
                 <div className="flex justify-between items-center text-gray-600">
-                  <span>Field:</span>
+                  <span>{t("Field:")}</span>
                   <span className="font-semibold text-gray-900">{crop.field}</span>
                 </div>
                 <div className="flex justify-between items-center text-gray-600">
-                  <span>Area:</span>
+                  <span>{t("Area:")}</span>
                   <span className="font-semibold text-gray-900">{crop.area}</span>
                 </div>
                 <div className="flex justify-between items-center text-gray-600">
-                  <span>Growth Stage:</span>
+                  <span>{t("Growth Stage:")}</span>
                   <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">
-                    {crop.growthStage}
+                    {t(crop.growthStage)}
                   </span>
                 </div>
               </div>
@@ -317,7 +319,7 @@ export default function Page() {
               {/* Progress Bar */}
               <div className="space-y-1.5 pt-2">
                 <div className="flex justify-between text-xs font-semibold text-gray-600">
-                  <span>Progress</span>
+                  <span>{t("Progress")}</span>
                   <span>{crop.progress}%</span>
                 </div>
                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
@@ -343,7 +345,7 @@ export default function Page() {
                   </div>
 
                   <span className="text-gray-400 mt-1">
-                    Planted
+                    {t("Planted")}
                   </span>
                 </div>
 
@@ -359,7 +361,7 @@ export default function Page() {
                   </div>
 
                   <span className="text-gray-400 mt-1">
-                    Harvest
+                    {t("Harvest")}
                   </span>
                 </div>
 
@@ -370,14 +372,14 @@ export default function Page() {
                   onClick={() => navigate(`/home/cropUpdate/${crop.id}`)}
                   className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition"
                 >
-                  Update
+                  {t("Update")}
                 </button>
 
                 <button
                   onClick={() => handleDelete(crop.id)}
                   className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 transition"
                 >
-                  Delete
+                  {t("Delete")}
                 </button>
               </div>
 

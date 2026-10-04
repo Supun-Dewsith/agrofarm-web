@@ -7,6 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   CalendarDays,
@@ -509,6 +510,7 @@ function Modal({
 ========================================================= */
 
 export default function Tasks() {
+  const { t } = useTranslation();
   const [role, setRole] = useState("");
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -1041,29 +1043,29 @@ export default function Tasks() {
     setFormError("");
 
     if (!form.title.trim()) {
-      setFormError("Enter a task title.");
+      setFormError(t("Enter a task title."));
       return;
     }
 
     if (!form.farmId) {
-      setFormError("Select a farm.");
+      setFormError(t("Select a farm."));
       return;
     }
 
     if (!form.supervisorId) {
-      setFormError("Select a supervisor.");
+      setFormError(t("Select a supervisor."));
       return;
     }
 
     if (form.workerIds.length === 0) {
       setFormError(
-        "Select at least one farmer."
+        t("Select at least one farmer.")
       );
       return;
     }
 
     if (!form.dueDate) {
-      setFormError("Select a due date.");
+      setFormError(t("Select a due date."));
       return;
     }
 
@@ -1099,7 +1101,7 @@ export default function Tasks() {
       !validWorkers
     ) {
       setFormError(
-        "Some selections are no longer available. Check the farm, field and assigned team."
+        t("Some selections are no longer available. Check the farm, field and assigned team.")
       );
       return;
     }
@@ -1158,14 +1160,14 @@ export default function Tasks() {
 
       setNotice(
         editingTaskId === null
-          ? "Task created and assigned successfully."
-          : "Task changes saved successfully."
+          ? t("Task created and assigned successfully.")
+          : t("Task changes saved successfully.")
       );
 
       setShowForm(false);
     } catch (err) {
       setFormError(
-        getError(err, "Unable to save task.")
+        getError(err, t("Unable to save task."))
       );
     } finally {
       savePending.current = false;
@@ -1217,15 +1219,13 @@ export default function Tasks() {
       );
 
       setNotice(
-        `“${task.title}” marked ${formatLabel(
-          nextStatus
-        ).toLowerCase()}.`
+        `“${task.title}” ${t("marked")} ${t(formatLabel(nextStatus)).toLowerCase()}.`
       );
     } catch (err) {
       setError(
         getError(
           err,
-          "Unable to update task status."
+          t("Unable to update task status.")
         )
       );
     } finally {
@@ -1269,10 +1269,10 @@ export default function Tasks() {
       }
 
       setDeleteTarget(null);
-      setNotice("Task deleted successfully.");
+      setNotice(t("Task deleted successfully."));
     } catch (err) {
       setDeleteError(
-        getError(err, "Unable to delete task.")
+        getError(err, t("Unable to delete task."))
       );
     } finally {
       mutationPending.current = false;
@@ -1297,12 +1297,12 @@ export default function Tasks() {
           </span>
 
           <div>
-            <h1>Task Management</h1>
+            <h1>{t("Task Management")}</h1>
 
             <p>
               {role === "FARMER"
-                ? "Your assigned tasks, all in one place"
-                : "Plan, assign and track farm activities"}
+                ? t("Your assigned tasks, all in one place")
+                : t("Plan, assign and track farm activities")}
             </p>
           </div>
         </div>
@@ -1317,7 +1317,7 @@ export default function Tasks() {
             onClick={() => openTaskForm()}
           >
             <Plus size={18} />
-            Create Task
+            {t("Create Task")}
           </button>
         )}
       </header>
@@ -1335,7 +1335,7 @@ export default function Tasks() {
             }
             onClick={() => void loadTasks()}
           >
-            Retry
+            {t("Retry")}
           </button>
         </div>
       )}
@@ -1348,7 +1348,7 @@ export default function Tasks() {
 
           <button
             type="button"
-            aria-label="Dismiss notification"
+            aria-label={t("Dismiss notification")}
             onClick={() => setNotice("")}
           >
             <X size={17} />
@@ -1360,7 +1360,7 @@ export default function Tasks() {
 
       <section
         className="tm-stats"
-        aria-label="Task summary"
+        aria-label={t("Task summary")}
       >
         {SUMMARY_CARDS.map(
           ({ key, title, Icon, color }) => (
@@ -1372,7 +1372,7 @@ export default function Tasks() {
               onClick={() => setFilter(key)}
             >
               <span className="tm-stat-copy">
-                <span>{title}</span>
+                <span>{t(title)}</span>
 
                 <strong>
                   {loading && tasks.length === 0
@@ -1399,16 +1399,16 @@ export default function Tasks() {
           <div>
             <h2>
               {role === "FARMER"
-                ? "My Tasks"
-                : "All Tasks"}
+                ? t("My Tasks")
+                : t("All Tasks")}
             </h2>
 
             <p>
               {role === "SUPERVISOR"
-                ? "Tasks across your assigned farms"
+                ? t("Tasks across your assigned farms")
                 : role === "FARMER"
-                  ? "Your supervisor reviews and updates progress"
-                  : "Keep every farm activity on track"}
+                  ? t("Your supervisor reviews and updates progress")
+                  : t("Keep every farm activity on track")}
             </p>
           </div>
 
@@ -1417,8 +1417,8 @@ export default function Tasks() {
               <Search size={18} />
 
               <input
-                aria-label="Search tasks"
-                placeholder="Search tasks, farms or people..."
+                aria-label={t("Search tasks")}
+                placeholder={t("Search tasks, farms or people...")}
                 value={search}
                 onChange={(event) =>
                   setSearch(event.target.value)
@@ -1428,7 +1428,7 @@ export default function Tasks() {
               {search && (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t("Clear search")}
                   onClick={() => setSearch("")}
                 >
                   <X size={16} />
@@ -1439,7 +1439,7 @@ export default function Tasks() {
             <button
               type="button"
               className="tm-icon"
-              aria-label="Refresh tasks"
+              aria-label={t("Refresh tasks")}
               disabled={
                 loading || busyTaskId !== null
               }
@@ -1460,7 +1460,7 @@ export default function Tasks() {
         <div className="tm-filter-row">
           <div
             className="tm-tabs"
-            aria-label="Filter by task status"
+            aria-label={t("Filter by task status")}
           >
             {FILTERS.map((status) => (
               <button
@@ -1477,8 +1477,8 @@ export default function Tasks() {
                 }
               >
                 {status === "ALL"
-                  ? "All Tasks"
-                  : formatLabel(status)}
+                  ? t("All Tasks")
+                  : t(formatLabel(status))}
 
                 <span>{counts[status]}</span>
               </button>
@@ -1487,7 +1487,7 @@ export default function Tasks() {
 
           <div className="tm-filter-selects">
             <select
-              aria-label="Filter by farm"
+              aria-label={t("Filter by farm")}
               value={farmFilter}
               onChange={(event) =>
                 setFarmFilter(
@@ -1495,7 +1495,7 @@ export default function Tasks() {
                 )
               }
             >
-              <option value="">All farms</option>
+              <option value="">{t("All farms")}</option>
 
               {filterFarms.map((farm) => (
                 <option
@@ -1508,7 +1508,7 @@ export default function Tasks() {
             </select>
 
             <select
-              aria-label="Sort tasks"
+              aria-label={t("Sort tasks")}
               value={sortOrder}
               onChange={(event) =>
                 setSortOrder(
@@ -1517,15 +1517,15 @@ export default function Tasks() {
               }
             >
               <option value="NEWEST">
-                Newest first
+                {t("Newest first")}
               </option>
 
               <option value="DUE_DATE">
-                Due date
+                {t("Due date")}
               </option>
 
               <option value="PRIORITY">
-                Highest priority
+                {t("Highest priority")}
               </option>
             </select>
           </div>
@@ -1541,7 +1541,7 @@ export default function Tasks() {
                 className="tm-spin"
               />
 
-              <h3>Loading tasks...</h3>
+              <h3>{t("Loading tasks...")}</h3>
             </div>
           ) : filteredTasks.length === 0 ? (
             <div className="tm-empty">
@@ -1549,20 +1549,20 @@ export default function Tasks() {
 
               <h3>
                 {error
-                  ? "Tasks could not be loaded"
+                  ? t("Tasks could not be loaded")
                   : hasFilters
-                    ? "No matching tasks"
-                    : "No tasks yet"}
+                    ? t("No matching tasks")
+                    : t("No tasks yet")}
               </h3>
 
               <p>
                 {error
-                  ? "Use Retry to load your tasks."
+                  ? t("Use Retry to load your tasks.")
                   : hasFilters
-                    ? "Try another search, farm or status."
+                    ? t("Try another search, farm or status.")
                     : canManage
-                      ? "Use Create Task to assign your first activity."
-                      : "Your assigned tasks will appear here."}
+                      ? t("Use Create Task to assign your first activity.")
+                      : t("Your assigned tasks will appear here.")}
               </p>
 
               {hasFilters && (
@@ -1571,7 +1571,7 @@ export default function Tasks() {
                   className="tm-secondary"
                   onClick={resetFilters}
                 >
-                  Clear filters
+                  {t("Clear filters")}
                 </button>
               )}
             </div>
@@ -1631,9 +1631,9 @@ export default function Tasks() {
                           <span
                             className={`tm-priority ${task.priority.toLowerCase()}`}
                           >
-                            {formatLabel(
+                            {t(formatLabel(
                               task.priority
-                            )}
+                            ))}
                           </span>
                         </div>
 
@@ -1668,13 +1668,13 @@ export default function Tasks() {
 
                           {isOverdue(task) && (
                             <span className="tm-overdue">
-                              Overdue
+                              {t("Overdue")}
                             </span>
                           )}
 
                           {isDueToday(task) && (
                             <span className="tm-due-today">
-                              Due today
+                              {t("Due today")}
                             </span>
                           )}
                         </div>
@@ -1702,7 +1702,7 @@ export default function Tasks() {
                             <button
                               type="button"
                               className="tm-more-workers"
-                              aria-label="View all assigned farmers"
+                              aria-label={t("View all assigned farmers")}
                               onClick={() =>
                                 setExpandedTaskId(
                                   task.id
@@ -1712,7 +1712,7 @@ export default function Tasks() {
                               +
                               {task.workerNames
                                 .length - 3}{" "}
-                              more
+                              {t("more")}
                             </button>
                           )}
                         </div>
@@ -1723,13 +1723,13 @@ export default function Tasks() {
                       <span
                         className={`tm-status ${task.status.toLowerCase()}`}
                       >
-                        {formatLabel(task.status)}
+                        {t(formatLabel(task.status))}
                       </span>
 
                       {canManage && (
                         <div className="tm-row-actions">
                           <select
-                            aria-label={`Status for ${task.title}`}
+                            aria-label={`${t("Status for")} ${task.title}`}
                             value={task.status}
                             disabled={
                               loading ||
@@ -1749,9 +1749,9 @@ export default function Tasks() {
                                   key={status}
                                   value={status}
                                 >
-                                  {formatLabel(
+                                  {t(formatLabel(
                                     status
-                                  )}
+                                  ))}
                                 </option>
                               )
                             )}
@@ -1760,7 +1760,7 @@ export default function Tasks() {
                           <button
                             type="button"
                             className="tm-icon"
-                            aria-label={`Edit ${task.title}`}
+                            aria-label={`${t("Edit")} ${task.title}`}
                             disabled={
                               loading ||
                               busyTaskId !== null
@@ -1775,7 +1775,7 @@ export default function Tasks() {
                           <button
                             type="button"
                             className="tm-icon tm-delete"
-                            aria-label={`Delete ${task.title}`}
+                            aria-label={`${t("Delete")} ${task.title}`}
                             disabled={
                               loading ||
                               busyTaskId !== null
@@ -1799,7 +1799,7 @@ export default function Tasks() {
                             size={14}
                             className="tm-spin"
                           />
-                          Updating...
+                          {t("Updating...")}
                         </span>
                       )}
                     </div>
@@ -1815,41 +1815,41 @@ export default function Tasks() {
                     <div className="tm-detail-grid">
                       <div>
                         <span className="tm-detail-label">
-                          DESCRIPTION
+                          {t("DESCRIPTION")}
                         </span>
 
                         <p className="tm-full-description">
                           {task.description ||
-                            "No description has been added."}
+                            t("No description has been added.")}
                         </p>
                       </div>
 
                       <div>
                         <span className="tm-detail-label">
-                          SUPERVISING OFFICER
+                          {t("SUPERVISING OFFICER")}
                         </span>
 
                         <p className="tm-supervisor">
                           <ShieldCheck size={18} />
 
                           {task.supervisorName ||
-                            "No supervisor assigned"}
+                            t("No supervisor assigned")}
                         </p>
 
                         <span className="tm-detail-label">
-                          WORK AREA
+                          {t("WORK AREA")}
                         </span>
 
                         <p>
                           {task.fieldName ||
-                            "Entire farm"}
+                            t("Entire farm")}
                         </p>
                       </div>
                     </div>
 
                     <div className="tm-detail-team">
                       <span className="tm-detail-label">
-                        ASSIGNED FARMERS ·{" "}
+                        {t("ASSIGNED FARMERS")} ·{" "}
                         {task.workerNames.length}
                       </span>
 
@@ -1884,8 +1884,8 @@ export default function Tasks() {
                     }
                   >
                     {expanded
-                      ? "Hide details"
-                      : "View details"}
+                      ? t("Hide details")
+                      : t("View details")}
 
                     {expanded ? (
                       <ChevronUp size={16} />
@@ -1901,8 +1901,8 @@ export default function Tasks() {
 
         <footer className="tm-panel-footer">
           <span>
-            Showing {filteredTasks.length} of{" "}
-            {tasks.length} tasks
+            {t("Showing")} {filteredTasks.length} {t("of")}{" "}
+            {tasks.length} {t("tasks")}
           </span>
 
           {hasFilters && (
@@ -1910,7 +1910,7 @@ export default function Tasks() {
               type="button"
               onClick={resetFilters}
             >
-              Clear filters
+              {t("Clear filters")}
             </button>
           )}
         </footer>
@@ -1930,25 +1930,24 @@ export default function Tasks() {
             <header className="tm-modal-header">
               <div>
                 <span className="tm-eyebrow">
-                  FARM ACTIVITIES
+                  {t("FARM ACTIVITIES")}
                 </span>
 
                 <h2 id="task-form-title">
                   {editingTaskId === null
-                    ? "Create Task"
-                    : "Edit Task"}
+                    ? t("Create Task")
+                    : t("Edit Task")}
                 </h2>
 
                 <p>
-                  Choose the location, assign your
-                  team and set the schedule.
+                  {t("Choose the location, assign your team and set the schedule.")}
                 </p>
               </div>
 
               <button
                 type="button"
                 className="tm-icon"
-                aria-label="Close task form"
+                aria-label={t("Close task form")}
                 disabled={saving}
                 onClick={closeTaskForm}
               >
@@ -1982,7 +1981,7 @@ export default function Tasks() {
                       )
                     }
                   >
-                    Retry
+                    {t("Retry")}
                   </button>
                 </div>
               )}
@@ -1992,17 +1991,17 @@ export default function Tasks() {
               <fieldset disabled={saving}>
                 <legend className="tm-section-title">
                   <span>01</span>
-                  Task details
+                  {t("Task details")}
                 </legend>
 
                 <label className="tm-input-label">
-                  Task title <b>*</b>
+                  {t("Task title")} <b>*</b>
 
                   <input
                     autoFocus
                     required
                     maxLength={255}
-                    placeholder="e.g. Inspect the irrigation system"
+                    placeholder={t("e.g. Inspect the irrigation system")}
                     value={form.title}
                     onChange={(event) =>
                       updateForm(
@@ -2014,12 +2013,12 @@ export default function Tasks() {
                 </label>
 
                 <label className="tm-input-label">
-                  Description
+                  {t("Description")}
 
                   <textarea
                     rows={4}
                     maxLength={1000}
-                    placeholder="Explain the work, equipment needed and what the supervisor should check..."
+                    placeholder={t("Explain the work, equipment needed and what the supervisor should check...")}
                     value={form.description}
                     onChange={(event) =>
                       updateForm(
@@ -2030,8 +2029,8 @@ export default function Tasks() {
                   />
 
                   <small className="tm-character-count">
-                    {form.description.length}/1000
-                    characters
+                    {form.description.length}/1000{" "}
+                    {t("characters")}
                   </small>
                 </label>
               </fieldset>
@@ -2041,12 +2040,12 @@ export default function Tasks() {
               <fieldset disabled={saving}>
                 <legend className="tm-section-title">
                   <span>02</span>
-                  Location & team
+                  {t("Location & team")}
                 </legend>
 
                 <div className="tm-grid">
                   <label className="tm-input-label">
-                    Farm <b>*</b>
+                    {t("Farm")} <b>*</b>
 
                     <select
                       required
@@ -2059,7 +2058,7 @@ export default function Tasks() {
                       }
                     >
                       <option value="">
-                        Select a farm
+                        {t("Select a farm")}
                       </option>
 
                       {options.farms.map((farm) => (
@@ -2074,7 +2073,7 @@ export default function Tasks() {
                   </label>
 
                   <label className="tm-input-label">
-                    Field <small>Optional</small>
+                    {t("Field")} <small>{t("Optional")}</small>
 
                     <select
                       value={form.fieldId}
@@ -2091,7 +2090,7 @@ export default function Tasks() {
                       }
                     >
                       <option value="">
-                        Entire farm / no specific field
+                        {t("Entire farm / no specific field")}
                       </option>
 
                       {options.fields.map(
@@ -2109,12 +2108,11 @@ export default function Tasks() {
                 </div>
 
                 <p className="tm-help">
-                  Changing the farm clears the selected
-                  field, supervisor and farmers.
+                  {t("Changing the farm clears the selected field, supervisor and farmers.")}
                 </p>
 
                 <label className="tm-input-label">
-                  Supervising officer <b>*</b>
+                  {t("Supervising officer")} <b>*</b>
 
                   <select
                     required
@@ -2132,7 +2130,7 @@ export default function Tasks() {
                     }
                   >
                     <option value="">
-                      Select a supervisor
+                      {t("Select a supervisor")}
                     </option>
 
                     {options.supervisors.map(
@@ -2154,10 +2152,7 @@ export default function Tasks() {
                   options.supervisors.length ===
                     0 && (
                     <p className="tm-hint">
-                      No active supervisor is assigned
-                      to this farm. Update farm
-                      assignments in User Management
-                      first.
+                      {t("No active supervisor is assigned to this farm. Update farm assignments in User Management first.")}
                     </p>
                   )}
 
@@ -2165,11 +2160,11 @@ export default function Tasks() {
 
                 <div className="tm-worker-heading">
                   <span>
-                    Assign farmers <b>*</b>
+                    {t("Assign farmers")} <b>*</b>
                   </span>
 
                   <span aria-live="polite">
-                    {form.workerIds.length} selected
+                    {form.workerIds.length} {t("selected")}
                   </span>
                 </div>
 
@@ -2183,7 +2178,7 @@ export default function Tasks() {
                     }
                     onClick={selectAllShownWorkers}
                   >
-                    Select all shown
+                    {t("Select all shown")}
                   </button>
 
                   <button
@@ -2195,20 +2190,20 @@ export default function Tasks() {
                       updateForm("workerIds", [])
                     }
                   >
-                    Clear selection
+                    {t("Clear selection")}
                   </button>
                 </div>
 
                 {selectedWorkers.length > 0 && (
                   <div
                     className="tm-selected-chips"
-                    aria-label="Selected farmers"
+                    aria-label={t("Selected farmers")}
                   >
                     {selectedWorkers.map((worker) => (
                       <button
                         type="button"
                         key={worker.id}
-                        aria-label={`Remove ${worker.name}`}
+                        aria-label={`${t("Remove")} ${worker.name}`}
                         onClick={() =>
                           toggleWorker(
                             worker.id,
@@ -2228,8 +2223,8 @@ export default function Tasks() {
                     <Search size={17} />
 
                     <input
-                      aria-label="Search farmers"
-                      placeholder="Search farmers..."
+                      aria-label={t("Search farmers")}
+                      placeholder={t("Search farmers...")}
                       value={workerSearch}
                       disabled={
                         !form.farmId ||
@@ -2247,22 +2242,21 @@ export default function Tasks() {
                   <div className="tm-worker-list">
                     {optionsLoading ? (
                       <p className="tm-worker-empty">
-                        Loading farm and team
-                        selections...
+                        {t("Loading farm and team selections...")}
                       </p>
                     ) : optionsError ? (
                       <p className="tm-worker-empty">
-                        Use Retry above to load your team.
+                        {t("Use Retry above to load your team.")}
                       </p>
                     ) : !form.farmId ? (
                       <p className="tm-worker-empty">
-                        Select a farm to see its farmers.
+                        {t("Select a farm to see its farmers.")}
                       </p>
                     ) : filteredWorkers.length === 0 ? (
                       <p className="tm-worker-empty">
                         {workerSearch
-                          ? "No farmers match your search."
-                          : "No active farmers are assigned to this farm."}
+                          ? t("No farmers match your search.")
+                          : t("No active farmers are assigned to this farm.")}
                       </p>
                     ) : (
                       filteredWorkers.map((worker) => {
@@ -2299,7 +2293,7 @@ export default function Tasks() {
 
                             <span>
                               {worker.name}
-                              <small>Farmer</small>
+                              <small>{t("Farmer")}</small>
                             </span>
                           </label>
                         );
@@ -2310,8 +2304,7 @@ export default function Tasks() {
 
                 {hasUnavailableWorkers && (
                   <p className="tm-hint">
-                    Some previously selected farmers
-                    are no longer available.{" "}
+                    {t("Some previously selected farmers are no longer available.")}{" "}
 
                     <button
                       type="button"
@@ -2328,7 +2321,7 @@ export default function Tasks() {
                         )
                       }
                     >
-                      Remove unavailable selections
+                      {t("Remove unavailable selections")}
                     </button>
                   </p>
                 )}
@@ -2339,12 +2332,12 @@ export default function Tasks() {
               <fieldset disabled={saving}>
                 <legend className="tm-section-title">
                   <span>03</span>
-                  Schedule & progress
+                  {t("Schedule & progress")}
                 </legend>
 
                 <div className="tm-grid tm-three">
                   <label className="tm-input-label">
-                    Priority <b>*</b>
+                    {t("Priority")} <b>*</b>
 
                     <select
                       value={form.priority}
@@ -2362,7 +2355,7 @@ export default function Tasks() {
                             key={priority}
                             value={priority}
                           >
-                            {formatLabel(priority)}
+                            {t(formatLabel(priority))}
                           </option>
                         )
                       )}
@@ -2370,7 +2363,7 @@ export default function Tasks() {
                   </label>
 
                   <label className="tm-input-label">
-                    Status <b>*</b>
+                    {t("Status")} <b>*</b>
 
                     <select
                       value={form.status}
@@ -2387,14 +2380,14 @@ export default function Tasks() {
                           key={status}
                           value={status}
                         >
-                          {formatLabel(status)}
+                          {t(formatLabel(status))}
                         </option>
                       ))}
                     </select>
                   </label>
 
                   <label className="tm-input-label">
-                    Due date <b>*</b>
+                    {t("Due date")} <b>*</b>
 
                     <input
                       type="date"
@@ -2415,8 +2408,7 @@ export default function Tasks() {
                   form.status !== "COMPLETED" &&
                   form.status !== "CANCELLED" && (
                     <p className="tm-hint">
-                      This date is in the past.
-                      The task will appear as overdue.
+                      {t("This date is in the past. The task will appear as overdue.")}
                     </p>
                   )}
               </fieldset>
@@ -2426,7 +2418,7 @@ export default function Tasks() {
 
             <footer className="tm-modal-footer">
               <span>
-                <b>*</b> Required fields
+                <b>*</b> {t("Required fields")}
               </span>
 
               <div>
@@ -2436,7 +2428,7 @@ export default function Tasks() {
                   disabled={saving}
                   onClick={closeTaskForm}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
 
                 <button
@@ -2456,10 +2448,10 @@ export default function Tasks() {
                   )}
 
                   {saving
-                    ? "Saving..."
+                    ? t("Saving...")
                     : editingTaskId === null
-                      ? "Create Task"
-                      : "Save Changes"}
+                      ? t("Create Task")
+                      : t("Save Changes")}
                 </button>
               </div>
             </footer>
@@ -2485,13 +2477,11 @@ export default function Tasks() {
             </span>
 
             <h2 id="task-delete-title">
-              Delete this task?
+              {t("Delete this task?")}
             </h2>
 
             <p>
-              “{deleteTarget.title}” and its farmer
-              assignments will be removed.
-              This cannot be undone.
+              “{deleteTarget.title}” {t("and its farmer assignments will be removed. This cannot be undone.")}
             </p>
 
             {deleteError && (
@@ -2513,7 +2503,7 @@ export default function Tasks() {
                   setDeleteTarget(null)
                 }
               >
-                Keep task
+                {t("Keep task")}
               </button>
 
               <button
@@ -2525,8 +2515,8 @@ export default function Tasks() {
                 }
               >
                 {busyTaskId !== null
-                  ? "Deleting..."
-                  : "Delete task"}
+                  ? t("Deleting...")
+                  : t("Delete task")}
               </button>
             </div>
           </div>
@@ -2545,13 +2535,11 @@ export default function Tasks() {
         >
           <div className="tm-confirm-content">
             <h2 id="task-discard-title">
-              Discard unsaved changes?
+              {t("Discard unsaved changes?")}
             </h2>
 
             <p>
-              Your changes have not been saved.
-              Continue editing to keep working,
-              or discard them to close the form.
+              {t("Your changes have not been saved. Continue editing to keep working, or discard them to close the form.")}
             </p>
 
             <div className="tm-confirm-actions">
@@ -2563,7 +2551,7 @@ export default function Tasks() {
                   setShowDiscard(false)
                 }
               >
-                Keep editing
+                {t("Keep editing")}
               </button>
 
               <button
@@ -2571,7 +2559,7 @@ export default function Tasks() {
                 className="tm-primary tm-danger"
                 onClick={discardChanges}
               >
-                Discard changes
+                {t("Discard changes")}
               </button>
             </div>
           </div>
