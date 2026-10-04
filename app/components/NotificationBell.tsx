@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { fetchWithAuth } from "../utils/auth";
+import { useTranslation } from "react-i18next";
 
 /* =========================================================
    TYPES
@@ -34,7 +35,7 @@ interface NotificationItem {
    TIME FORMATTER
 ========================================================= */
 
-function relativeTime(value: string) {
+function relativeTime(value: string, t?: any) {
   const createdTime = new Date(value).getTime();
 
   const seconds = Math.max(
@@ -45,15 +46,15 @@ function relativeTime(value: string) {
   );
 
   if (seconds < 60) {
-    return "Just now";
+    return t ? t("Just now") : "Just now";
   }
 
   if (seconds < 3600) {
-    return `${Math.floor(seconds / 60)} min ago`;
+    return `${Math.floor(seconds / 60)} min ${t ? t("ago") : "ago"}`;
   }
 
   if (seconds < 86400) {
-    return `${Math.floor(seconds / 3600)} hr ago`;
+    return `${Math.floor(seconds / 3600)} hr ${t ? t("ago") : "ago"}`;
   }
 
   return new Date(value).toLocaleDateString();
@@ -64,6 +65,7 @@ function relativeTime(value: string) {
 ========================================================= */
 
 export default function NotificationBell() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const [notifications, setNotifications] =
@@ -122,7 +124,7 @@ export default function NotificationBell() {
 
       if (!response.ok) {
         throw new Error(
-          "Failed to load notifications"
+          t("Failed to load notifications")
         );
       }
 
@@ -136,7 +138,7 @@ export default function NotificationBell() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Failed to load notifications"
+          : t("Failed to load notifications")
       );
     } finally {
       setLoading(false);
@@ -231,7 +233,7 @@ export default function NotificationBell() {
 
       if (!response.ok) {
         throw new Error(
-          "Failed to update notification"
+          t("Failed to update notification")
         );
       }
 
@@ -251,7 +253,7 @@ export default function NotificationBell() {
       );
     } catch {
       setError(
-        "Could not mark notification as read"
+        t("Could not mark notification as read")
       );
     }
   };
@@ -271,7 +273,7 @@ export default function NotificationBell() {
 
       if (!response.ok) {
         throw new Error(
-          "Failed to update notifications"
+          t("Failed to update notifications")
         );
       }
 
@@ -285,7 +287,7 @@ export default function NotificationBell() {
       setUnreadCount(0);
     } catch {
       setError(
-        "Could not mark all notifications as read"
+        t("Could not mark all notifications as read")
       );
     }
   };
@@ -304,8 +306,8 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={toggleNotifications}
-        aria-label="Notifications"
-        title="Notifications"
+        aria-label={t("Notifications")}
+        title={t("Notifications")}
         className={`
           relative grid h-10 w-10
           place-items-center rounded-xl
@@ -375,7 +377,7 @@ export default function NotificationBell() {
                   font-bold text-slate-900
                 "
               >
-                Notifications
+                {t("Notifications")}
               </h3>
 
               <p
@@ -384,11 +386,7 @@ export default function NotificationBell() {
                   text-slate-500
                 "
               >
-                {unreadCount} unread{" "}
-                notification
-                {unreadCount === 1
-                  ? ""
-                  : "s"}
+                {unreadCount} {t("unread notifications")}
               </p>
             </div>
 
@@ -403,7 +401,7 @@ export default function NotificationBell() {
                   onClick={() =>
                     void markAllAsRead()
                   }
-                  title="Mark all as read"
+                  title={t("Mark all as read")}
                   className="
                     rounded-lg p-2
                     text-emerald-700
@@ -422,7 +420,7 @@ export default function NotificationBell() {
                 onClick={() =>
                   setOpen(false)
                 }
-                title="Close"
+                title={t("Close")}
                 className="
                   rounded-lg p-2
                   text-slate-500
@@ -466,7 +464,7 @@ export default function NotificationBell() {
                   text-sm text-slate-500
                 "
               >
-                Loading notifications...
+                {t("Loading notifications...")}
               </div>
             ) : notifications.length ===
               0 ? (
@@ -495,7 +493,7 @@ export default function NotificationBell() {
                     text-slate-700
                   "
                 >
-                  No notifications yet
+                  {t("No notifications yet")}
                 </p>
 
                 <p
@@ -504,8 +502,7 @@ export default function NotificationBell() {
                     leading-5 text-slate-500
                   "
                 >
-                  Attendance and task
-                  updates will appear here.
+                  {t("Attendance and task updates will appear here.")}
                 </p>
               </div>
             ) : (
@@ -596,7 +593,7 @@ export default function NotificationBell() {
                             "
                           >
                             {
-                              notification.title
+                              t(notification.title)
                             }
                           </span>
 
@@ -619,7 +616,7 @@ export default function NotificationBell() {
                           "
                         >
                           {
-                            notification.message
+                            t(notification.message)
                           }
                         </span>
 
@@ -631,7 +628,8 @@ export default function NotificationBell() {
                           "
                         >
                           {relativeTime(
-                            notification.createdAt
+                            notification.createdAt,
+                            t
                           )}
                         </span>
                       </span>

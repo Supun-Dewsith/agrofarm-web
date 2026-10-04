@@ -686,7 +686,7 @@ export default function UserRegistration() {
                             {u.username}
                           </span>
                           <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "10px", backgroundColor: roleBgColor, color: roleTextColor }}>
-                            {u.role}
+                            {t(u.role)}
                           </span>
                         </div>
                         <div style={{ fontSize: "11px", color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -758,7 +758,7 @@ export default function UserRegistration() {
                   backgroundColor: "#059669",
                   color: "#ffffff"
                 }}>
-                  {editingUser.role}
+                  {t(editingUser.role)}
                 </span>
               </div>
               <button
@@ -928,7 +928,7 @@ export default function UserRegistration() {
                 }}
               >
                 {availableRolesToRegister.map((role) => (
-                  <option key={role} value={role}>{role}</option>
+                  <option key={role} value={role}>{t(role)}</option>
                 ))}
               </select>
               {isSupervisorUser && (
@@ -994,7 +994,7 @@ export default function UserRegistration() {
                     }}
                   />
                   <span style={{ textTransform: "capitalize", display: "flex", alignItems: "center", gap: "6px" }}>
-                    {perm.replace(/_/g, ' ')}
+                    {t(perm.replace(/_/g, ' '))}
                     {isRegistrationDisabled && (
                       <span style={{
                         fontSize: "10px",

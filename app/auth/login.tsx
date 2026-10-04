@@ -383,7 +383,7 @@ export default function Login() {
         <div className="flex items-center justify-between text-[11px] text-slate-400 pt-4 border-t border-slate-100">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
-            <span>256-bit SSL Encrypted</span>
+            <span>{t("256-bit SSL Encrypted")}</span>
           </div>
           <span>AgriSense AI &copy; {new Date().getFullYear()}</span>
         </div>
@@ -404,18 +404,18 @@ export default function Login() {
         <div className="relative z-10 flex items-center justify-between text-xs tracking-wider text-slate-300/80">
           <div className="flex items-center gap-2.5">
             <span className="font-medium text-emerald-200 tracking-wide text-xs">
-              Smart Agriculture Platform
+              {t("Smart Agriculture Platform")}
             </span>
           </div>
 
           <button
             type="button"
             onClick={handleShuffle}
-            title="Next Insight"
+            title={t("Next Insight")}
             className="inline-flex items-center gap-1.5 text-xs text-slate-300/80 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15 transition-all cursor-pointer active:scale-95"
           >
             <RefreshCw className={`h-3 w-3 ${isTyping ? "animate-spin" : ""}`} />
-            <span>Shuffle</span>
+            <span>{t("Shuffle")}</span>
           </button>
         </div>
 
@@ -489,16 +489,16 @@ export default function Login() {
               </div>
               <div>
                 <h3 className="text-lg font-bold tracking-tight text-slate-900 leading-tight">
-                  Access Recovery
+                  {t("Access Recovery")}
                 </h3>
                 <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider">
-                  AgriSense Security
+                  {t("AgriSense Security")}
                 </span>
               </div>
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed mb-4">
-              Account credentials within the AgriSense network are centrally regulated to safeguard operational telemetry and sensitive crop logs.
+              {t("Account credentials within the AgriSense network are centrally regulated to safeguard operational telemetry and sensitive crop logs.")}
             </p>
 
             {!requestSubmitted ? (
@@ -506,10 +506,10 @@ export default function Login() {
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
                   <div className="flex items-center gap-2 text-slate-700 font-semibold">
                     <ShieldAlert className="h-4 w-4 text-emerald-700 shrink-0" />
-                    <span>Admin Verification Required</span>
+                    <span>{t("Admin Verification Required")}</span>
                   </div>
                   <p className="text-[11px] text-slate-500 leading-normal pl-6">
-                    Farm Supervisors can reset passwords on-demand via the User Management portal.
+                    {t("Farm Supervisors can reset passwords on-demand via the User Management portal.")}
                   </p>
                 </div>
 
@@ -519,7 +519,7 @@ export default function Login() {
                       htmlFor="reset-user"
                       className="text-xs font-semibold text-slate-700 tracking-wide block mb-1.5"
                     >
-                      Username or Registered Email
+                      {t("Username or Registered Email")}
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -543,19 +543,19 @@ export default function Login() {
                     {isSubmittingReset ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-emerald-300" />
-                        <span>Sending Request...</span>
+                        <span>{t("Sending Request...")}</span>
                       </>
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        <span>Submit Reset Request</span>
+                        <span>{t("Submit Reset Request")}</span>
                       </>
                     )}
                   </button>
                 </form>
 
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span>Farm Helpdesk:</span>
+                  <span>{t("Farm Helpdesk:")}</span>
                   <span className="font-semibold text-slate-800">admin@agrismart.com</span>
                 </div>
               </div>
@@ -565,11 +565,9 @@ export default function Login() {
                   <CheckCircle2 className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Request Dispatched</h4>
+                  <h4 className="text-sm font-bold text-slate-900">{t("Request Dispatched")}</h4>
                   <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    A credential recovery alert for{" "}
-                    <span className="font-semibold text-emerald-900">{resetUsername}</span> has been
-                    routed to the farm administrator. Temporary credentials will be provided shortly.
+                    {t("A credential recovery alert for")} <span className="font-semibold text-emerald-900">{resetUsername}</span> {t("has been routed to the farm administrator. Temporary credentials will be provided shortly.")}
                   </p>
                 </div>
                 <button
@@ -577,7 +575,7 @@ export default function Login() {
                   onClick={handleCloseModal}
                   className="w-full bg-[#1b4332] hover:bg-[#143427] text-white py-2 px-4 rounded-xl text-xs font-semibold tracking-wide shadow-sm transition-colors mt-2 cursor-pointer"
                 >
-                  Return to Login
+                  {t("Return to Login")}
                 </button>
               </div>
             )}

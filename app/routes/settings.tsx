@@ -1456,7 +1456,7 @@ export default function Settings() {
                           display: "inline-block",
                         }}
                       >
-                        {roleName}
+                        {t(roleName)}
                       </span>
                     </div>
                     <span style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginTop: "4px" }}>
@@ -2170,7 +2170,7 @@ export default function Settings() {
                               color: item.badgeColor,
                             }}
                           >
-                            {item.badge}
+                            {t(item.badge)}
                           </span>
                         </div>
                         <p style={{ margin: 0, fontSize: "12px", color: "#64748b", lineHeight: "1.4" }}>

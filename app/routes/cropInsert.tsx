@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sprout, MapPin, Calendar, Layers, PlusCircle, Check } from 'lucide-react';
 import { fetchWithAuth, getAuthData } from '../utils/auth';
+import { useTranslation } from 'react-i18next';
 
 interface FarmOption {
   id: string;
@@ -48,6 +49,7 @@ interface Fields{
 
 
 export default function Page() {
+  const { t } = useTranslation();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -87,14 +89,14 @@ export default function Page() {
           const farms = data as Farms[];
   
            if (farms.length === 0) {
-            setError("No farms found.");
+            setError(t("No farms found."));
            } else{
             setFarms(data as Farms[]);
            }
         })
         .catch(console.error);
         
-    }, []); 
+    }, [t]); 
 
   // ----------------- get fields ------------------//
   useEffect(() => {
@@ -116,12 +118,12 @@ export default function Page() {
       if (!Array.isArray(data)) {
         console.error("Expected fields array but received:", data);
         setFields([]);
-        setError("Invalid fields response from server.");
+        setError(t("Invalid fields response from server."));
         return;
       }
 
       if (data.length === 0) {
-        setError("No fields found.");
+        setError(t("No fields found."));
         setFields([]);
       } else {
         setFields(data as Fields[]);
@@ -132,7 +134,7 @@ export default function Page() {
       setFields([]);
     });
 
-  }, [selectedFarm]);
+  }, [selectedFarm, t]);
 
 
 
@@ -192,8 +194,8 @@ export default function Page() {
         {/* Header */}
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add New Crop</h1>
-            <p className="text-sm text-gray-400 mt-1">Register a new crop and assign it to a farmer's field.</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t("Add New Crop")}</h1>
+            <p className="text-sm text-gray-400 mt-1">{t("Register a new crop and assign it to a farmer's field.")}</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <Sprout className="w-6 h-6" />
@@ -204,7 +206,7 @@ export default function Page() {
         {submitted && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-center gap-3 text-sm font-medium">
             <Check className="w-5 h-5 text-emerald-600" />
-            Crop successfully registered and assigned to the selected farm!
+            {t("Crop successfully registered and assigned to the selected farm!")}
           </div>
         )}
 
@@ -216,7 +218,7 @@ export default function Page() {
             {/* Crop Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Crop Name
+                {t("Crop Name")}
               </label>
               <input
                 type="text"
@@ -224,7 +226,7 @@ export default function Page() {
                 required
                 value={formData.cropName}
                 onChange={handleChange}
-                placeholder="e.g. Tomato, Corn, Rice"
+                placeholder={t("e.g. Tomato, Corn, Rice")}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -232,14 +234,14 @@ export default function Page() {
             {/* Variety */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Variety / Subtype
+                {t("Variety / Subtype")}
               </label>
               <input
                 type="text"
                 name="variety"
                 value={formData.variety}
                 onChange={handleChange}
-                placeholder="e.g. Cherry Tomato, Basmati"
+                placeholder={t("e.g. Cherry Tomato, Basmati")}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -252,7 +254,7 @@ export default function Page() {
             {/* Select Farm */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Planted Farm
+                {t("Planted Farm")}
               </label>
               <select
                 name="farmId"
@@ -265,7 +267,7 @@ export default function Page() {
                 }}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="">{selectedfarmname}</option>
+                <option value="">{t(selectedfarmname)}</option>
                 {farms.map((farm) => (
                   <option key={farm.farmIDs} value={farm.farmIDs}>
                     {farm.farmNames}
@@ -277,7 +279,7 @@ export default function Page() {
             {/* Field Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Field Name / Designation
+                {t("Field Name / Designation")}
               </label>
               <select
                 name="fieldId"
@@ -290,7 +292,7 @@ export default function Page() {
                 }}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="">Select a field...</option>
+                <option value="">{t("Select a field...")}</option>
                 {fields.map((field) => (
                   <option key={field.id} value={field.id}>
                     {field.field_name}
@@ -308,7 +310,7 @@ export default function Page() {
             {/* Growth Stage */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Initial Growth Stage
+                {t("Initial Growth Stage")}
               </label>
               <select
                 name="growthStage"
@@ -316,11 +318,11 @@ export default function Page() {
                 onChange={handleChange}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="Planted">Planted</option>
-                <option value="Tillering">Tillering</option>
-                <option value="Flowering">Flowering</option>
-                <option value="Grain Filling">Grain Filling</option>
-                <option value="Maturity">Maturity</option>
+                <option value="Planted">{t("Planted")}</option>
+                <option value="Tillering">{t("Tillering")}</option>
+                <option value="Flowering">{t("Flowering")}</option>
+                <option value="Grain Filling">{t("Grain Filling")}</option>
+                <option value="Maturity">{t("Maturity")}</option>
               </select>
             </div>
 
@@ -332,7 +334,7 @@ export default function Page() {
             {/* Status */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Crop Health Status
+                {t("Crop Health Status")}
               </label>
               <select
                 name="status"
@@ -340,16 +342,16 @@ export default function Page() {
                 onChange={handleChange}
                 className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="Healthy">Healthy</option>
-                <option value="Moderate">Moderate</option>
-                <option value="Critical">Critical</option>
+                <option value="Healthy">{t("Healthy")}</option>
+                <option value="Moderate">{t("Moderate")}</option>
+                <option value="Critical">{t("Critical")}</option>
               </select>
             </div>
 
             {/* Progress */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Progress Percentage (%)
+                {t("Progress Percentage (%)")}
               </label>
               <select
                 name="progress"
@@ -378,7 +380,7 @@ export default function Page() {
             
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Planted Date
+                {t("Planted Date")}
               </label>
               <input
                 type="date"
@@ -391,7 +393,7 @@ export default function Page() {
 
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Expected Harvest Date
+                {t("Expected Harvest Date")}
               </label>
               <input
                 type="date"
@@ -407,7 +409,7 @@ export default function Page() {
           {/* --- insert picture ---- */}
           <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Crop Image
+                  {t("Crop Image")}
                 </label>
 
                 <input
@@ -428,7 +430,7 @@ export default function Page() {
                   <div className="mt-4">
                     <img
                       src={imagePreview}
-                      alt="Crop preview"
+                      alt={t("Crop preview")}
                       className="w-48 h-48 object-cover rounded-xl border border-gray-200"
                     />
                   </div>
@@ -442,7 +444,7 @@ export default function Page() {
               className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-6 py-3 rounded-xl transition-colors shadow-sm text-sm"
             >
               <PlusCircle className="w-4 h-4" />
-              Save Crop Record
+              {t("Save Crop Record")}
             </button>
           </div>
 
