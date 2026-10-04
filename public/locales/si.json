@@ -904,5 +904,15 @@
   "task": "කාර්යයන්",
   "harvest": "අස්වැන්න",
   "attendance": "පැමිණීම",
-  "fields": "ක්ෂේත්‍ර"
+  "fields": "ක්ෂේත්‍ර",
+  "Worker Management": "සේවක කළමනාකරණය",
+  "Manage and track all registered workers": "ලියාපදිංචි සියලුම සේවකයින් කළමනාකරණය සහ නිරීක්ෂණය කරන්න",
+  "Add Worker": "සේවකයෙකු එක් කරන්න",
+  "Worker data is currently unavailable.": "සේවක දත්ත දැනට ලබාගත නොහැක.",
+  "Farm data is currently unavailable.": "ගොවිපල දත්ත දැනට ලබාගත නොහැක.",
+  "Delete User": "පරිශීලකයා මකන්න",
+  "This action cannot be undone.": "මෙම ක්‍රියාව ආපසු හැරවිය නොහැක.",
+  "Are you sure you want to delete": "ඔබට මෙම පරිශීලකයා මැකීමට අවශ්‍ය බව සහතිකද",
+  "Deleting...": "මකමින් පවතී...",
+  "Failed to delete this user. Please try again.": "මෙම පරිශීලකයා මැකීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න."
 }

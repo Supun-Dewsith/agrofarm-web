@@ -907,5 +907,15 @@
   "task": "பணிகள்",
   "harvest": "அறுவடை",
   "attendance": "வருகை",
-  "fields": "வயல்கள்"
+  "fields": "வயல்கள்",
+  "Worker Management": "பணியாளர் மேலாண்மை",
+  "Manage and track all registered workers": "பதிவுசெய்யப்பட்ட அனைத்து பணியாளர்களையும் நிர்வகித்து கண்காணிக்கவும்",
+  "Add Worker": "பணியாளரைச் சேர்க்கவும்",
+  "Worker data is currently unavailable.": "பணியாளர் தரவு தற்போது கிடைக்கவில்லை.",
+  "Farm data is currently unavailable.": "பண்ணை தரவு தற்போது கிடைக்கவில்லை.",
+  "Delete User": "பயனரை நீக்கு",
+  "This action cannot be undone.": "இந்த செயலை செயல்தவிர்க்க முடியாது.",
+  "Are you sure you want to delete": "நீங்கள் நிச்சயமாக நீக்க விரும்புகிறீர்களா",
+  "Deleting...": "நீக்குகிறது...",
+  "Failed to delete this user. Please try again.": "இந்த பயனரை நீக்குவதில் தோல்வி ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்."
 }

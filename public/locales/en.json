@@ -904,5 +904,15 @@
   "task": "Tasks",
   "harvest": "Harvest",
   "attendance": "Attendance",
-  "fields": "fields"
+  "fields": "fields",
+  "Worker Management": "Worker Management",
+  "Manage and track all registered workers": "Manage and track all registered workers",
+  "Add Worker": "Add Worker",
+  "Worker data is currently unavailable.": "Worker data is currently unavailable.",
+  "Farm data is currently unavailable.": "Farm data is currently unavailable.",
+  "Delete User": "Delete User",
+  "This action cannot be undone.": "This action cannot be undone.",
+  "Are you sure you want to delete": "Are you sure you want to delete",
+  "Deleting...": "Deleting...",
+  "Failed to delete this user. Please try again.": "Failed to delete this user. Please try again."
 }

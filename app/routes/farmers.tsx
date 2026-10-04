@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 
 interface Worker {
   id: number;
@@ -102,9 +103,9 @@ export default function FarmerManagement() {
       .catch((err) => {
         console.error('Farm API error:', err);
         setFarms([]);
-        setFarmError(t('Farm data is currently unavailable.'));
+        setFarmError('Farm data is currently unavailable.');
       });
-  }, [t]);
+  }, []);
 
   // =========================
   // Search + Farm Filtering
@@ -174,7 +175,7 @@ export default function FarmerManagement() {
     } catch (error) {
       console.error('Delete worker error:', error);
 
-      alert('Failed to delete this user. Please try again.');
+      alert(t('Failed to delete this user. Please try again.'));
 
     } finally {
       setIsDeleting(false);
@@ -203,11 +204,11 @@ export default function FarmerManagement() {
 
           <div>
             <h1 className="text-3xl font-bold text-[#2A471C] tracking-tight">
-              Worker Management
+              {t("Worker Management")}
             </h1>
 
             <p className="text-sm text-gray-600 mt-0.5">
-              Manage and track all registered workers
+              {t("Manage and track all registered workers")}
             </p>
           </div>
 
@@ -216,7 +217,7 @@ export default function FarmerManagement() {
             className="inline-flex items-center justify-center gap-2 bg-[#2A471C] hover:bg-[#203714] text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Add Worker
+            {t("Add Worker")}
           </button>
 
         </div>
@@ -252,7 +253,7 @@ export default function FarmerManagement() {
             >
 
               <option value="all">
-                All Farms
+                {t("All Farms")}
               </option>
 
               {farms.map((farm) => (
@@ -268,7 +269,7 @@ export default function FarmerManagement() {
 
             {farmError && (
               <p className="text-xs text-gray-400">
-                {farmError}
+                {t(farmError)}
               </p>
             )}
 
@@ -279,7 +280,7 @@ export default function FarmerManagement() {
 
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Active Farmers
+                {t("Active Farmers")}
               </p>
 
               <p className="text-3xl font-bold text-gray-900 mt-1">
@@ -298,7 +299,7 @@ export default function FarmerManagement() {
 
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Farmers
+                {t("Total Farmers")}
               </p>
 
               <p className="text-3xl font-bold text-gray-900 mt-1">
@@ -327,35 +328,35 @@ export default function FarmerManagement() {
                 <tr className="border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-white">
 
                   <th className="py-4 px-6">
-                    Farmer
+                    {t("Farmer")}
                   </th>
 
                   <th className="py-4 px-6">
-                    Role
+                    {t("Role")}
                   </th>
 
                   <th className="py-4 px-6">
-                    Contact
+                    {t("Contact")}
                   </th>
 
                   <th className="py-4 px-6">
-                    Farm
+                    {t("Farm")}
                   </th>
 
                   <th className="py-4 px-6">
-                    Tasks
+                    {t("Tasks")}
                   </th>
 
                   <th className="py-4 px-6">
-                    Status
+                    {t("Status")}
                   </th>
 
                   <th className="py-4 px-6">
-                    Join Date
+                    {t("Join Date")}
                   </th>
 
                   <th className="py-4 px-6 text-right">
-                    Actions
+                    {t("Actions")}
                   </th>
 
                 </tr>
@@ -414,7 +415,7 @@ export default function FarmerManagement() {
 
                       {/* Role */}
                       <td className="py-4 px-6 whitespace-nowrap">
-                        {worker.role}
+                        {t(worker.role)}
                       </td>
 
                       {/* Contact */}
@@ -467,7 +468,7 @@ export default function FarmerManagement() {
                                 key={index}
                                 className="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium"
                               >
-                                {task}
+                                {t(task)}
                               </span>
 
                             ))}
@@ -480,12 +481,13 @@ export default function FarmerManagement() {
                       <td className="py-4 px-6 whitespace-nowrap">
 
                         <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${worker.status.toLowerCase() === 'active'
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${
+                            worker.status.toLowerCase() === 'active'
                               ? 'bg-[#008728]'
                               : 'bg-gray-400'
-                            }`}
+                          }`}
                         >
-                          {worker.status}
+                          {t(worker.status)}
                         </span>
 
                       </td>
@@ -526,7 +528,7 @@ export default function FarmerManagement() {
 
                               <Pencil className="w-4 h-4 text-gray-500" />
 
-                              Update
+                              {t("Update")}
 
                             </button>
 
@@ -540,7 +542,7 @@ export default function FarmerManagement() {
 
                               <Trash2 className="w-4 h-4" />
 
-                              Delete
+                              {t("Delete")}
 
                             </button>
 
@@ -564,10 +566,10 @@ export default function FarmerManagement() {
                     >
 
                       {workerError
-                        ? workerError
+                        ? t(workerError)
                         : searchTerm || selectedFarm !== 'all'
-                          ? 'No farmers found matching your filters.'
-                          : 'No farmer data available.'}
+                          ? t('No farmers found matching your filters.')
+                          : t('No farmer data available.')}
 
                     </td>
 
@@ -608,11 +610,11 @@ export default function FarmerManagement() {
                 <div>
 
                   <h2 className="text-lg font-semibold text-gray-900">
-                    Delete User
+                    {t("Delete User")}
                   </h2>
 
                   <p className="text-xs text-gray-500 mt-0.5">
-                    This action cannot be undone.
+                    {t("This action cannot be undone.")}
                   </p>
 
                 </div>
@@ -634,7 +636,7 @@ export default function FarmerManagement() {
 
               <p className="text-sm text-gray-600">
 
-                Are you sure you want to delete{' '}
+                {t("Are you sure you want to delete")}{' '}
 
                 <span className="font-semibold text-gray-900">
                   {deleteWorker.name}
@@ -655,7 +657,7 @@ export default function FarmerManagement() {
                 disabled={isDeleting}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
-                Cancel
+                {t("Cancel")}
               </button>
 
               {/* Delete */}
@@ -666,8 +668,8 @@ export default function FarmerManagement() {
               >
 
                 {isDeleting
-                  ? 'Deleting...'
-                  : 'Delete'}
+                  ? t('Deleting...')
+                  : t('Delete')}
 
               </button>
 
