@@ -2063,31 +2063,31 @@ export default function FarmManagement() {
   ======================================================= */
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 px-3 py-4 sm:px-6 lg:px-8">
 
       {/* ===================================================
           HEADER
       =================================================== */}
 
-      <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="mb-6 sm:mb-7 flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
 
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
             {t("Farm Management")}
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+          <p className="mt-1 sm:mt-2 max-w-2xl text-xs sm:text-sm leading-5 sm:leading-6 text-slate-500 sm:text-base">
             {canManageFarms ? t("Manage all farms and fields with real map boundaries") : canCreateFields ? t("View your assigned farms and manage their fields") : t("View your assigned farms and their fields")}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap gap-2.5 w-full sm:w-auto">
 
           {canManageFarms && (<button
             onClick={
               openCreateFarm
             }
-            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl hover:shadow-emerald-600/25 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 sm:px-5 py-2.5 sm:py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl hover:shadow-emerald-600/25 focus:outline-none focus:ring-4 focus:ring-emerald-100 cursor-pointer"
           >
             + {t("Register Farm")}
           </button>)}
@@ -2099,7 +2099,7 @@ export default function FarmManagement() {
             disabled={
               farms.length === 0
             }
-            className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-45"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-white px-4 sm:px-5 py-2.5 sm:py-3 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
           >
             + {t("Register Field")}
           </button>)}
@@ -2121,7 +2121,7 @@ export default function FarmManagement() {
           STATS
       =================================================== */}
 
-      <div className="mb-7 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mb-6 sm:mb-7 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
 
         <StatCard
           title={t("Total Farms")}

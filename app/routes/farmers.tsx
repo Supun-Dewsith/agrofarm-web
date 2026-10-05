@@ -193,28 +193,28 @@ export default function FarmerManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans text-gray-800">
+    <div className="min-h-screen bg-gray-100 p-3 sm:p-6 font-sans text-gray-800">
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
 
         {/* =========================
             Header
         ========================= */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
           <div>
-            <h1 className="text-3xl font-bold text-[#2A471C] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#2A471C] tracking-tight">
               {t("Worker Management")}
             </h1>
 
-            <p className="text-sm text-gray-600 mt-0.5">
+            <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
               {t("Manage and track all registered workers")}
             </p>
           </div>
 
           <button
             onClick={() => navigate('/home/register-users')}
-            className="inline-flex items-center justify-center gap-2 bg-[#2A471C] hover:bg-[#203714] text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2A471C] hover:bg-[#203714] text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             {t("Add Worker")}
@@ -225,10 +225,10 @@ export default function FarmerManagement() {
         {/* =========================
             Search + Filter + Statistics
         ========================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
 
           {/* Search and Farm Filter */}
-          <div className="lg:col-span-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3">
+          <div className="sm:col-span-2 lg:col-span-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3">
 
             {/* Search */}
             <div className="relative w-full">

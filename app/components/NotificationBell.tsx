@@ -355,8 +355,9 @@ export default function NotificationBell() {
       {open && (
         <div
           className="
-            absolute right-0 top-12 z-50
-            w-[min(390px,calc(100vw-2rem))]
+            fixed inset-x-3 top-16 z-50
+            sm:absolute sm:inset-auto sm:right-0 sm:top-12
+            sm:w-[390px] max-w-[calc(100vw-1.5rem)]
             overflow-hidden rounded-2xl
             border border-slate-200
             bg-white shadow-2xl
