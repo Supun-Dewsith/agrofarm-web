@@ -61,7 +61,7 @@ const CURRENCIES = [
   { value: "AED (د.إ)", label: "AED (د.إ) - UAE Dirham" },
 ];
 
-type Tab = "profile" | "preferences" | "notifications" | "security";
+type Tab = "profile" | "preferences" | "security";
 
 interface Profile {
   id: number;
@@ -323,6 +323,10 @@ export default function Settings() {
         ]);
 
       setProfile(profileData);
+      try {
+        localStorage.setItem("user_profile", JSON.stringify(profileData));
+        window.dispatchEvent(new Event("user_profile_updated"));
+      } catch {}
       setProfileForm({
         firstName: profileData.firstName || "",
         lastName: profileData.lastName || "",
@@ -440,6 +444,10 @@ export default function Settings() {
       const updatedProfile = (await response.json()) as Profile;
 
       setProfile(updatedProfile);
+      try {
+        localStorage.setItem("user_profile", JSON.stringify(updatedProfile));
+        window.dispatchEvent(new Event("user_profile_updated"));
+      } catch {}
       setProfileForm({
         firstName: updatedProfile.firstName || "",
         lastName: updatedProfile.lastName || "",
@@ -510,47 +518,7 @@ export default function Settings() {
     }
   };
 
-  const updateNotifications = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!notifications) return;
 
-    try {
-      setSaving(true);
-      const response = await fetchWithAuth("/api/v1/settings/notifications", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(notifications),
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          await readError(response, t("Failed to update notifications."))
-        );
-      }
-
-      const updated = (await response.json()) as Notifications;
-      setNotifications(updated);
-
-      notify("success", t("Notification settings saved successfully."));
-    } catch (error) {
-      notify(
-        "error",
-        error instanceof Error ? error.message : t("Failed to update notifications.")
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleAllNotifications = (enabled: boolean) => {
-    setNotifications({
-      diseaseAlerts: enabled,
-      lowStockWarnings: enabled,
-      taskReminders: enabled,
-      harvestUpdates: enabled,
-      weatherAlerts: enabled,
-    });
-  };
 
   const updateSecurity = async (event: FormEvent) => {
     event.preventDefault();
@@ -736,12 +704,6 @@ export default function Settings() {
         label: t("Farm Preferences"),
         sublabel: t("Language, regional & farm settings"),
         icon: Sliders,
-      },
-      {
-        id: "notifications" as Tab,
-        label: t("Notifications"),
-        sublabel: t("Crop, stock & weather alerts"),
-        icon: Bell,
       },
       {
         id: "security" as Tab,
@@ -948,7 +910,7 @@ export default function Settings() {
                 backgroundColor: "#f1f5f9",
                 color: "#475569"
               }}>
-                4 {t("Sections")}
+                {navTabs.length} {t("Sections")}
               </span>
             </div>
 
@@ -1544,29 +1506,86 @@ export default function Settings() {
                         {t("Assigned Permissions")}
                       </span>
                     </div>
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748b" }}>
-                      {((profile.permissions && profile.permissions.length > 0) ? profile.permissions : (authUser?.permissions || [])).length} {t("Active")}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {((profile.permissions && profile.permissions.length > 0) ? profile.permissions : (authUser?.permissions || ["VIEW_DASHBOARD", "VIEW_FARM_MANAGEMENT", "VIEW_TASKS", "VIEW_WEATHER", "VIEW_ATTENDANCE", "VIEW_SETTINGS"])).map((perm, idx) => (
+                    {roleName === "ADMIN" ? (
                       <span
-                        key={idx}
                         style={{
                           fontSize: "11px",
-                          fontWeight: 600,
+                          fontWeight: 700,
+                          color: "#059669",
+                          backgroundColor: "#dcfce7",
                           padding: "2px 8px",
-                          borderRadius: "4px",
-                          backgroundColor: "#ffffff",
-                          color: "#475569",
-                          border: "1px solid #e2e8f0",
-                          fontFamily: "monospace",
+                          borderRadius: "9999px",
+                          border: "1px solid #bbf7d0",
                         }}
                       >
-                        {perm}
+                        {t("All permissions enabled")}
                       </span>
-                    ))}
+                    ) : (
+                      <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748b" }}>
+                        {((profile.permissions && profile.permissions.length > 0) ? profile.permissions : (authUser?.permissions || [])).length} {t("Active")}
+                      </span>
+                    )}
                   </div>
+
+                  {roleName === "ADMIN" ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {[
+                          "ALL_MODULES_ACCESS",
+                          "MANAGE_USERS",
+                          "MANAGE_FARMS",
+                          "MANAGE_CROPS",
+                          "VIEW_DASHBOARD",
+                          "FINANCIAL_LEDGER",
+                          "MANAGE_TASKS",
+                          "WEATHER_TELEMETRY",
+                          "ATTENDANCE_LOGS",
+                          "DISEASE_DIAGNOSTICS",
+                          "SYSTEM_SETTINGS",
+                          "EXPORT_REPORTS",
+                        ].map((perm, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: "#ffffff",
+                              color: "#065f46",
+                              border: "1px solid #a7f3d0",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            ✓ {perm}
+                          </span>
+                        ))}
+                      </div>
+                      <p style={{ margin: 0, fontSize: "11px", color: "#059669", fontWeight: 500 }}>
+                        {t("Administrator account has full unrestricted access across all system modules and regional estates.")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {((profile.permissions && profile.permissions.length > 0) ? profile.permissions : (authUser?.permissions || ["VIEW_DASHBOARD", "VIEW_FARM_MANAGEMENT", "VIEW_TASKS", "VIEW_WEATHER", "VIEW_ATTENDANCE", "VIEW_SETTINGS"])).map((perm, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            backgroundColor: "#ffffff",
+                            color: "#475569",
+                            border: "1px solid #e2e8f0",
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          {perm}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1927,172 +1946,7 @@ export default function Settings() {
             </div>
           )}
 
-          {/* TAB 3: NOTIFICATION PREFERENCES */}
-          {activeTab === "notifications" && notifications && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-                <div>
-                  <h3 style={{ ...sectionHeaderStyle, marginBottom: "4px" }}>
-                    <Bell size={18} color="#059669" />
-                    {t("Notification Preferences")}
-                  </h3>
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                    {t("Configure automated alerts for crop anomalies, low inventory, task deadlines, and weather hazards.")}
-                  </p>
-                </div>
 
-                {/* Quick Bulk Actions */}
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    type="button"
-                    onClick={() => toggleAllNotifications(true)}
-                    style={{
-                      ...secondaryButtonStyle,
-                      padding: "6px 12px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {t("Enable All")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleAllNotifications(false)}
-                    style={{
-                      ...secondaryButtonStyle,
-                      padding: "6px 12px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {t("Mute All")}
-                  </button>
-                </div>
-              </div>
-
-              <form onSubmit={updateNotifications}>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                    marginBottom: "32px",
-                  }}
-                >
-                  {[
-                    {
-                      key: "diseaseAlerts" as keyof Notifications,
-                      title: t("Disease alerts"),
-                      desc: t("Get notified when crop disease risks or blights are detected."),
-                      badge: "Critical",
-                      badgeBg: "#fef2f2",
-                      badgeColor: "#991b1b",
-                    },
-                    {
-                      key: "lowStockWarnings" as keyof Notifications,
-                      title: t("Low stock warnings"),
-                      desc: t("Receive alerts when inventory items are running low."),
-                      badge: "Inventory",
-                      badgeBg: "#fefce8",
-                      badgeColor: "#854d0e",
-                    },
-                    {
-                      key: "taskReminders" as keyof Notifications,
-                      title: t("Task reminders"),
-                      desc: t("Receive reminders about upcoming farm and labor tasks."),
-                      badge: "Tasks",
-                      badgeBg: "#eff6ff",
-                      badgeColor: "#1e40af",
-                    },
-                    {
-                      key: "harvestUpdates" as keyof Notifications,
-                      title: t("Harvest updates"),
-                      desc: t("Get updates about harvest activities and recorded crop yields."),
-                      badge: "Yield",
-                      badgeBg: "#f0fdf4",
-                      badgeColor: "#166534",
-                    },
-                    {
-                      key: "weatherAlerts" as keyof Notifications,
-                      title: t("Weather alerts"),
-                      desc: t("Receive important weather warnings and severe forecast alerts."),
-                      badge: "Forecast",
-                      badgeBg: "#faf5ff",
-                      badgeColor: "#7e22ce",
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.key}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "16px",
-                        borderRadius: "8px",
-                        border: "1px solid #e2e8f0",
-                        backgroundColor: "#ffffff",
-                        gap: "16px",
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
-                            {item.title}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "10px",
-                              fontWeight: 700,
-                              padding: "2px 6px",
-                              borderRadius: "10px",
-                              backgroundColor: item.badgeBg,
-                              color: item.badgeColor,
-                            }}
-                          >
-                            {t(item.badge)}
-                          </span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: "12px", color: "#64748b", lineHeight: "1.4" }}>
-                          {item.desc}
-                        </p>
-                      </div>
-
-                      <Toggle
-                        checked={Boolean(notifications[item.key])}
-                        onChange={(value) =>
-                          setNotifications({
-                            ...notifications,
-                            [item.key]: value,
-                          })
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: "12px",
-                    borderTop: "1px solid #e2e8f0",
-                    paddingTop: "20px",
-                  }}
-                >
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    style={{
-                      ...primaryButtonStyle,
-                      opacity: saving ? 0.7 : 1,
-                      cursor: saving ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    <Save size={16} />
-                    {saving ? t("Saving...") : t("Save Changes")}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
 
           {/* TAB 4: SECURITY & AUTHENTICATION */}
           {activeTab === "security" && security && (
