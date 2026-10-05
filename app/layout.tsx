@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, Navigate } from "react-router";
-import { logout, getAuthData } from "./utils/auth";
+import { logout, getAuthData, fetchWithAuth } from "./utils/auth";
 import { menuItems } from "./utils/constants";
 import {
   Sprout,
@@ -12,15 +13,48 @@ import { useTranslation } from 'react-i18next';
 
 
 export default function DashboardLayout() {
-  const user = getAuthData();
+  const [user, setUser] = useState(() => getAuthData());
   const location = useLocation();
   const LOGO_TEXT = "AgriSense AI";
-  const { t } = useTranslation(); 
+  const { t } = useTranslation();
 
+  const [profile, setProfile] = useState<{ firstName?: string | null; lastName?: string | null; username?: string; imageUrl?: string } | null>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("user_profile");
+      if (cached) {
+        try { return JSON.parse(cached); } catch {}
+      }
+    }
+    return null;
+  });
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      try {
+        const cached = localStorage.getItem("user_profile");
+        if (cached) setProfile(JSON.parse(cached));
+        setUser(getAuthData());
+      } catch {}
+    };
+
+    window.addEventListener("user_profile_updated", handleProfileUpdate);
+    window.addEventListener("storage", handleProfileUpdate);
+
+    fetchWithAuth("/api/v1/settings/profile")
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setProfile(data);
+          localStorage.setItem("user_profile", JSON.stringify(data));
+        }
+      })
+      .catch((err) => console.warn("Could not load user profile in layout:", err));
+
+    return () => {
+      window.removeEventListener("user_profile_updated", handleProfileUpdate);
+      window.removeEventListener("storage", handleProfileUpdate);
+    };
+  }, []);
 
   const currentPath = location.pathname.split("/").pop();
 
@@ -60,6 +94,19 @@ export default function DashboardLayout() {
       return <Navigate to="/home/dashboard" replace />;
     }
   }
+
+  const firstName = (profile?.firstName ?? user?.firstName ?? "").trim();
+  const lastName = (profile?.lastName ?? user?.lastName ?? "").trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+  const username = (user?.username || profile?.username || "").trim();
+
+  // If first and last name exist show full name; otherwise fallback to username
+  const displayName = fullName || username || t("User");
+
+  const avatarUrl = profile?.imageUrl || user?.imageUrl;
+  const userInitials = (firstName && lastName)
+    ? `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+    : (firstName || username || "AD").slice(0, 2).toUpperCase();
 
   return (
     <div className="h-screen overflow-hidden flex bg-white text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900">
@@ -113,10 +160,10 @@ export default function DashboardLayout() {
 
             {/* User Profile Card Group */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200/80">
-              {user?.imageUrl ? (
+              {avatarUrl ? (
                 <img
-                  src={user.imageUrl}
-                  alt={user?.username || t("Profile")}
+                  src={avatarUrl}
+                  alt={displayName}
                   className="h-9 w-9 rounded-full object-cover shadow-sm ring-2 ring-emerald-900/20 border border-white"
                   onError={(e) => {
                     // Fallback if the image URL fails to resolve or 404s
@@ -128,14 +175,14 @@ export default function DashboardLayout() {
 
               {/* Initials fallback (displayed if no imageUrl exists or if the image fails to load) */}
               <div
-                className={`h-9 w-9 bg-emerald-900 text-white font-bold rounded-full flex items-center justify-center text-xs tracking-wider shadow-sm ring-2 ring-emerald-900/10 ${user?.imageUrl ? "hidden" : ""
+                className={`h-9 w-9 bg-emerald-900 text-white font-bold rounded-full flex items-center justify-center text-xs tracking-wider shadow-sm ring-2 ring-emerald-900/10 ${avatarUrl ? "hidden" : ""
                   }`}
               >
-                {user?.username?.substring(0, 2).toUpperCase() || "AD"}
+                {userInitials}
               </div>
               <div className="flex flex-col text-left hidden sm:flex">
                 <span className="text-sm font-semibold text-slate-800 leading-none">
-                  {user?.username || t("Admin User")}
+                  {displayName}
                 </span>
                 <span className="text-[10px] font-bold tracking-widest text-emerald-700/80 uppercase mt-1">
                   {user?.role || t("SUPERVISOR")}

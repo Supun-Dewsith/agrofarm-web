@@ -3,6 +3,8 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   username: string;
+  firstName?: string | null;
+  lastName?: string | null;
   role: string;
   permissions: string[];
   imageUrl: string;
