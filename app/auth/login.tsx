@@ -216,9 +216,7 @@ export default function Login() {
         {/* Top Bar */}
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-emerald-800 text-white flex items-center justify-center shadow-sm shadow-emerald-950/20">
-              <Sprout className="h-5 w-5 text-emerald-300" />
-            </div>
+            <img src="/logo.png" alt="AgriSense AI Logo" className="h-9 w-9 object-contain rounded-xl" />
             <div className="flex flex-col">
               <span className="text-base font-bold tracking-tight text-slate-900 leading-none">
                 AgriSense AI
