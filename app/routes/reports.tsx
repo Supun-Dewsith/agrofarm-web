@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { ReportAiDrawer } from '~/components/ReportAiDrawer';
 import { useTranslation } from 'react-i18next';
+import { usePreferences } from '~/utils/preferences';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, BarChart, Bar, Legend, CartesianGrid
@@ -38,6 +39,7 @@ interface FarmOption {
 
 export default function ReportsPage() {
   const { t } = useTranslation();
+  const { currency, formatMoney } = usePreferences();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<ReportTab>('financial');
@@ -275,7 +277,7 @@ export default function ReportsPage() {
   // CSV Export Trigger
   const handleExportCSV = () => {
     if (activeTab === 'financial') {
-      const headers = ['ID', 'Date', 'Farm', 'Crop', 'Type', 'Category', 'Amount (LKR)', 'Description', 'Recorded By'];
+      const headers = ['ID', 'Date', 'Farm', 'Crop', 'Type', 'Category', `Amount (${currency.code})`, 'Description', 'Recorded By'];
       const rows = filteredFinancial.map((f) => [
         f.id,
         f.transactionDate,
@@ -353,8 +355,7 @@ export default function ReportsPage() {
   };
 
   const formatLKR = (val: number | undefined | null) => {
-    if (val === undefined || val === null) return 'LKR 0';
-    return `LKR ${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return formatMoney(val ?? 0);
   };
 
   const TableSkeletonRows = ({ columns, rows = 5 }: { columns: number; rows?: number }) => {
@@ -781,7 +782,7 @@ export default function ReportsPage() {
                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <Tooltip
-                  formatter={(value: any) => [`LKR ${Number(value).toLocaleString()}`, '']}
+                  formatter={(value: any) => [formatMoney(Number(value) || 0), '']}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px' }}
                 />
                 <Area type="monotone" dataKey="Revenue" stroke="#059669" strokeWidth={2} fill="url(#colorRevenue)" name={t("Revenue")} />
@@ -1276,11 +1277,11 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              {/* Amount (LKR) */}
+              {/* Amount */}
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">{t("Amount (LKR)")}</label>
+                <label className="block text-xs font-bold text-slate-600 mb-1">{t("Amount")} ({currency.code})</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">{currency.symbol}</span>
                   <input
                     type="number"
                     step="0.01"
