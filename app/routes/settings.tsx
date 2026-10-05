@@ -834,15 +834,7 @@ export default function Settings() {
   const displayAvatar = previewUrl || makeImageUrl(profile?.imageUrl ?? null);
 
   return (
-    <div
-      style={{
-        margin: "0",
-        padding: "20px 24px 48px",
-        fontFamily: "Inter, system-ui, sans-serif",
-        boxSizing: "border-box",
-        width: "100%",
-      }}
-    >
+    <div className="p-3 sm:p-6 lg:p-7 pb-16 w-full font-sans box-border">
       {/* STATUS NOTIFICATION BANNER */}
       {message && (
         <div
@@ -914,7 +906,7 @@ export default function Settings() {
               </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div className="grid grid-cols-2 lg:flex lg:flex-col gap-2">
               {navTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;

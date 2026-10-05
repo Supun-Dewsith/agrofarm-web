@@ -872,12 +872,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-7 mx-auto text-slate-800">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-7 mx-auto text-slate-800 max-w-[1600px]">
       {/* 2. Official Central Bank Commodity Market Prices Ticker */}
       {marketLoading ? (
         <MarketPricesSkeleton />
       ) : marketPrices && marketPrices.length > 0 ? (
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between gap-4 mb-3">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
@@ -925,7 +925,7 @@ export default function DashboardPage() {
       {overviewLoading ? (
         <StatCardsSkeleton />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
           {stats.map((stat, idx) => (
             <Link
               key={idx}
@@ -968,7 +968,7 @@ export default function DashboardPage() {
         {overviewLoading ? (
           <ChartCardSkeleton height="min-h-[380px]" title={t("Financial Performance Trajectory")} />
         ) : (
-          <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col min-h-[380px]">
+          <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 flex flex-col min-h-[380px]">
             <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -1001,7 +1001,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50/80 rounded-2xl mb-4 border border-slate-100/80 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 bg-slate-50/80 rounded-2xl mb-4 border border-slate-100/80 text-xs">
               <div>
                 <span className="text-slate-400 block text-[10px] font-medium">{t("Recorded Revenue")}</span>
                 <span className="font-bold text-emerald-700 text-sm">
@@ -1156,7 +1156,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Upcoming Harvest Countdown */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-bold text-slate-800 text-base">{t("Upcoming Harvests")}</h3>
@@ -1209,7 +1209,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Crop Health Status Donut */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-bold text-slate-800 text-base">{t("Crop Health Distribution")}</h3>
@@ -1307,7 +1307,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Operating Expense Breakdown by Category */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-bold text-slate-800 text-base">{t("Expense Allocation Breakdown")}</h3>
@@ -1393,7 +1393,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Harvest Production Bar Chart */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between min-h-[340px]">
+            <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between min-h-[340px]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -1453,7 +1453,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* 7-Day Attendance & Workforce Turnout */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-bold text-slate-800 text-base">{t("7-Day Workforce Turnout")}</h3>
@@ -1630,7 +1630,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Plant Pathology Diagnostics */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-bold text-slate-800 text-base">{t("Crop Pathology Intelligence")}</h3>
@@ -1677,7 +1677,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Real-Time Operations Timeline */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <div className="flex items-center gap-2">

@@ -345,10 +345,10 @@ export default function WeatherPage() {
   }, [selected, t]);
 
   return (
-    <div className="bg-white min-h-full w-full flex flex-col gap-6 p-5">
+    <div className="bg-white min-h-full w-full flex flex-col gap-4 sm:gap-6 p-3 sm:p-5">
 
       {/* Farm Selection */}
-      <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+      <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-3.5 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
           <div className="flex items-center gap-3">

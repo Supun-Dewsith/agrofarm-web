@@ -690,14 +690,14 @@ const Inventory = () => {
     ).size;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
 
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
         <div>
 
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             {t("Inventory Management")}
           </h1>
 
@@ -765,13 +765,13 @@ const Inventory = () => {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
           {/* Farm filter */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
               <MapPin size={19} />
             </div>
 
-            <div>
+            <div className="flex-1 sm:flex-initial">
 
               <label className="mb-1 block text-xs font-medium text-gray-500">
                 {t("Select Farm")}
@@ -790,7 +790,7 @@ const Inventory = () => {
 
                   setSelectedFarm(value);
                 }}
-                className="min-w-[220px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                className="w-full sm:w-auto sm:min-w-[220px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
               >
 
                 <option value="all">
@@ -1312,9 +1312,9 @@ const Inventory = () => {
 
       {showModal && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
 
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
 
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
 
@@ -1583,9 +1583,9 @@ const Inventory = () => {
 
       {showUpdateModal && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
 
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
 
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
 

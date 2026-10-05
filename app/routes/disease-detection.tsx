@@ -431,15 +431,7 @@ export default function DiseaseDetectionPage() {
 
   return (
     <div
-      style={{
-        margin: '0',
-        padding: '24px 28px 64px',
-        fontFamily: 'Inter, system-ui, sans-serif',
-        boxSizing: 'border-box',
-        width: '100%',
-        backgroundColor: '#f8fafc',
-        minHeight: '100vh',
-      }}
+      className="p-3 sm:p-6 lg:p-7 pb-16 w-full min-h-screen bg-[#f8fafc] font-sans box-border"
     >
       {/* Keyframe animation & print layout styles */}
       <style>{`
@@ -2141,7 +2133,9 @@ export default function DiseaseDetectionPage() {
             maxWidth: '460px',
             width: '100%',
             padding: '24px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

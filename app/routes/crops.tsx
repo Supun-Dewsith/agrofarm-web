@@ -175,8 +175,8 @@ export default function Page() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 font-sans text-gray-800">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50/50 p-3 sm:p-6 font-sans text-gray-800">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
 
     {/* cropinserting button and choose farm button*/}
       {/* Crop actions and farm selection */}
@@ -217,7 +217,7 @@ export default function Page() {
 
 
         {/* Top Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           
           {/* Total Crops */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
@@ -283,9 +283,9 @@ export default function Page() {
         </div>
 
         {/* Crops Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredCrops.map((crop) => (
-            <div key={crop.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between p-5 space-y-4">
+            <div key={crop.id} className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between p-4 sm:p-5 space-y-4">
               
               {/* Image Section */}
               <div className="relative h-48 rounded-2xl overflow-hidden">
