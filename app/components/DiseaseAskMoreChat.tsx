@@ -87,12 +87,12 @@ export function DiseaseAskMoreChat({
     <div
       style={{
         position: 'fixed',
-        right: 24,
-        bottom: 24,
+        right: 12,
+        bottom: 12,
         width: 430,
-        maxWidth: 'calc(100vw - 32px)',
+        maxWidth: 'calc(100vw - 24px)',
         height: 560,
-        maxHeight: 'calc(100vh - 48px)',
+        maxHeight: 'calc(100vh - 24px)',
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: 16,

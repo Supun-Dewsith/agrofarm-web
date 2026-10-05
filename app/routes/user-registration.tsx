@@ -445,15 +445,7 @@ export default function UserRegistration() {
   };
 
   return (
-    <div
-      style={{
-        margin: "0",
-        padding: "20px 24px 48px",
-        fontFamily: "Inter, system-ui, sans-serif",
-        boxSizing: "border-box",
-        width: "100%",
-      }}
-    >
+    <div className="p-3 sm:p-6 lg:p-7 pb-16 w-full font-sans box-border">
 
       {statusMessage && (
         <div style={{

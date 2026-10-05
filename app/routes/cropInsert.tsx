@@ -188,17 +188,17 @@ export default function Page() {
     };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 font-sans text-gray-800">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50/50 p-3 sm:p-6 font-sans text-gray-800">
+      <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
         
         {/* Header */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t("Add New Crop")}</h1>
-            <p className="text-sm text-gray-400 mt-1">{t("Register a new crop and assign it to a farmer's field.")}</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t("Add New Crop")}</h1>
+            <p className="text-xs sm:text-sm text-gray-400 mt-1">{t("Register a new crop and assign it to a farmer's field.")}</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <Sprout className="w-6 h-6" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Sprout className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
 
@@ -211,9 +211,9 @@ export default function Page() {
         )}
 
         {/* Form Container */}
-        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm space-y-5 sm:space-y-6">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             
             {/* Crop Name */}
             <div>
@@ -441,7 +441,7 @@ export default function Page() {
           <div className="pt-4 flex justify-end">
             <button
               type="submit"
-              className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-6 py-3 rounded-xl transition-colors shadow-sm text-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-6 py-3 rounded-xl transition-colors shadow-sm text-sm cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               {t("Save Crop Record")}

@@ -388,10 +388,10 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div className="space-y-4 p-4 sm:p-6 mx-auto font-sans text-slate-800">
+    <div className="space-y-4 p-3 sm:p-6 mx-auto font-sans text-slate-800">
 
       {/* Sleek Top Controls Bar (Matching Settings Page Element Vibe & Thin Borders) */}
-      <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-3.5 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         {/* Farm & Date Presets */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Farm Dropdown */}
@@ -430,7 +430,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Date Picker Inputs */}
-          <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-xs text-slate-700">
+          <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-xs text-slate-700 w-full sm:w-auto">
             <Calendar size={13} className="text-slate-400" />
             <input
               type="date"
@@ -455,8 +455,8 @@ export default function ReportsPage() {
         </div>
 
         {/* Live Search & Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="relative min-w-[200px]">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+          <div className="relative min-w-[180px] flex-1 sm:flex-initial">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
