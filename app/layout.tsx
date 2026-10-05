@@ -114,9 +114,7 @@ export default function DashboardLayout() {
       {/* SIDEBAR */}
       <aside className="w-64 bg-[#1b3b2b] text-slate-300 flex flex-col hidden md:flex border-r border-[#244A38]/30">
         <div className="flex items-center gap-3 px-6 h-16 border-b border-[#244A38]/50">
-          <div className="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
-            <Sprout className="h-5 w-5 text-emerald-400" />
-          </div>
+          <img src="/logo.png" alt="AgriSense AI Logo" className="h-8 w-8 object-contain rounded-lg" />
           <span className="text-base font-bold text-white tracking-wider uppercase">
             {LOGO_TEXT}
           </span>
