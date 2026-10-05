@@ -1,10 +1,13 @@
 import { fetchWithAuth } from '../utils/auth';
 import type { DiseaseAnalysisResult, ChatMessage, DiseaseChatResponse } from '../types/disease';
 
-export const analyzePlantImage = async (file: File, language: string = 'en'): Promise<DiseaseAnalysisResult> => {
+export const analyzePlantImage = async (file: File, language: string = 'en', crop?: string): Promise<DiseaseAnalysisResult> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('language', language);
+  if (crop && crop.trim()) {
+    formData.append('crop', crop.trim());
+  }
 
   // Send request ensuring NO Content-Type header is pre-set
   const response = await fetchWithAuth('/api/disease/analyze', {

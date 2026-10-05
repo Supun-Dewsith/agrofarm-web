@@ -29,6 +29,18 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { fetchWithAuth, getAuthData, logout } from "../utils/auth";
+import {
+  CURRENCY_OPTIONS,
+  getStoredCurrency,
+  setStoredCurrency,
+  getStoredMeasurementUnit,
+  setStoredMeasurementUnit,
+  formatMoney,
+  convertArea,
+  convertWeight,
+  convertTemperature,
+  type MeasurementUnit,
+} from "../utils/preferences";
 
 const API_BASE_URL = String(
   import.meta.env.VITE_API_BASE_URL || "http://localhost:80"
@@ -36,20 +48,7 @@ const API_BASE_URL = String(
 
 const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024;
 
-const TIMEZONES = [
-  { value: "Asia/Colombo", label: "Asia/Colombo (UTC+05:30) - Sri Lanka" },
-  { value: "UTC", label: "UTC (UTC+00:00)" },
-  { value: "Asia/Dubai", label: "Asia/Dubai (UTC+04:00)" },
-  { value: "Asia/Kolkata", label: "Asia/Kolkata (UTC+05:30) - India" },
-  { value: "Asia/Bangkok", label: "Asia/Bangkok (UTC+07:00)" },
-  { value: "Asia/Singapore", label: "Asia/Singapore (UTC+08:00)" },
-  { value: "Asia/Tokyo", label: "Asia/Tokyo (UTC+09:00)" },
-  { value: "Australia/Sydney", label: "Australia/Sydney (UTC+10:00)" },
-  { value: "Europe/London", label: "Europe/London (UTC+00:00)" },
-  { value: "Europe/Paris", label: "Europe/Paris (UTC+01:00)" },
-  { value: "America/New_York", label: "America/New_York (UTC-05:00)" },
-  { value: "America/Los_Angeles", label: "America/Los_Angeles (UTC-08:00)" },
-];
+
 
 const CURRENCIES = [
   { value: "LKR (Rs)", label: "LKR (Rs) - Sri Lankan Rupee" },
@@ -207,18 +206,8 @@ export default function Settings() {
   const [farms, setFarms] = useState<Farm[]>([]);
 
   // Local farming usability preferences
-  const [measurementUnit, setMeasurementUnit] = useState<"metric" | "imperial">(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("agrofarm_measurement_unit") as "metric" | "imperial") || "metric";
-    }
-    return "metric";
-  });
-
-  const [dateFormat, setDateFormat] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("agrofarm_date_format") || "YYYY-MM-DD";
-    }
-    return "YYYY-MM-DD";
+  const [measurementUnit, setMeasurementUnit] = useState<MeasurementUnit>(() => {
+    return getStoredMeasurementUnit();
   });
 
   const [loading, setLoading] = useState(true);
@@ -344,10 +333,13 @@ export default function Settings() {
       setNotifications(notificationData);
       setSecurity(securityData);
 
+      const initialCurrency = systemData.currency || getStoredCurrency() || "LKR (Rs)";
+      setStoredCurrency(initialCurrency);
+
       setSystem({
-        farmName: systemData.farmName || "",
+        farmName: systemData.farmName || "AgroFarm",
         timezone: systemData.timezone || "Asia/Colombo",
-        currency: systemData.currency || "LKR (Rs)",
+        currency: initialCurrency,
         autoBackup: Boolean(systemData.autoBackup),
         aiDiseaseDetection: Boolean(systemData.aiDiseaseDetection),
         weatherSync: Boolean(systemData.weatherSync),
@@ -596,14 +588,6 @@ export default function Settings() {
     event.preventDefault();
     if (!system) return;
 
-    if (!system.farmName) {
-      notify("error", t("Please select a farm."));
-      return;
-    }
-    if (!system.timezone) {
-      notify("error", t("Please select a timezone."));
-      return;
-    }
     if (!system.currency) {
       notify("error", t("Please select a currency."));
       return;
@@ -612,14 +596,19 @@ export default function Settings() {
     try {
       setSaving(true);
 
-      // Persist local agricultural preferences
-      localStorage.setItem("agrofarm_measurement_unit", measurementUnit);
-      localStorage.setItem("agrofarm_date_format", dateFormat);
+      // Persist workable local preferences
+      setStoredMeasurementUnit(measurementUnit);
+      setStoredCurrency(system.currency);
+
+      const payload = {
+        ...system,
+        farmName: system.farmName || "AgroFarm",
+      };
 
       const response = await fetchWithAuth("/api/v1/settings/system", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(system),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -631,15 +620,15 @@ export default function Settings() {
       const updated = (await response.json()) as SystemSettings;
 
       setSystem({
-        farmName: updated.farmName || "",
-        timezone: updated.timezone || "",
-        currency: updated.currency || "",
+        farmName: updated.farmName || payload.farmName,
+        timezone: updated.timezone || system.timezone,
+        currency: updated.currency || system.currency,
         autoBackup: Boolean(updated.autoBackup),
         aiDiseaseDetection: Boolean(updated.aiDiseaseDetection),
         weatherSync: Boolean(updated.weatherSync),
       });
 
-      notify("success", t("Farm & system preferences saved successfully."));
+      notify("success", t("Farm & regional preferences saved successfully."));
     } catch (error) {
       notify(
         "error",
@@ -1767,57 +1756,30 @@ export default function Settings() {
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                    gap: "20px",
+                    gap: "24px",
                     marginBottom: "28px",
                   }}
                 >
+                  {/* Currency with Workable Live Preview */}
                   <div>
-                    <label style={labelStyle}>
-                      {t("Default Farm")} <span style={{ color: "#ef4444" }}>*</span>
-                    </label>
-                    <select
-                      value={system.farmName}
-                      onChange={(e) => setSystem({ ...system, farmName: e.target.value })}
-                      required
-                      style={inputStyle}
-                    >
-                      <option value="">{t("Select default farm")}</option>
-                      {farms.map((f) => (
-                        <option key={f.id} value={f.farmName}>
-                          {f.farmName}
-                        </option>
-                      ))}
-                    </select>
-                    {farms.length === 0 && !loadingFarms && (
-                      <span style={{ fontSize: "11px", color: "#d97706", marginTop: "4px", display: "block" }}>
-                        {t("No farms found. Default farm set to current workspace.")}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <label style={{ ...labelStyle, margin: 0 }}>
+                        {t("Currency")} <span style={{ color: "#ef4444" }}>*</span>
+                      </label>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: "9999px",
+                          backgroundColor: "#f0fdf4",
+                          color: "#059669",
+                          border: "1px solid #bbf7d0",
+                        }}
+                      >
+                        {t("Active Preview")}: {formatMoney(12500, { customCurrency: system.currency })}
                       </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>
-                      {t("Timezone")} <span style={{ color: "#ef4444" }}>*</span>
-                    </label>
-                    <select
-                      value={system.timezone}
-                      onChange={(e) => setSystem({ ...system, timezone: e.target.value })}
-                      required
-                      style={inputStyle}
-                    >
-                      <option value="">{t("Select timezone")}</option>
-                      {TIMEZONES.map((tz) => (
-                        <option key={tz.value} value={tz.value}>
-                          {tz.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>
-                      {t("Currency")} <span style={{ color: "#ef4444" }}>*</span>
-                    </label>
+                    </div>
                     <select
                       value={system.currency}
                       onChange={(e) => setSystem({ ...system, currency: e.target.value })}
@@ -1825,202 +1787,117 @@ export default function Settings() {
                       style={inputStyle}
                     >
                       <option value="">{t("Select currency")}</option>
-                      {CURRENCIES.map((cur) => (
+                      {CURRENCY_OPTIONS.map((cur) => (
                         <option key={cur.value} value={cur.value}>
                           {cur.label}
                         </option>
                       ))}
                     </select>
+                    <span style={{ fontSize: "11px", color: "#64748b", marginTop: "5px", display: "block" }}>
+                      {t("Applies across financial summaries, harvests, sales prices, and reports.")}
+                    </span>
                   </div>
 
-                  <div>
-                    <label style={labelStyle}>{t("Measurement Units")}</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  {/* Measurement Units with Interactive Workable Preview */}
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                      <label style={{ ...labelStyle, margin: 0 }}>{t("Measurement Units")}</label>
+                      <span style={{ fontSize: "11px", color: "#059669", fontWeight: 600 }}>
+                        {measurementUnit === "metric" ? t("Metric (International Standard)") : t("Imperial (US / UK Standard)")}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px", marginBottom: "14px" }}>
                       <button
                         type="button"
                         onClick={() => setMeasurementUnit("metric")}
                         style={{
-                          padding: "10px",
-                          borderRadius: "6px",
+                          padding: "14px 16px",
+                          borderRadius: "10px",
                           border: measurementUnit === "metric" ? "2px solid #059669" : "1px solid #cbd5e1",
                           backgroundColor: measurementUnit === "metric" ? "#f0fdf4" : "#ffffff",
-                          color: measurementUnit === "metric" ? "#065f46" : "#475569",
-                          fontSize: "13px",
-                          fontWeight: 600,
+                          textAlign: "left",
                           cursor: "pointer",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        {t("Metric System (ha, kg, °C)")}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: measurementUnit === "metric" ? "#065f46" : "#1e293b" }}>
+                            {t("Metric System")}
+                          </span>
+                          {measurementUnit === "metric" && (
+                            <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#059669", color: "#ffffff", padding: "2px 7px", borderRadius: "9999px" }}>
+                              {t("Selected")}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#475569", lineHeight: 1.4 }}>
+                          {t("Land Area: Hectares (ha) • Produce: Kilograms (kg) • Temperature: Celsius (°C)")}
+                        </div>
                       </button>
+
                       <button
                         type="button"
                         onClick={() => setMeasurementUnit("imperial")}
                         style={{
-                          padding: "10px",
-                          borderRadius: "6px",
+                          padding: "14px 16px",
+                          borderRadius: "10px",
                           border: measurementUnit === "imperial" ? "2px solid #059669" : "1px solid #cbd5e1",
                           backgroundColor: measurementUnit === "imperial" ? "#f0fdf4" : "#ffffff",
-                          color: measurementUnit === "imperial" ? "#065f46" : "#475569",
-                          fontSize: "13px",
-                          fontWeight: 600,
+                          textAlign: "left",
                           cursor: "pointer",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        {t("Imperial System (ac, lbs, °F)")}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 700, color: measurementUnit === "imperial" ? "#065f46" : "#1e293b" }}>
+                            {t("Imperial System")}
+                          </span>
+                          {measurementUnit === "imperial" && (
+                            <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#059669", color: "#ffffff", padding: "2px 7px", borderRadius: "9999px" }}>
+                              {t("Selected")}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#475569", lineHeight: 1.4 }}>
+                          {t("Land Area: Acres (ac) • Produce: Pounds (lbs) • Temperature: Fahrenheit (°F)")}
+                        </div>
                       </button>
                     </div>
-                  </div>
 
-                  <div>
-                    <label style={labelStyle}>{t("Date Format")}</label>
-                    <select
-                      value={dateFormat}
-                      onChange={(e) => setDateFormat(e.target.value)}
-                      style={inputStyle}
+                    {/* Live Conversion Preview Card */}
+                    <div
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: "8px",
+                        backgroundColor: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                      }}
                     >
-                      <option value="YYYY-MM-DD">YYYY-MM-DD (2026-09-29)</option>
-                      <option value="DD/MM/YYYY">DD/MM/YYYY (29/09/2026)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* 3. SMART AUTOMATIONS LIST */}
-                <h4 style={{ margin: "0 0 14px", fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
-                  {t("Smart Farm Automations")}
-                </h4>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                    marginBottom: "32px",
-                  }}
-                >
-                  {/* AI Disease Detection */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "16px",
-                      borderRadius: "8px",
-                      border: "1px solid #e2e8f0",
-                      backgroundColor: "#ffffff",
-                      gap: "16px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                      <div
-                        style={{
-                          padding: "8px",
-                          borderRadius: "6px",
-                          backgroundColor: "#f0fdf4",
-                          color: "#059669",
-                          marginTop: "2px",
-                        }}
-                      >
-                        <Sparkles size={16} />
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#334155" }}>
+                        <span style={{ fontWeight: 600, color: "#64748b" }}>{t("Sample Field Area:")}</span>
+                        <span style={{ fontWeight: 700, color: "#059669" }}>
+                          {measurementUnit === "metric" ? "10.00 ha" : "24.71 ac"}
+                        </span>
                       </div>
-                      <div>
-                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "2px" }}>
-                          {t("AI Disease Detection")}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#64748b", lineHeight: "1.4" }}>
-                          {t("Automatically run neural network inference on uploaded crop images.")}
-                        </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#334155" }}>
+                        <span style={{ fontWeight: 600, color: "#64748b" }}>{t("Sample Harvest Weight:")}</span>
+                        <span style={{ fontWeight: 700, color: "#059669" }}>
+                          {measurementUnit === "metric" ? "1,000 kg" : "2,205 lbs"}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#334155" }}>
+                        <span style={{ fontWeight: 600, color: "#64748b" }}>{t("Sample Temperature:")}</span>
+                        <span style={{ fontWeight: 700, color: "#059669" }}>
+                          {measurementUnit === "metric" ? "28°C" : "82°F"}
+                        </span>
                       </div>
                     </div>
-                    <Toggle
-                      checked={Boolean(system.aiDiseaseDetection)}
-                      onChange={(checked) =>
-                        setSystem({ ...system, aiDiseaseDetection: checked })
-                      }
-                    />
-                  </div>
-
-                  {/* Weather Synchronization */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "16px",
-                      borderRadius: "8px",
-                      border: "1px solid #e2e8f0",
-                      backgroundColor: "#ffffff",
-                      gap: "16px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                      <div
-                        style={{
-                          padding: "8px",
-                          borderRadius: "6px",
-                          backgroundColor: "#eff6ff",
-                          color: "#2563eb",
-                          marginTop: "2px",
-                        }}
-                      >
-                        <CloudRain size={16} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "2px" }}>
-                          {t("Weather Synchronization")}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#64748b", lineHeight: "1.4" }}>
-                          {t("Keep localized weather information and forecasts automatically synchronized.")}
-                        </div>
-                      </div>
-                    </div>
-                    <Toggle
-                      checked={Boolean(system.weatherSync)}
-                      onChange={(checked) =>
-                        setSystem({ ...system, weatherSync: checked })
-                      }
-                    />
-                  </div>
-
-                  {/* Automatic Backup */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "16px",
-                      borderRadius: "8px",
-                      border: "1px solid #e2e8f0",
-                      backgroundColor: "#ffffff",
-                      gap: "16px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                      <div
-                        style={{
-                          padding: "8px",
-                          borderRadius: "6px",
-                          backgroundColor: "#faf5ff",
-                          color: "#9333ea",
-                          marginTop: "2px",
-                        }}
-                      >
-                        <Database size={16} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "2px" }}>
-                          {t("Automatic Cloud Backup")}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#64748b", lineHeight: "1.4" }}>
-                          {t("Daily automated snapshots of farm records and inventory safely stored.")}
-                        </div>
-                      </div>
-                    </div>
-                    <Toggle
-                      checked={Boolean(system.autoBackup)}
-                      onChange={(checked) =>
-                        setSystem({ ...system, autoBackup: checked })
-                      }
-                    />
                   </div>
                 </div>
 
@@ -2226,7 +2103,7 @@ export default function Settings() {
                   {t("Security")}
                 </h3>
                 <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                  {t("Manage your login password, two-factor authentication, and account access permissions.")}
+                  {t("Manage your login password and account access permissions.")}
                 </p>
               </div>
 
@@ -2379,79 +2256,6 @@ export default function Settings() {
                     >
                       <Save size={16} />
                       {saving ? t("Saving...") : t("Change Password")}
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Two-Factor Authentication Block */}
-              <div
-                style={{
-                  padding: "20px",
-                  borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
-                  backgroundColor: "#ffffff",
-                }}
-              >
-                <form onSubmit={updateSecurity}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "16px",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                      <div
-                        style={{
-                          padding: "8px",
-                          borderRadius: "6px",
-                          backgroundColor: "#f0fdf4",
-                          color: "#059669",
-                          marginTop: "2px",
-                        }}
-                      >
-                        <ShieldCheck size={18} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "2px" }}>
-                          {t("Two-Factor Authentication")}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#64748b", lineHeight: "1.4" }}>
-                          {t("Require an additional verification step when signing in to protect your farm data.")}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Toggle
-                      checked={Boolean(security.twoFactorAuthentication)}
-                      onChange={(checked) =>
-                        setSecurity({ twoFactorAuthentication: checked })
-                      }
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      borderTop: "1px solid #e2e8f0",
-                      paddingTop: "16px",
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      style={{
-                        ...primaryButtonStyle,
-                        opacity: saving ? 0.7 : 1,
-                        cursor: saving ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      <Save size={16} />
-                      {saving ? t("Saving...") : t("Save Changes")}
                     </button>
                   </div>
                 </form>

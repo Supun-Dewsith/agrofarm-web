@@ -49,13 +49,14 @@ export async function clientAction({ request }: { request: Request }) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
   const language = (formData.get('language') as string) || i18n.resolvedLanguage || i18n.language || 'en';
+  const crop = (formData.get('crop') as string) || '';
 
   if (!file || file.size === 0) {
     return { error: 'Please select a valid image file.' };
   }
 
   try {
-    const result = await analyzePlantImage(file, language);
+    const result = await analyzePlantImage(file, language, crop);
     return { result };
   } catch (error: any) {
     return { error: error.message || 'Analysis failed. Please try again.' };
@@ -82,11 +83,31 @@ function formatInspectionDate(dateString?: string, t?: any): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+export const COMMON_CROPS = [
+  { value: '', label: 'Auto-detect (All Crops)' },
+  { value: 'Tomato', label: 'Tomato (Solanum lycopersicum)' },
+  { value: 'Paddy / Rice', label: 'Paddy / Rice (Oryza sativa)' },
+  { value: 'Chili / Pepper', label: 'Chili / Pepper (Capsicum)' },
+  { value: 'Potato', label: 'Potato (Solanum tuberosum)' },
+  { value: 'Corn / Maize', label: 'Corn / Maize (Zea mays)' },
+  { value: 'Tea', label: 'Tea (Camellia sinensis)' },
+  { value: 'Eggplant / Brinjal', label: 'Eggplant / Brinjal (Solanum melongena)' },
+  { value: 'Onion', label: 'Onion / Shallots (Allium cepa)' },
+  { value: 'Cucumber', label: 'Cucumber (Cucumis sativus)' },
+  { value: 'Coconut', label: 'Coconut (Cocos nucifera)' },
+  { value: 'Banana', label: 'Banana (Musa)' },
+  { value: '__other__', label: 'Other Crop (Specify...)' },
+];
+
 export default function DiseaseDetectionPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fetcher = useFetcher<typeof clientAction>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Optional target crop selection for focused AI diagnosis
+  const [selectedCrop, setSelectedCrop] = useState<string>('');
+  const [customCrop, setCustomCrop] = useState<string>('');
 
   // Core Inspection state
   const [chatOpen, setChatOpen] = useState(false);
@@ -216,6 +237,12 @@ export default function DiseaseDetectionPage() {
     formData.append('file', selectedFile);
     const currentLang = i18n.resolvedLanguage || i18n.language || 'en';
     formData.append('language', currentLang);
+
+    const finalCrop = selectedCrop === '__other__' ? customCrop.trim() : selectedCrop.trim();
+    if (finalCrop) {
+      formData.append('crop', finalCrop);
+    }
+
     fetcher.submit(formData, { method: 'post', encType: 'multipart/form-data' });
   };
 
@@ -226,6 +253,8 @@ export default function DiseaseDetectionPage() {
     setSelectedInspectionId(null);
     setActiveAnalysis(null);
     setLinkedPlotInfo(null);
+    setSelectedCrop('');
+    setCustomCrop('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -684,6 +713,89 @@ export default function DiseaseDetectionPage() {
             >
               {t('Upload Photo')}
             </button>
+
+            {/* Optional Crop Selection Card */}
+            <div style={{
+              marginBottom: '12px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '12px',
+              textAlign: 'left'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Leaf size={14} className="text-emerald-600" />
+                  {t('Target Crop')}
+                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>({t('Optional')})</span>
+                </label>
+                {selectedCrop && (
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedCrop(''); setCustomCrop(''); }}
+                    style={{
+                      fontSize: '11px',
+                      color: '#059669',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      fontWeight: 600
+                    }}
+                  >
+                    {t('Reset')}
+                  </button>
+                )}
+              </div>
+              <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px 0', lineHeight: 1.35 }}>
+                {t('Narrow the neural diagnosis by selecting or specifying your crop species.')}
+              </p>
+              <select
+                value={selectedCrop}
+                onChange={(e) => setSelectedCrop(e.target.value)}
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  fontSize: '12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: '#ffffff',
+                  color: '#1e293b',
+                  outline: 'none',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {COMMON_CROPS.map((cropOption) => (
+                  <option key={cropOption.value} value={cropOption.value}>
+                    {t(cropOption.label)}
+                  </option>
+                ))}
+              </select>
+
+              {selectedCrop === '__other__' && (
+                <div style={{ marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder={t('Type crop name (e.g. Cabbage, Mango, Papaya)')}
+                    value={customCrop}
+                    onChange={(e) => setCustomCrop(e.target.value)}
+                    disabled={isSubmitting}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      fontSize: '12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      backgroundColor: '#ffffff',
+                      color: '#1e293b',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
             <button
               type="button"

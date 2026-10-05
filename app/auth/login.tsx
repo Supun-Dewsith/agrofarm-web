@@ -340,42 +340,6 @@ export default function Login() {
                 <span>{t("Sign In")}</span>
               )}
             </button>
-
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200/80" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-3 text-slate-400 font-medium uppercase tracking-wider text-[11px]">
-                  {t("Or")}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="w-full bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-medium shadow-xs transition-colors flex items-center justify-center gap-2.5 cursor-pointer"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  fill="#EA4335"
-                  d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.273 0 3.164 2.709 1.145 6.655l4.12 3.11z"
-                />
-                <path
-                  fill="#4285F4"
-                  d="M23.755 12.218c0-.827-.073-1.627-.209-2.409H12v4.582h6.6c-.282 1.527-1.145 2.818-2.436 3.69l3.782 2.928c2.209-2.036 3.809-5.036 3.809-8.79z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M5.266 14.235L1.145 17.345C3.164 21.291 7.273 24 12 24c3.055 0 5.782-1.01 7.91-2.736l-3.782-2.928a6.99 6.99 0 0 1-4.128 1.173 7.077 7.077 0 0 1-6.734-4.855z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.266 9.765A7.043 7.043 0 0 1 4.909 12c0 .79.127 1.545.357 2.235l-4.12 3.11A11.907 11.907 0 0 1 0 12c0-1.927.455-3.755 1.255-5.382l4.01 3.147z"
-                />
-              </svg>
-              <span>{t("sign in with google")}</span>
-            </button>
           </Form>
         </div>
 

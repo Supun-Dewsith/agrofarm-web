@@ -2,6 +2,7 @@ import { fetchWithAuth, getAuthData } from "../utils/auth";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouteError, isRouteErrorResponse, Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { usePreferences } from "../utils/preferences";
 import FarmWeatherSlideshow, { getWeatherCondition } from "../components/dashboard/FarmWeatherSlideshow";
 import type { FarmWeatherItem } from "../components/dashboard/FarmWeatherSlideshow";
 import {
@@ -621,6 +622,7 @@ export default function DashboardPage() {
   const [activityFilter, setActivityFilter] = useState<string>("all");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>("");
   const { t } = useTranslation();
+  const { formatMoney, convertAreaFromAcres } = usePreferences();
 
   const loadData = useCallback(async (isSilent = false) => {
     if (!isSilent) {
@@ -1003,19 +1005,19 @@ export default function DashboardPage() {
               <div>
                 <span className="text-slate-400 block text-[10px] font-medium">{t("Recorded Revenue")}</span>
                 <span className="font-bold text-emerald-700 text-sm">
-                  LKR {totalFinancialRevenue.toLocaleString()}
+                  {formatMoney(totalFinancialRevenue, { hideDecimals: true })}
                 </span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] font-medium">{t("Recorded Expenses")}</span>
                 <span className="font-bold text-slate-700 text-sm">
-                  LKR {totalFinancialExpense.toLocaleString()}
+                  {formatMoney(totalFinancialExpense, { hideDecimals: true })}
                 </span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] font-medium">{t("Net Inflow Margin")}</span>
                 <span className={`font-bold text-sm ${netFinancialProfit >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
-                  LKR {netFinancialProfit.toLocaleString()}
+                  {formatMoney(netFinancialProfit, { hideDecimals: true })}
                 </span>
               </div>
             </div>
@@ -1055,7 +1057,7 @@ export default function DashboardPage() {
                       fontSize: "12px",
                     }}
                     formatter={(value: any, name: any) => [
-                      `LKR ${Number(value || 0).toLocaleString()}`,
+                      formatMoney(value, { hideDecimals: true }),
                       name === "revenue" ? t("Revenue") : t("Expense"),
                     ]}
                   />
@@ -1374,7 +1376,7 @@ export default function DashboardPage() {
                           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                           <span className="text-slate-700 truncate">{t(item.category)}</span>
                         </div>
-                        <span className="font-bold text-slate-800 shrink-0">LKR {item.amount.toLocaleString()}</span>
+                        <span className="font-bold text-slate-800 shrink-0">{formatMoney(item.amount, { hideDecimals: true })}</span>
                       </div>
                     ))}
                   </div>
@@ -1597,8 +1599,8 @@ export default function DashboardPage() {
                   <span className="text-slate-400 text-[10px] font-semibold uppercase">{t("Cultivated Land Area")}</span>
                   <span className="font-bold text-emerald-700">
                     {landUtilization && landUtilization.totalAreaAcres > 0
-                      ? `${landUtilization.totalAreaAcres} ${t("Acres")} (${landUtilization.totalFields} ${t("fields")})`
-                      : t("0 Acres Registered")}
+                      ? `${convertAreaFromAcres(landUtilization.totalAreaAcres).formatted} (${landUtilization.totalFields} ${t("fields")})`
+                      : t("0 Registered")}
                   </span>
                 </div>
                 {landUtilization && Object.keys(landUtilization.soilDistribution || {}).length > 0 ? (

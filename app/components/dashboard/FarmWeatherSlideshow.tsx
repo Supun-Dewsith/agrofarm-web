@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Droplets, Wind, CloudRain, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { usePreferences } from '../../utils/preferences';
 
 import SunnyIcon from '../../asserts/icons/animated/day.svg';
 import CloudSun from '../../asserts/icons/animated/cloudy-day-1.svg';
@@ -143,6 +144,7 @@ export function getWeatherIconSrc(code: number | undefined | null): string {
 
 export default function FarmWeatherSlideshow({ farmsWeather }: FarmWeatherSlideshowProps) {
   const { t } = useTranslation();
+  const { convertTemperature } = usePreferences();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -258,12 +260,14 @@ export default function FarmWeatherSlideshow({ farmsWeather }: FarmWeatherSlides
             <div className="space-y-0.5">
               <div className="flex items-baseline">
                 <span className="text-5xl font-light tracking-tighter">
-                  {Math.round(current.temp)}
+                  {convertTemperature(current.temp).value}
                 </span>
-                <span className="text-2xl font-light text-emerald-100/90 ml-0.5">°C</span>
+                <span className="text-2xl font-light text-emerald-100/90 ml-0.5">
+                  {convertTemperature(current.temp).unit}
+                </span>
                 {current.highTemp !== undefined && current.lowTemp !== undefined && (
                   <span className="ml-2.5 text-xs font-semibold bg-white/15 backdrop-blur-sm px-2 py-0.5 rounded-full text-white/90">
-                    {t("H")}: {current.highTemp}° · {t("L")}: {current.lowTemp}°
+                    {t("H")}: {convertTemperature(current.highTemp).value}° · {t("L")}: {convertTemperature(current.lowTemp).value}°
                   </span>
                 )}
               </div>
@@ -350,8 +354,8 @@ export default function FarmWeatherSlideshow({ farmsWeather }: FarmWeatherSlides
                   className="w-6 h-6 object-contain my-0.5"
                 />
                 <div className="flex items-center gap-1 text-[11px] leading-tight">
-                  <span className="font-bold">{day.maxTemp}°</span>
-                  <span className="text-white/60 text-[10px]">{day.minTemp}°</span>
+                  <span className="font-bold">{convertTemperature(day.maxTemp).value}°</span>
+                  <span className="text-white/60 text-[10px]">{convertTemperature(day.minTemp).value}°</span>
                 </div>
                 {day.rainProb > 0 ? (
                   <span className="text-[9px] font-medium text-cyan-200 mt-0.5">
