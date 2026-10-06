@@ -706,7 +706,7 @@ export default function DiseaseDetectionPage() {
               {t('Upload Photo')}
             </button>
 
-            {/* Optional Crop Selection Card */}
+            {/* Optional Crop Selection Card - Commented out / hidden
             <div style={{
               marginBottom: '12px',
               backgroundColor: '#f8fafc',
@@ -788,6 +788,7 @@ export default function DiseaseDetectionPage() {
                 </div>
               )}
             </div>
+            */}
 
             <button
               type="button"

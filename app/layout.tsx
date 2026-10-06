@@ -62,7 +62,7 @@ export default function DashboardLayout() {
     fetchWithAuth("/api/v1/settings/profile")
       .then(async (res) => {
         if (res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as { firstName?: string | null; lastName?: string | null; username?: string; imageUrl?: string };
           setProfile(data);
           localStorage.setItem("user_profile", JSON.stringify(data));
         }
@@ -85,6 +85,10 @@ export default function DashboardLayout() {
     const currentItem = menuItems.find(item => item.path === location.pathname);
     if (currentItem) {
       return t(currentItem.label);
+    }
+
+    if (currentPath === "farmers") {
+      return t("Workers");
     }
 
     const formattedTitle = currentPath
