@@ -8,7 +8,7 @@ export const menuItems = [
   { icon: UserPlus, label: "Register", path: "/home/register-users", permission: "CAN_REGISTER_USERS" },
   { icon: LayoutDashboard, label: "Dashboard", path: "/home/dashboard", permission: "VIEW_DASHBOARD" },
   { icon: LandPlot, label: "Farm Management", path: "/home/farm-management", permission: "VIEW_FARM_MANAGEMENT" },
-  { icon: Users, label: "Farmers", path: "/home/farmers", permission: "VIEW_FARMERS" },
+  { icon: Users, label: "Workers", path: "/home/farmers", permission: "VIEW_FARMERS" },
   { icon: Sprout, label: "Crops", path: "/home/crops", permission: "VIEW_CROPS" },
   { icon: ClipboardList, label: "Attendance", path: "/home/attendance", permission: "VIEW_ATTENDANCE" },
   { icon: CloudSun, label: "Weather", path: "/home/weather", permission: "VIEW_WEATHER" },
